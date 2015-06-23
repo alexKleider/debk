@@ -24,7 +24,10 @@ debk.py is a module that supports double entry book keeping.
 
 Usage:
   debk.py -h | --version
-  debk.py ( new | show_accounts | show_journal )  --entity=ENTITY
+  debk.py new --entity=ENTITY
+  debk.py show_accounts [--entity=ENTITY]
+  debk.py show_journal [--entity=ENTITY]
+  debk.py journal_entry [--entity=ENTITY]
 
 Options:
   -h --help  Print usage statement.
@@ -35,6 +38,12 @@ Commands:
   new creates a new set of books.
   show_accounts displays the chart of accounts.
   show_journal displays the journal entries.
+  journal_entry provides for user entry.
+
+Comments:
+  The --entity=ENTITY option is mandatory with the 'mew' command.
+  For the other commands, and attempt will be made to read the 
+
 """
 #
 # hash-bang line
@@ -63,6 +72,7 @@ ENTITIES = dict(
             )
 DEFAULT_CofA = "defaultChartOfAccounts"
 DEFAULT_Metadata = "defaultMetadata.json"
+DEFAULT_ENTITY = 'defaultEntity'
 # Expect there to be DEFAULT_CofA and DEFAULT_Metadata
 # files in DEFAULT_HOME.
 CofA_name = 'CofA'               # These three files will appear
@@ -106,6 +116,9 @@ def create_entity(entity_name):
         metadata = json.load(json_file)
     metadata['entity_name'] = entity_name
     try:
+        with open(os.path.join(DEFAULT_HOME,
+                    DEFAULT_ENTITY), 'w') as entity_file_object:
+            entity_file_object.write(entity_name)
         os.mkdir(new_dir)
         shutil.copy(cofa_source, new_CofA)
         with open(new_Journal, 'w') as journal_file_object:
@@ -168,6 +181,83 @@ class ChartOfAccounts(object):
                         + place_holder_indicator)
         return '\n'.join(ret)
 
+class JournalEntry(object):
+    """
+    """
+    
+    def __init__(self, entry_number):
+        entry = JournalEntry.get_entry(entry_number)
+        if entry: self.data = entry
+        else: return
+
+    def get_entry(entry_number):
+        """
+        Attempts to return a journal entry in the
+        form of a dictionary suitable for json storage.
+        Empty 'date' line terminates (None is returned.)
+        Two empty account number entries in the face of an imbalance will
+        also terminate (None is returned.) 
+        """
+        date_stamp = input("""
+        Each entry must include a date, your name, a transaction description
+        (more than one line is OK, an empty line terminates description entry)
+        and a list of acnts with debits and credits. (Empty line terminates.)
+        Date: """)
+        if not date_stamp: return
+        name = input("    Name: ")
+        description_array = []
+        while True:  # Allow multiline transaction description.
+            description_line = input("    Description: ")
+            if not description_line:
+                break
+            description_array.append(description_line)
+        explanation = '\n'.join(description_array)
+        account_list = []
+        sum_dr = sum_cr = 0
+        tries = 0   # Keep track of blank entries.
+        while True:  # Allow multiple account entries that must balance.
+            print(
+        "  Enter an account number with debit &/or credit. (<--' to quit)")
+            number = input("    Acnt#: ")
+            if not number:  # User is finished?
+                if sum_dr != sum_cr:  # Not allowed to leave imbalance.
+                    print('Debits and Credits must balance!')
+                    if tries > 0:  # Two empty entries in a row
+                        return
+                    else:
+                        tries += 1
+                        continue
+                else: break
+            else: tries = 0  # It's only two in a row that aborts entry.
+            dr = none2int(input("    DR: "))
+            sum_dr += int(dr)
+            cr = none2int(input("    CR: "))
+            sum_cr += int(cr)
+            account_list.append({"acnt":number, "DR":dr, "CR":cr})
+        return {
+            "number":"{:0>4}".format(entry_number),
+            "date":date_stamp,
+            "user":name,
+            "description":explanation,
+            "accounts":account_list
+        }
+
+    def show(self):
+        """Presents a printable version of a journal entry (self.)
+        Returns None if parameter is False in a Boolean context.
+        """
+        if not self: return
+        ret0 = ["Entry {number:0>4} created {date} by {user}"]
+        ret0.append('  {description}')
+        ret1 = ('\n'.join(ret0)).format(**self)
+
+        ret2 = ['{0:>16}{1:>10}'.format("DR", "CR")]
+        for account in self["accounts"]:
+            ret2.append('{number:>6}:{DR:>10}{CR:>10}'
+                            .format(**account))
+        ret3 = '\n'.join(ret2)
+        return '\n'.join([ret1, ret3])
+
 class Journal(object):
     """
     """
@@ -181,7 +271,7 @@ class Journal(object):
         journal_file = os.path.join(
                 self.cofa.home,
                 Journal_name)
-        with open("journal_file", 'r') as f_object:
+        with open(journal_file, 'r') as f_object:
             self.data = json.load(f_object)
 
     def show_entry(entry):
@@ -197,9 +287,19 @@ class Journal(object):
         return '\n  '.join(ret)
 
 
+
 def main():
     args = docopt.docopt(__doc__, version=VERSION)
 #   print(args)
+    if args['new']:
+        if args['--entity'] == create_entity(args['--entity']):
+            print(
+        "An accounting system for '{}' has been successfully created."
+                        .format(args['--entity']))
+    if not args['--entity']:
+        with open(os.path.join(DEFAULT_HOME,
+                    DEFAULT_ENTITY), 'r') as entity_file_object:
+            args['--entity'] = entity_file_object.read()
     if args['show_accounts']:
         cofa = ChartOfAccounts(args['--entity'])
         print(cofa.show())
@@ -208,12 +308,7 @@ def main():
     if args['show_journal']:
         cofa = ChartOfAccounts(args['--entity'])
         journal = Journal(args['--entity'])
-        print(cofa.show())
-    if args['new']:
-        if args['--entity'] == create_entity(args['--entity']):
-            print(
-        "An accounting system for '{}' has been successfully created."
-                        .format(args['--entity']))
+        print(journal.show())
         
 
 if __name__ == '__main__':  # code block to run the application

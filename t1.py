@@ -29,29 +29,45 @@ import src.debk as debk
 
 VERSION = "v0.0.1"
 
+ENTITIES = ['EntityNoAccounts',
+            'EntityPrepopulatedAccounts',
+            ]
+entity_dirs = [os.path.join(debk.DEFAULT_HOME, entity)
+                            for entity in ENTITIES]
+CofA = os.path.join(debk.DEFAULT_HOME, debk.DEFAULT_CofA)
+
 class CreateEntity(unittest.TestCase):
     """Test creation of an accounting entity."""
-
-    entity = debk.ENTITIES['testEntity']
-    entity_dir = os.path.join(debk.DEFAULT_HOME, entity)
-    CofA = os.path.join(debk.DEFAULT_HOME,
-                        debk.DEFAULT_CofA)
 
     def setUp(self):
         """
         """
-        if os.path.isdir(self.entity_dir):  # tearDown not executed
-            shutil.rmtree(self.entity_dir)  # if previous run failed.
-        debk.create_entity(self.entity)
+        for entity_dir in entity_dirs:
+            if os.path.isdir(entity_dir):  # tearDown not executed
+                shutil.rmtree(entity_dir)  # if previous run failed.
+        for entity in ENTITIES:
+            debk.create_entity(entity)
 
     def test_dir_creation(self):
-        self.assertTrue(os.path.isdir(self.entity_dir))
+        for entity_dir in entity_dirs:
+            self.assertTrue(os.path.isdir(entity_dir))
 
-    def test_CofA_creation(self):
+    def test_CofA_creation0(self):
         with open(os.path.join(debk.DEFAULT_HOME,
                                 debk.DEFAULT_CofA), 'r') as f:
             original = f.read()
-        with open(os.path.join(self.entity_dir,
+        with open(os.path.join(debk.DEFAULT_HOME,
+                                ENTITIES[0],
+                                debk.CofA_name), 'r') as f:
+            new = f.read()
+        self.assertEqual(original, new)
+
+    def test_CofA_creation1(self):
+        with open(os.path.join(debk.DEFAULT_HOME,
+                                'kazan15ChartOfAccounts'), 'r') as f:
+            original = f.read()
+        with open(os.path.join(debk.DEFAULT_HOME,
+                                ENTITIES[1],
                                 debk.CofA_name), 'r') as f:
             new = f.read()
         self.assertEqual(original, new)
@@ -59,7 +75,8 @@ class CreateEntity(unittest.TestCase):
     def tearDown(self):
         """
         """
-        shutil.rmtree(self.entity_dir)
+        for entity_dir in entity_dirs:
+            shutil.rmtree(entity_dir)
 
 class CreateAccount(unittest.TestCase):
     """Test account creation.
