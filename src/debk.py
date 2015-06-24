@@ -102,13 +102,13 @@ def create_entity(entity_name):
     Also sets up an empty journal file. (contains only '{}'.)
     Returns <entity_name> if no errors are recognized.
     """
-    cofa_source = os.path.join(
-                DEFAULT_HOME,
+    cofa_source = os.path.join(  # Use a prepopulated chart of
+                DEFAULT_HOME,    # accounts if it exists.
                 entity_name + 'ChartOfAccounts')
     if not os.path.isfile(cofa_source):
         cofa_source = os.path.join(DEFAULT_HOME, DEFAULT_CofA)
     new_dir = os.path.join(DEFAULT_HOME, entity_name)
-    new_CofA = os.path.join(new_dir, CofA_name)
+    new_CofA_file_name = os.path.join(new_dir, CofA_name)
     new_Journal = os.path.join(new_dir, Journal_name)
     meta_source = os.path.join(DEFAULT_HOME, DEFAULT_Metadata)
     meta_dest = os.path.join(new_dir, Metadata_name)
@@ -120,7 +120,7 @@ def create_entity(entity_name):
                     DEFAULT_ENTITY), 'w') as entity_file_object:
             entity_file_object.write(entity_name)
         os.mkdir(new_dir)
-        shutil.copy(cofa_source, new_CofA)
+        shutil.copy(cofa_source, new_CofA_file_name)
         with open(new_Journal, 'w') as journal_file_object:
             journal_file_object.write('{}')
         with open(meta_dest, 'w') as json_file:
@@ -130,7 +130,7 @@ def create_entity(entity_name):
                             .format(entity_name))
     except OSError:
         print("ERROR: Destination '{}' &/or '{}' may not be writeable."
-                            .format(new_CofA, new_Journal))
+                            .format(new_CofA_file_name, new_Journal))
     else:
         return entity_name
 
@@ -242,6 +242,12 @@ class JournalEntry(object):
             "accounts":account_list
         }
 
+    def ok(self):
+        """
+        Checks that a journal entry was actually created.
+        """
+        return hasattr(self, 'data')
+
     def show(self):
         """Presents a printable version of a journal entry (self.)
         Returns None if parameter is False in a Boolean context.
@@ -265,6 +271,12 @@ class Journal(object):
 
     def __init__(self, entity_name):
         """
+        Loads an entity's metadata, chart of accounts, and 
+        all journal entries to date in preparation for further
+        journal entries.
+        In future, may well load only journal entries created
+        since last last end of year close out of the books.
+        As of yet have not dealt with end of year.
         """
         self.entity = entity_name
         self.cofa = ChartOfAccounts(entity_name)

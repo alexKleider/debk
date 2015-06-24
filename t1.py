@@ -23,18 +23,19 @@
 First test suite for debk module.
 """
 import os
+import json
 import shutil
 import unittest
 import src.debk as debk
 
 VERSION = "v0.0.1"
 
+CofA = os.path.join(debk.DEFAULT_HOME, debk.DEFAULT_CofA)
 ENTITIES = ['EntityNoAccounts',
             'EntityPrepopulatedAccounts',
             ]
-entity_dirs = [os.path.join(debk.DEFAULT_HOME, entity)
-                            for entity in ENTITIES]
-CofA = os.path.join(debk.DEFAULT_HOME, debk.DEFAULT_CofA)
+entity_dirs = {entity: os.path.join(debk.DEFAULT_HOME, entity)
+                            for entity in ENTITIES}
 
 class CreateEntity(unittest.TestCase):
     """Test creation of an accounting entity."""
@@ -42,17 +43,23 @@ class CreateEntity(unittest.TestCase):
     def setUp(self):
         """
         """
-        for entity_dir in entity_dirs:
+        for entity_dir in entity_dirs.values():
             if os.path.isdir(entity_dir):  # tearDown not executed
                 shutil.rmtree(entity_dir)  # if previous run failed.
         for entity in ENTITIES:
             debk.create_entity(entity)
 
     def test_dir_creation(self):
-        for entity_dir in entity_dirs:
-            self.assertTrue(os.path.isdir(entity_dir))
+        """
+        Tests that new home directories are created for each entity.
+        """
+        for entity in ENTITIES:
+            self.assertTrue(os.path.isdir(entity_dirs[entity]))
 
-    def test_CofA_creation0(self):
+    def test_CofA_creation_0(self):
+        """
+        Tests creation of a non prepopulated CofA.
+        """
         with open(os.path.join(debk.DEFAULT_HOME,
                                 debk.DEFAULT_CofA), 'r') as f:
             original = f.read()
@@ -62,7 +69,10 @@ class CreateEntity(unittest.TestCase):
             new = f.read()
         self.assertEqual(original, new)
 
-    def test_CofA_creation1(self):
+    def test_CofA_creation_1(self):
+        """
+        Tests creation of a prepopulated CofA.
+        """
         with open(os.path.join(debk.DEFAULT_HOME,
                                 'kazan15ChartOfAccounts'), 'r') as f:
             original = f.read()
@@ -72,11 +82,37 @@ class CreateEntity(unittest.TestCase):
             new = f.read()
         self.assertEqual(original, new)
 
+    def test_JournalCreation(self):
+        """
+        Tests that an empty journal has been created.
+        """
+        for entity_dir in entity_dirs.values():
+            with open(os.path.join(entity_dir, 'Journal.json'),
+                    'r') as journal_file_obj:
+                self.assertTrue(journal_file_obj.read() == '{}') 
+
+    def test_MetadataFileCreation(self):
+        """
+        Tests for a correclty set up json metadata file.
+        """
+        for entity in ENTITIES:
+            match = {"last_journal_entry_number": 0,
+                    "entity_name": entity}
+            with open(os.path.join(entity_dirs[entity],
+                        'Metadata.json'), 'r') as metadata_file_obj:
+                metadata = json.load(metadata_file_obj)
+#               print()
+#               print(match)
+#               print(metadata)
+#               print(entity)
+#               print()
+                self.assertTrue(metadata == match) 
+
     def tearDown(self):
         """
         """
-        for entity_dir in entity_dirs:
-            shutil.rmtree(entity_dir)
+        for entity in ENTITIES:
+            shutil.rmtree(entity_dirs[entity])
 
 class CreateAccount(unittest.TestCase):
     """Test account creation.
