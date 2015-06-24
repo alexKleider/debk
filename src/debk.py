@@ -105,6 +105,7 @@ def create_entity(entity_name):
     cofa_source = os.path.join(  # Use a prepopulated chart of
                 DEFAULT_HOME,    # accounts if it exists.
                 entity_name + 'ChartOfAccounts')
+#   print("#Looking for {}.#".format(cofa_source))
     if not os.path.isfile(cofa_source):
         cofa_source = os.path.join(DEFAULT_HOME, DEFAULT_CofA)
     new_dir = os.path.join(DEFAULT_HOME, entity_name)

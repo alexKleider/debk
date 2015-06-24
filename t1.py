@@ -32,7 +32,7 @@ VERSION = "v0.0.1"
 
 CofA = os.path.join(debk.DEFAULT_HOME, debk.DEFAULT_CofA)
 ENTITIES = ['EntityNoAccounts',
-            'EntityPrepopulatedAccounts',
+            'kazan15',
             ]
 entity_dirs = {entity: os.path.join(debk.DEFAULT_HOME, entity)
                             for entity in ENTITIES}
@@ -74,12 +74,17 @@ class CreateEntity(unittest.TestCase):
         Tests creation of a prepopulated CofA.
         """
         with open(os.path.join(debk.DEFAULT_HOME,
-                                'kazan15ChartOfAccounts'), 'r') as f:
+                        'kazan15ChartOfAccounts'),
+                'r') as f:
             original = f.read()
         with open(os.path.join(debk.DEFAULT_HOME,
                                 ENTITIES[1],
                                 debk.CofA_name), 'r') as f:
             new = f.read()
+#       print()
+#       print(original)
+#       print(new)
+#       print()
         self.assertEqual(original, new)
 
     def test_JournalCreation(self):
