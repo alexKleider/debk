@@ -34,7 +34,7 @@ CofA = os.path.join(debk.DEFAULT_HOME, debk.DEFAULT_CofA)
 ENTITIES = ['EntityNoAccounts',
             'kazan15',
             ]
-entity_dirs = {entity: os.path.join(debk.DEFAULT_HOME, entity)
+entity_dirs = {entity: os.path.join(debk.DEFAULT_HOME, entity+'.d')
                             for entity in ENTITIES}
 
 class CreateEntity(unittest.TestCase):
@@ -64,7 +64,7 @@ class CreateEntity(unittest.TestCase):
                                 debk.DEFAULT_CofA), 'r') as f:
             original = f.read()
         with open(os.path.join(debk.DEFAULT_HOME,
-                                ENTITIES[0],
+                                ENTITIES[0]+'.d',
                                 debk.CofA_name), 'r') as f:
             new = f.read()
         self.assertEqual(original, new)
@@ -78,7 +78,7 @@ class CreateEntity(unittest.TestCase):
                 'r') as f:
             original = f.read()
         with open(os.path.join(debk.DEFAULT_HOME,
-                                ENTITIES[1],
+                                ENTITIES[1]+'.d',
                                 debk.CofA_name), 'r') as f:
             new = f.read()
 #       print()

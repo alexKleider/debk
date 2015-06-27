@@ -66,26 +66,52 @@ VERSION = "0.0.0"
 
 # other constants
 DEFAULT_HOME = '/var/opt/debk.d'
-ENTITIES = dict(
-            kazan15 = 'Kazan15',
-            testEntity = 'TestEntity',
-            )
+# Each entity will have its home directory in DEFAULT_HOME.
+
+# The following files are expected to be in the DEFAULT_HOME directory:
 DEFAULT_CofA = "defaultChartOfAccounts"
+# The default chart of accounts (place holders only.)
+# A file of this name is kept in DEFAULT_HOME to serve as a template
+# during entity creation although a different file can be used, see
+# docstring for create_entity().
 DEFAULT_Metadata = "defaultMetadata.json"
-DEFAULT_ENTITY = 'defaultEntity'
-# Expect there to be DEFAULT_CofA and DEFAULT_Metadata
-# files in DEFAULT_HOME.
+# A template used during entity creation.
+DEFAULT_Entity = "defaultEntity"
+# DEFAULT_Entity  - Keeps track of the last entity accessed and
+# its content serves as the entity chosen if an entity is not
+# specified on the command line.
+
 CofA_name = 'CofA'               # These three files will appear
-Journal_name = 'Journal.json'         # in the home directory
+Journal_name = 'Journal.json'    # in the home directory 
 Metadata_name = 'Metadata.json'  # of each entity.
 
-# Each entity will have its home directory in debk.d.
-
+with open(os.path.join(DEFAULT_HOME, DEFAULT_CofA), 'r') as f:
+    reader = csv.reader(f)
+    CSV_FIELD_NAMES = next(reader)
+expected_field_names = ['code', 'type', 'full_name', 'name',
+                            'notes', 'hidden', 'place_holder']
+# print(CSV_FIELD_NAMES)
+# print(expected_field_names)
+assert CSV_FIELD_NAMES == expected_field_names
 # global variables
 # custom exception types
 # private functions and classes
 # public functions and classes
 # main function
+
+def none2int(n):
+    """ Solves the need to interpret a non-entry as zero."""
+    if not n: return 0
+    else: return int(n)
+
+def next_value(n=0):
+    """ Used to assign numbers to journal entries.
+    The value for 'n' will have to be kept in persistent storage
+    (in metadata.)
+    """
+    while True:
+        n += 1
+        yield n
 
 def create_entity(entity_name):
     """
@@ -95,7 +121,7 @@ def create_entity(entity_name):
     and populates it with a default start up chart of accounts.
     An attempt will be made to find a file name that is the 
     concatenation of the entity name and 'ChartOfAccounts'.
-    If not found, the 'defaultChartOfAccounts' will be used.
+    If not found, the file specified by DEFAULT_CofA will be used.
     Reports error if:
         1. <entity_name> already exists, or
         2. not able to write to new directory.
@@ -108,22 +134,23 @@ def create_entity(entity_name):
 #   print("#Looking for {}.#".format(cofa_source))
     if not os.path.isfile(cofa_source):
         cofa_source = os.path.join(DEFAULT_HOME, DEFAULT_CofA)
-    new_dir = os.path.join(DEFAULT_HOME, entity_name)
+    new_dir = os.path.join(DEFAULT_HOME, entity_name+'.d')
     new_CofA_file_name = os.path.join(new_dir, CofA_name)
     new_Journal = os.path.join(new_dir, Journal_name)
     meta_source = os.path.join(DEFAULT_HOME, DEFAULT_Metadata)
     meta_dest = os.path.join(new_dir, Metadata_name)
-    with open(meta_source, 'r') as json_file:
-        metadata = json.load(json_file)
+    with open(meta_source, 'r') as meta_file:
+        metadata = json.load(meta_file)
     metadata['entity_name'] = entity_name
     try:
+        # The following keeps 
         with open(os.path.join(DEFAULT_HOME,
-                    DEFAULT_ENTITY), 'w') as entity_file_object:
+                    DEFAULT_Entity), 'w') as entity_file_object:
             entity_file_object.write(entity_name)
         os.mkdir(new_dir)
         shutil.copy(cofa_source, new_CofA_file_name)
         with open(new_Journal, 'w') as journal_file_object:
-            journal_file_object.write('{}')
+            journal_file_object.write('{"Journal": []}')
         with open(meta_dest, 'w') as json_file:
             json.dump(metadata, json_file)
     except FileExistsError:
@@ -149,7 +176,7 @@ class ChartOfAccounts(object):
         Loads the chart of accounts belonging to a specified entity.
         """
         self.entity = entity_name
-        self.home = os.path.join(DEFAULT_HOME, entity_name)
+        self.home = os.path.join(DEFAULT_HOME, entity_name+'.d')
         self.cofa_file = os.path.join(self.home, CofA_name)
         self.cofa_dict = {}  # Keyed by account number ('code'.)
         self.code_set = set()
@@ -184,27 +211,39 @@ class ChartOfAccounts(object):
 
 class JournalEntry(object):
     """
+    Each journal entry (self.data) is a dictionary as defined at the end
+    of the JournalEntry.get_entry method declaration.)
     """
     
-    def __init__(self, entry_number):
-        entry = JournalEntry.get_entry(entry_number)
+    def __init__(self, entry):
+        """
+        An instance can be instantiated by providing the dictionary
+        directly or by providing an entry number (as a string.)
+        In the later case, the user is prompted for data entry.
+        """
+        if not (type(entry) is dict):
+            entry = JournalEntry.get_entry(entry)
         if entry: self.data = entry
         else: return
 
     def get_entry(entry_number):
         """
         Attempts to return a journal entry in the
-        form of a dictionary suitable for json storage.
+        form of a dictionary which can be appended to the array
+        kept in the Journal json file inside its single dictionary keyed
+        by 'Journal'.
         Empty 'date' line terminates (None is returned.)
         Two empty account number entries in the face of an imbalance will
         also terminate (None is returned.) 
         """
         date_stamp = input("""
-        Each entry must include a date, your name, a transaction description
-        (more than one line is OK, an empty line terminates description entry)
-        and a list of acnts with debits and credits. (Empty line terminates.)
+    Each entry must include a date, your name, a transaction description
+    (more than one line is OK, an empty line terminates description entry)
+    and a list of acnts with debits and credits. (Empty line terminates.)
         Date: """)
-        if not date_stamp: return
+        if not date_stamp:
+            print()
+            return
         name = input("    Name: ")
         description_array = []
         while True:  # Allow multiline transaction description.
@@ -253,14 +292,15 @@ class JournalEntry(object):
         """Presents a printable version of a journal entry (self.)
         Returns None if parameter is False in a Boolean context.
         """
-        if not self: return
+        if not self.ok(): return
         ret0 = ["Entry {number:0>4} created {date} by {user}"]
         ret0.append('  {description}')
-        ret1 = ('\n'.join(ret0)).format(**self)
+        ret1 = ('\n'.join(ret0)).format(**self.data)
 
         ret2 = ['{0:>16}{1:>10}'.format("DR", "CR")]
-        for account in self["accounts"]:
-            ret2.append('{number:>6}:{DR:>10}{CR:>10}'
+        print(self.data["accounts"])
+        for account in self.data["accounts"]:
+            ret2.append('{acnt:>6}:{DR:>10}{CR:>10}'
                             .format(**account))
         ret3 = '\n'.join(ret2)
         return '\n'.join([ret1, ret3])
@@ -268,7 +308,12 @@ class JournalEntry(object):
 class Journal(object):
     """
     """
-    # code being tested in temp.py
+
+    def show_entry(entry):
+        journal_entry = JournalEntry(entry)
+        return journal_entry.show()
+
+    # code was developed in journal.py
 
     def __init__(self, entity_name):
         """
@@ -278,27 +323,63 @@ class Journal(object):
         In future, may well load only journal entries created
         since last last end of year close out of the books.
         As of yet have not dealt with end of year.
+        Also consider collecting new entries and not even loading
+        those in persistent storage until user decides to save.
+
+        Attributes include:
+            cofa: chart of accounts
+            journal:
+            metadata:
+            cofa_file:
+            journal_file:
+            metadata_file:
         """
-        self.entity = entity_name
-        self.cofa = ChartOfAccounts(entity_name)
-        journal_file = os.path.join(
-                self.cofa.home,
-                Journal_name)
-        with open(journal_file, 'r') as f_object:
-            self.data = json.load(f_object)
+        dir_name = os.path.join(DEFAULT_HOME, entity_name+'.d')
+        self.cofa_file = os.path.join(dir_name, CofA_name)
+        self.journal_file = os.path.join(dir_name, Journal_name)
+        self.metadata_file = os.path.join(dir_name, Metadata_name) 
+        with open(self.cofa_file, 'r') as f_object:
+            self.cofa = [row for row in csv.DictReader(f_object)]
+        with open(self.journal_file, 'r') as f_object:
+            journal_dict = json.load(f_object)
+            print(journal_dict)
+            self.journal = journal_dict["Journal"]
+            # The json file consists of a dict with only one entry keyed
+            # by "journal" and its value is a list of journal entries.
+        with open(self.metadata_file, 'r') as f_object:
+            self.metadata = json.load(f_object)
+        self.last_number = self.metadata['last_journal_entry_number']
+        self.entity_name = entity_name
 
-    def show_entry(entry):
-        pass
+    def save(self):
+#       with open(self.cofa_file, 'w') as f_object:
+#           writer = csv.DictWriter(f_object)
+#           self.cofa = csv.DictWriter(f_object)
+#       May in the future allow adding accounts during journal entry.
+        with open(self.journal_file, 'w', newline='') as f_object:
+            json.dump({"Journal": self.journal}, f_object)
+        with open(self.metadata_file, 'w') as f_object:
+            json.dump(self.metadata, f_object)
 
+    def get_entry(self):
+#       print("\na journal entry is of type {}\n"
+#                   .format(type(self.journal)))
+        new_entry = JournalEntry(self.last_number)
+        if new_entry.ok():
+            self.metadata['last_journal_entry_number'] += 1
+            self.journal.append(new_entry.data)
+            return new_entry
+        # else returns None
 
     def show(self):
         """
         """
-        ret = ['{}  Journal Entries'.format(self.entity)]
-        for entry in self.data:
-            ret.append(show_entry(entry))
+        ret = ['{}  Journal Entries'
+            .format(self.entity_name)]
+        for entry in self.journal:
+#           if entry:
+                ret.append(Journal.show_entry(entry))
         return '\n  '.join(ret)
-
 
 
 def main():
@@ -311,7 +392,7 @@ def main():
                         .format(args['--entity']))
     if not args['--entity']:
         with open(os.path.join(DEFAULT_HOME,
-                    DEFAULT_ENTITY), 'r') as entity_file_object:
+                    DEFAULT_Entity), 'r') as entity_file_object:
             args['--entity'] = entity_file_object.read()
     if args['show_accounts']:
         cofa = ChartOfAccounts(args['--entity'])
@@ -322,6 +403,30 @@ def main():
         cofa = ChartOfAccounts(args['--entity'])
         journal = Journal(args['--entity'])
         print(journal.show())
+    if args['journal_entry']:
+        journal = Journal(args['--entity'])
+        while True:
+            print("Beginning a journal entry.")
+            entry = journal.get_entry()
+            if not entry:
+                print("Breaking out of journal entry.")
+                break
+            else: print(entry.show())
+        if journal.last_number < journal.metadata[
+                                    'last_journal_entry_number']:
+            journal_dict = {'Journal': journal.journal}
+            print("journal_dict (to be stored) is:")
+            print(journal_dict)
+            answer = input("Would you like to save the entries?: ")
+            if answer and (answer[0] in 'yY'):
+                print('Answer was affirmative.  Journal content:')
+                print(journal.show())
+                print("Journal content should have been printed.")
+                with open(journal.journal_file, 'w') as f_object:
+                    json.dump(journal_dict, f_object)
+                with open(journal.metadata_file, 'w') as f_object:
+                    json.dump(journal.metadata, f_object)
+        print("Should now be all over.")
         
 
 if __name__ == '__main__':  # code block to run the application
