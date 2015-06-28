@@ -65,6 +65,8 @@ import docopt
 VERSION = "0.0.0"
 
 # other constants
+EPSILON = 0.01
+
 DEFAULT_HOME = '/var/opt/debk.d'
 # Each entity will have its home directory in DEFAULT_HOME.
 
@@ -99,10 +101,10 @@ assert CSV_FIELD_NAMES == expected_field_names
 # public functions and classes
 # main function
 
-def none2int(n):
+def none2float(n):
     """ Solves the need to interpret a non-entry as zero."""
     if not n: return 0
-    else: return int(n)
+    else: return float(n)
 
 def next_value(n=0):
     """ Used to assign numbers to journal entries.
@@ -260,8 +262,11 @@ class JournalEntry(object):
         "  Enter an account number with debit &/or credit. (<--' to quit)")
             number = input("    Acnt#: ")
             if not number:  # User is finished?
-                if sum_dr != sum_cr:  # Not allowed to leave imbalance.
-                    print('Debits and Credits must balance!')
+                # Not allowed to leave imbalance.
+                imbalance = sum_dr - sum_cr
+                if abs(imbalance) > EPSILON:
+                    print('Imbalance! Dr - Cr = {:,.2f}.'
+                                .format(imbalance))
                     if tries > 0:  # Two empty entries in a row
                         return
                     else:
@@ -269,10 +274,12 @@ class JournalEntry(object):
                         continue
                 else: break
             else: tries = 0  # It's only two in a row that aborts entry.
-            dr = none2int(input("    DR: "))
-            sum_dr += int(dr)
-            cr = none2int(input("    CR: "))
-            sum_cr += int(cr)
+            dr = none2float(input("    DR: "))
+            sum_dr += dr
+            cr = none2float(input("    CR: "))
+            sum_cr += cr
+            print('Dr & Cr values are of type {} and {}.'
+                        .format(type(dr), type(cr)))
             account_list.append({"acnt":number, "DR":dr, "CR":cr})
         return {
             "number":"{:0>4}".format(entry_number),
@@ -300,13 +307,18 @@ class JournalEntry(object):
         ret2 = ['{0:>16}{1:>10}'.format("DR", "CR")]
         print(self.data["accounts"])
         for account in self.data["accounts"]:
-            ret2.append('{acnt:>6}:{DR:>10}{CR:>10}'
+            ret2.append('{acnt:>6}:{DR:>10,.2f}{CR:>10,.2f}'
                             .format(**account))
         ret3 = '\n'.join(ret2)
         return '\n'.join([ret1, ret3])
 
 class Journal(object):
     """
+    Deals with the whole journal, loading it from persistent storage ,
+    adding to it and then sending it back to be stored.
+    See docstring for __init__ method.
+    NOTE: this class's get_entry and show methods rely on 
+    JournalEntry methods get_entry and show_entry methods.
     """
 
     def show_entry(entry):
@@ -364,7 +376,8 @@ class Journal(object):
     def get_entry(self):
 #       print("\na journal entry is of type {}\n"
 #                   .format(type(self.journal)))
-        new_entry = JournalEntry(self.last_number)
+        new_entry = (
+            JournalEntry(self.metadata['last_journal_entry_number']))
         if new_entry.ok():
             self.metadata['last_journal_entry_number'] += 1
             self.journal.append(new_entry.data)
