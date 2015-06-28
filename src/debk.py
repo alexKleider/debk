@@ -119,16 +119,17 @@ def create_entity(entity_name):
     """
     Establishes a new accounting system.
 
-    Creates a new dirctory <entity_name> within DEFAULT_HOME.
-    and populates it with a default start up chart of accounts.
+    Creates a new dirctory '<entity_name>.d' within DEFAULT_HOME
+    and populates it with a set of required files including a
+    default start up chart of accounts.
     An attempt will be made to find a file name that is the 
     concatenation of the entity name and 'ChartOfAccounts'.
     If not found, the file specified by DEFAULT_CofA will be used.
     Reports error if:
         1. <entity_name> already exists, or
         2. not able to write to new directory.
-    Also sets up an empty journal file. (contains only '{}'.)
-    Returns <entity_name> if no errors are recognized.
+    Also sets up an empty journal file and a metadata file.
+    Reports success if no errors are recognized.
     """
     cofa_source = os.path.join(  # Use a prepopulated chart of
                 DEFAULT_HOME,    # accounts if it exists.
@@ -278,11 +279,11 @@ class JournalEntry(object):
             sum_dr += dr
             cr = none2float(input("    CR: "))
             sum_cr += cr
-            print('Dr & Cr values are of type {} and {}.'
-                        .format(type(dr), type(cr)))
+#           print('Dr & Cr values are of type {} and {}.'
+#                       .format(type(dr), type(cr)))
             account_list.append({"acnt":number, "DR":dr, "CR":cr})
         return {
-            "number":"{:0>4}".format(entry_number),
+            "number":"{:0>3}".format(entry_number),
             "date":date_stamp,
             "user":name,
             "description":explanation,
@@ -295,20 +296,36 @@ class JournalEntry(object):
         """
         return hasattr(self, 'data')
 
+    def show_account_line(account_line):
+        """
+        Parameter is expected to be a dict with following keys:
+        'accnt' (type str,) 'DR', 'CR' (both type float.)
+        """
+        ret = dict(acnt= '{:>8}'.format(account_line['acnt']),)
+        if account_line['DR']:
+            ret['DR'] = '{:>10,.2f}'.format(account_line['DR'])
+        else:
+            ret['DR'] = '{:>10}'.format(' ')
+        if account_line['CR']:
+            ret['CR'] = '{:>10,.2f}'.format(account_line['CR'])
+        else:
+            ret['CR'] = '{:>10}'.format(' ')
+        return ('{acnt:>8}:{DR}{CR}'
+                            .format(**ret))
+
     def show(self):
         """Presents a printable version of a journal entry (self.)
         Returns None if parameter is False in a Boolean context.
         """
         if not self.ok(): return
-        ret0 = ["Entry {number:0>4} created {date} by {user}"]
+        ret0 = ["Entry {number} created {date} by {user}"]
         ret0.append('  {description}')
         ret1 = ('\n'.join(ret0)).format(**self.data)
 
-        ret2 = ['{0:>16}{1:>10}'.format("DR", "CR")]
-        print(self.data["accounts"])
+        ret2 = ['  Acnt# {0:^10}{1:^10}'.format("DR", "CR")]
+#       print(self.data["accounts"])
         for account in self.data["accounts"]:
-            ret2.append('{acnt:>6}:{DR:>10,.2f}{CR:>10,.2f}'
-                            .format(**account))
+            ret2.append(JournalEntry.show_account_line(account)) 
         ret3 = '\n'.join(ret2)
         return '\n'.join([ret1, ret3])
 
@@ -354,13 +371,13 @@ class Journal(object):
             self.cofa = [row for row in csv.DictReader(f_object)]
         with open(self.journal_file, 'r') as f_object:
             journal_dict = json.load(f_object)
-            print(journal_dict)
+#           print(journal_dict)
             self.journal = journal_dict["Journal"]
             # The json file consists of a dict with only one entry keyed
             # by "journal" and its value is a list of journal entries.
         with open(self.metadata_file, 'r') as f_object:
             self.metadata = json.load(f_object)
-        self.last_number = self.metadata['last_journal_entry_number']
+        self.next_number = self.metadata['next_journal_entry_number']
         self.entity_name = entity_name
 
     def save(self):
@@ -377,9 +394,9 @@ class Journal(object):
 #       print("\na journal entry is of type {}\n"
 #                   .format(type(self.journal)))
         new_entry = (
-            JournalEntry(self.metadata['last_journal_entry_number']))
+            JournalEntry(self.metadata['next_journal_entry_number']))
         if new_entry.ok():
-            self.metadata['last_journal_entry_number'] += 1
+            self.metadata['next_journal_entry_number'] += 1
             self.journal.append(new_entry.data)
             return new_entry
         # else returns None
@@ -392,7 +409,7 @@ class Journal(object):
         for entry in self.journal:
 #           if entry:
                 ret.append(Journal.show_entry(entry))
-        return '\n  '.join(ret)
+        return '\n'.join(ret)
 
 
 def main():
@@ -419,27 +436,27 @@ def main():
     if args['journal_entry']:
         journal = Journal(args['--entity'])
         while True:
-            print("Beginning a journal entry.")
+#           print("Beginning journal entry.")
             entry = journal.get_entry()
             if not entry:
-                print("Breaking out of journal entry.")
+#               print("Breaking out of journal entry.")
                 break
-            else: print(entry.show())
-        if journal.last_number < journal.metadata[
-                                    'last_journal_entry_number']:
+#           else: print(entry.show())
+        if journal.next_number <= journal.metadata[
+                                    'next_journal_entry_number']:
             journal_dict = {'Journal': journal.journal}
-            print("journal_dict (to be stored) is:")
-            print(journal_dict)
+#           print("journal_dict (to be stored) is:")
+#           print(journal_dict)
             answer = input("Would you like to save the entries?: ")
             if answer and (answer[0] in 'yY'):
                 print('Answer was affirmative.  Journal content:')
                 print(journal.show())
-                print("Journal content should have been printed.")
+#               print("Journal content should have been printed.")
                 with open(journal.journal_file, 'w') as f_object:
                     json.dump(journal_dict, f_object)
                 with open(journal.metadata_file, 'w') as f_object:
                     json.dump(journal.metadata, f_object)
-        print("Should now be all over.")
+#       print("Should now be all over.")
         
 
 if __name__ == '__main__':  # code block to run the application
