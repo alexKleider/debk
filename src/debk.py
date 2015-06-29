@@ -411,6 +411,29 @@ class Journal(object):
                 ret.append(Journal.show_entry(entry))
         return '\n'.join(ret)
 
+    def get(self):
+        while True:
+#           print("Beginning journal entry.")
+            entry = self.get_entry()
+            if not entry:
+#               print("Breaking out of journal entry.")
+                break
+#           else: print(entry.show())
+        if self.next_number <= self.metadata[
+                                    'next_journal_entry_number']:
+            journal_dict = {'Journal': self.journal}
+#           print("journal_dict (to be stored) is:")
+#           print(journal_dict)
+            answer = input("Would you like to save the entries?: ")
+            if answer and (answer[0] in 'yY'):
+                print('Answer was affirmative.  Journal content:')
+                print(self.show())
+#               print("Journal content should have been printed.")
+                with open(self.journal_file, 'w') as f_object:
+                    json.dump(journal_dict, f_object)
+                with open(self.metadata_file, 'w') as f_object:
+                    json.dump(self.metadata, f_object)
+#       print("Should now be all over.")
 
 def main():
     args = docopt.docopt(__doc__, version=VERSION)
@@ -435,28 +458,7 @@ def main():
         print(journal.show())
     if args['journal_entry']:
         journal = Journal(args['--entity'])
-        while True:
-#           print("Beginning journal entry.")
-            entry = journal.get_entry()
-            if not entry:
-#               print("Breaking out of journal entry.")
-                break
-#           else: print(entry.show())
-        if journal.next_number <= journal.metadata[
-                                    'next_journal_entry_number']:
-            journal_dict = {'Journal': journal.journal}
-#           print("journal_dict (to be stored) is:")
-#           print(journal_dict)
-            answer = input("Would you like to save the entries?: ")
-            if answer and (answer[0] in 'yY'):
-                print('Answer was affirmative.  Journal content:')
-                print(journal.show())
-#               print("Journal content should have been printed.")
-                with open(journal.journal_file, 'w') as f_object:
-                    json.dump(journal_dict, f_object)
-                with open(journal.metadata_file, 'w') as f_object:
-                    json.dump(journal.metadata, f_object)
-#       print("Should now be all over.")
+        journal.get()
         
 
 if __name__ == '__main__':  # code block to run the application
