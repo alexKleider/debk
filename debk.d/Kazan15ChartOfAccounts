@@ -1,0 +1,42 @@
+code,type,full_name,name,notes,hidden,place_holder
+1000,ASSET,Assets,Assets,Assets,F,T
+1100,ASSET,Assets:Liquid,Liquid,LiquidAssets,F,T
+1110,ASSET,Assets:Liquid:Bank,Bank,BankAccount,F,F
+1500,ASSET,Assets:Fixed,Fixed,FixedAssets,F,T
+1510,ASSET,Assets:Fixed:Equipment,Equipment,Equipment,F,T
+1511,ASSET,Assets:Fixed:Equipment:Canoes,Canoes,Canoes,F,F
+1512,ASSET,Assets:Fixed:Equipment:Paddles,Paddles,Paddles,F,F
+1513,ASSET,Assets:Fixed:Equipment:Packs,Packs,Packs,F,F
+
+3000,EQUITY,Equity,Equity,Equity,F,T
+3001,EQUITY,Equity:DH,DH,Participant Equity,F,F
+3002,EQUITY,Equity:CW,CW,Participant Equity,F,F
+3003,EQUITY,Equity:SB,SB,Participant Equity,F,F
+3004,EQUITY,Equity:HB,HB,Participant Equity,F,F
+3005,EQUITY,Equity:CD,CD,Participant Equity,F,F
+3006,EQUITY,Equity:JH,JH,Participant Equity,F,F
+3007,EQUITY,Equity:KS,KS,Participant Equity,F,F
+3008,EQUITY,Equity:RS,RS,Participant Equity,F,F
+3009,EQUITY,Equity:KK,KK,Participant Equity,F,F
+3010,EQUITY,Equity:AK,AK,Participant Equity,F,F
+
+2000,LIABILITY,Liabilities,Liabilities,Liabilities,F,T
+2001,LIABILITY,Liability:DH,DH,Value owned,F,F
+2002,LIABILITY,Liability:CW,CW,Value owned,F,F
+2003,LIABILITY,Liability:SB,SB,Value owned,F,F
+2004,LIABILITY,Liability:HB,HB,Value owned,F,F
+2005,LIABILITY,Liability:CD,CD,Value owned,F,F
+2006,LIABILITY,Liability:JH,JH,Value owned,F,F
+2007,LIABILITY,Liability:KS,KS,Value owned,F,F
+2008,LIABILITY,Liability:RS,RS,Value owned,F,F
+2009,LIABILITY,Liability:KK,KK,Value owned,F,F
+2010,LIABILITY,Liability:AK,AK,Value owned,F,F
+
+4000,INCOME,Income,Income,Income,F,T
+4001,INCOME,Income:Interest,Interest,Interest,F,F
+
+5000,EXPENSE,Expenses,Expenses,Expenses,F,T
+5020,EXPENSE,Expenses:KasbaLodge,KasbaLodge,Charter, freight and float,F,F
+5030,EXPENSE,Expenses:CalmAir,CalmAir,Return flight & freight,F,F
+5040,EXPENSE,Expenses:Pakcanoe,Pakcanoe,Canoes & accessories,F,F
+
