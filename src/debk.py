@@ -169,9 +169,13 @@ class ChartOfAccounts(object):
     """
     A class to manage an entity's chart of accounts.
     Instantiation loads such a chart from a file.
-    Methods are planned to show the accounts in various way.
-    I expect that there'll be a method to create journal entries 
-    and have them posted to the relevant accounts.
+    The 'show' method returns text displaying the accounts in a way
+    determined by the 'verbosity' parameter:
+        0: Listing if the accounts only.
+        1: Accounts with totals.
+        2: Accounts with all entries affecting each account.
+    Zeroing out of the temporary (Expenses and Income) accounts is for
+    now being left for the user to do using journal entries.
     """
 
     def __init__(self, entity_name):
@@ -194,9 +198,16 @@ class ChartOfAccounts(object):
                 self.code_set.add(row['code'])
                 self.cofa_dict[row['code']] = row
 
-    def show(self):
+    def show(self, verbosity=0):
         """
         """
+        if verbosity:
+
+            journal = Journal(self.entity_name)
+            for entry in journal.journal:
+                for acnt_code in entry["acounts"]:
+                    # add Dr|Cr to self.cofa_dict[acnt_code][Dr|Cr]
+                    pass
         acnt_codes = sorted(self.cofa_dict)
 #       print(acnt_codes)
         ret = ['{} Chart of Accounts'.format(self.entity)]
