@@ -30,5 +30,6 @@ Ledger follows:
 rm -r /var/opt/debk.d/Kazan15.d
 cp output output.dos
 todos output.dos
+mv output.dos ~/Sask/Kazan15/
 vim output
 

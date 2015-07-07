@@ -68,6 +68,7 @@ VERSION = "0.0.0"
 
 # other constants
 EPSILON = 0.01
+i_mult = 2  # Indentation multiplier
 
 DEFAULT_HOME = '/var/opt/debk.d'
 # Each entity will have its home directory in DEFAULT_HOME.
@@ -116,6 +117,32 @@ def next_value(n=0):
     while True:
         n += 1
         yield n
+
+def set_indentation(indentation_level, 
+                    previous_place_holder_value,
+                    current_place_holder_value,
+                    account_code):
+    """Uses the account's place_holder value to algorithmicly change
+    indentation_level. The first two parameters are both changed.
+    Tried to use a generator but didn't work."""
+    assert current_place_holder_value in {'T', 'F'}
+    if account_code in {'1000', '2000', '3000', '4000', '5000'}:
+        return(0, 'T')
+#   print("PREVIOUS AND CURRENT: {}, {}"
+#       .format(previous_place_holder_value,
+#               current_place_holder_value))
+    if previous_place_holder_value == 'T':
+        indentation_level += 1
+    elif (previous_place_holder_value == 'F' and 
+            current_place_holder_value == 'T'):
+        indentation_level -= 1
+    previous_place_holder_value = current_place_holder_value
+#   print("PREVIOUS AND CURRENT: {}, {}"
+#       .format(previous_place_holder_value,
+#               current_place_holder_value))
+#   print("INDENT SET TO {}.".format(indentation_level))
+    return (indentation_level, previous_place_holder_value)
+
 
 def create_entity(entity_name):
     """
@@ -472,7 +499,7 @@ def show_account_balances(args):
     respective accounts returning a multiline string showing entries
     and balances for each account.
     """
-    format_line = "{:>10}{:^10}{:^10}{}{}"
+    format_line = "{}{:>10}{:^10}{:^10}{}{}"
     journal = Journal(args['--entity'])
     for entry in journal.journal:  # Populated journal.cofa.posted
         for line_entry in entry['line_entries']:
@@ -484,33 +511,48 @@ def show_account_balances(args):
             journal.cofa.posted[line_entry['acnt']].append(d)
 
     header = "Account Balances"
-    ret = [header, " "*len(header)]
+    ret = [header, "-"*len(header)]
     dr_check = cr_check = 0  # Keep track of totals of all accounts.
     fixed_assets = expenses = 0  # Keep running totals of these.
+    indent = 0  # Keep track of indentation level.
+    place_holder = ''
     for account_code in journal.cofa.ordered_codes:
-        ret.append("{:<5}{}"
-            .format(
+        if journal.cofa.cofa_dict[account_code]['place_holder'] == 'T':
+            header_choice = 'full_name'
+        else:
+            header_choice = 'name'
+        indent, place_holder = (
+            set_indentation(indent,   # { These two parameters
+                    place_holder,     # {    are modified.
+                    journal.cofa.cofa_dict[account_code]['place_holder'],
+                    account_code))
+        ret.append("{}{:<5}{}"
+            .format("{}".format(' '*i_mult*indent),
                 journal.cofa.cofa_dict[account_code]['code'],
-                journal.cofa.cofa_dict[account_code]['name']))
+                journal.cofa.cofa_dict[account_code][header_choice]))
         if args['--verbosity'] > 0:  # No point if user doesn't want it.
             if account_code in journal.cofa.posted:
                 dr = cr = 0  # Debit and credit running totals.
                 ret.append(format_line
-                    .format("Entry#", 'Debits', 'Credits', ' ', ' '))
+                    .format("{}".format(' '*i_mult*indent),
+                            "Entry#", 'Debits', 'Credits', 'Balance', ' '))
                 for line_entry in journal.cofa.posted[account_code]:
                     if line_entry['DR']:
                         dr += line_entry['DR']
                         new_line = (format_line
-                            .format(line_entry['journal_entry_number'],
+                            .format("{}".format(' '*i_mult*indent),
+                                    line_entry['journal_entry_number'],
                                     line_entry['DR'], ' ', ' ', ' '))
                     if line_entry['CR']:
                         cr += line_entry['CR']
                         new_line = (format_line
-                            .format(line_entry['journal_entry_number'],
+                            .format("{}".format(' '*i_mult*indent),
+                                    line_entry['journal_entry_number'],
                                     ' ', line_entry['CR'], ' ', ' '))
                     if line_entry['DR'] and line_entry['CR']:
                         new_line = (format_line
-                            .format(line_entry['journal_entry_number'],
+                            .format("{}".format(' '*i_mult*indent),
+                                    line_entry['journal_entry_number'],
                                     line_entry['DR'], line_entry['CR'],
                                     ' ', ' '))
                     ret.append(new_line)
@@ -518,7 +560,8 @@ def show_account_balances(args):
                     dr -= cr
                     dr_check += dr
                     ret.append(format_line
-                        .format("Balance:", ' ', ' ',
+                        .format("{}".format(' '*i_mult*indent),
+                                ' ', ' ', ' ',
                         '{:.2f}'.format(dr), 'Dr'))
                     if account_code[:1] == '5':
                         expenses += dr
@@ -528,9 +571,10 @@ def show_account_balances(args):
                     cr -= dr
                     cr_check += cr
                     ret.append(format_line
-                        .format("Balance:", ' ', ' ',
+                        .format("{}".format(' '*i_mult*indent),
+                                "Balance:", ' ', ' ',
                         '{:.2f}'.format(cr), 'Cr'))
-    ret.append("The following should balance: {}Dr and {}Cr."
+    ret.append("The following should balance: {:.2f}Dr and {:.2f}Cr."
                 .format(dr_check, cr_check))
     ret.append("""
 Value of fixed assets: {:.2f}
@@ -542,7 +586,7 @@ Value of fixed assets: {:.2f}
 Total of all expenses: {:.2f}
     This should be divided into 10 equal parts and charged
     against the participants' equity accounts.
-    See entry #017 to see if this process has been comleted.
+    See entry #017 to see if this process has been completed.
     (If the value given above doesn't match that value in entry 017,
     then an update is required.)
 """
