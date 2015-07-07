@@ -32,7 +32,7 @@ VERSION = "v0.0.1"
 
 CofA = os.path.join(debk.DEFAULT_HOME, debk.DEFAULT_CofA)
 ENTITIES = ['EntityNoAccounts',
-            'kazan15',
+            'Kazan15',
             ]
 entity_dirs = {entity: os.path.join(debk.DEFAULT_HOME, entity+'.d')
                             for entity in ENTITIES}
@@ -74,7 +74,7 @@ class CreateEntity(unittest.TestCase):
         Tests creation of a prepopulated CofA.
         """
         with open(os.path.join(debk.DEFAULT_HOME,
-                        'kazan15ChartOfAccounts'),
+                        'Kazan15ChartOfAccounts'),
                 'r') as f:
             original = f.read()
         with open(os.path.join(debk.DEFAULT_HOME,
@@ -94,14 +94,15 @@ class CreateEntity(unittest.TestCase):
         for entity_dir in entity_dirs.values():
             with open(os.path.join(entity_dir, 'Journal.json'),
                     'r') as journal_file_obj:
-                self.assertTrue(journal_file_obj.read() == '{}') 
+                self.assertTrue(
+                    journal_file_obj.read() == '{"Journal": []}') 
 
     def test_MetadataFileCreation(self):
         """
         Tests for a correclty set up json metadata file.
         """
         for entity in ENTITIES:
-            match = {"last_journal_entry_number": 0,
+            match = {"next_journal_entry_number": 1,
                     "entity_name": entity}
             with open(os.path.join(entity_dirs[entity],
                         'Metadata.json'), 'r') as metadata_file_obj:

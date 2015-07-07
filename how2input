@@ -1,0 +1,27 @@
+Rather than do data entry manually, I've used redirection to load the
+journal entries.
+The whole thing can be further automated using a small bash script.
+See k15.sh for my example.  
+
+The following are the rules one must follow when building an input file.
+(The file 'input' provides an example; it's the file I've been using.)
+
+
+There must be 2 blank lines between the last Credit line of the last
+entry and the final 'yes'.
+
+There must be one blank line between last Credit of one entry and
+the date of the next entry.
+
+Each entry consists of:
+    date
+    user
+    description lines
+    one blank line
+      (to signal that there are no more description lines to enter)
+    two or more triple lines:
+        first is account code
+        second is debit entry   { Use zero if there is
+        third is credit entry   {  no value to enter.
+    a blank line (to signal end of the entry-
+            Referrece to this line was already made above.)

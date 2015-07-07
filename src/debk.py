@@ -26,12 +26,14 @@ Usage:
   debk.py -h | --version
   debk.py new --entity=ENTITY
   debk.py show_accounts [--entity=ENTITY]
+  debk.py [-v|-vv|-vvv] show_account_balances [--entity=ENTITY]
   debk.py show_journal [--entity=ENTITY]
   debk.py journal_entry [--entity=ENTITY]
 
 Options:
   -h --help  Print usage statement.
   --version  Print version.
+  -v --verbosity  How much info to show [default: 0]
   --entity=ENTITY  Specify entity.
 
 Commands:
@@ -182,10 +184,14 @@ class ChartOfAccounts(object):
         """
         Loads the chart of accounts belonging to a specified entity.
         """
-        self.entity = entity_name
+        self.entity_name = entity_name
         self.home = os.path.join(DEFAULT_HOME, entity_name+'.d')
         self.cofa_file = os.path.join(self.home, CofA_name)
         self.cofa_dict = {}  # Keyed by account number ('code'.)
+        self.posted = {} # Keyed by 'code',
+                         # Values are dicts keyed by
+                         #     journal_entry_number  and
+                         #     the keys of journal-entry-lines
         self.code_set = set()
         with open(self.cofa_file, 'r') as cofa_file_object:
             reader = csv.DictReader(cofa_file_object)
@@ -197,9 +203,11 @@ class ChartOfAccounts(object):
                     sys.exit()
                 self.code_set.add(row['code'])
                 self.cofa_dict[row['code']] = row
+        self.ordered_codes = sorted([key for key in self.code_set])
 
-    def show(self, verbosity=0):
+    def show(self, verbosity=0):    
         """
+        # Will probably do this within the Journal class
         """
         if verbosity:
 
@@ -223,10 +231,31 @@ class ChartOfAccounts(object):
                         + place_holder_indicator)
         return '\n'.join(ret)
 
+class LineEntry(object):
+    """
+    Each instance has the following attributes:
+    acnt   a chart of accounts code/number
+    DR     a debit amount
+    CR     a credit amount
+    """
+    
+    def __init__(self, acnt, DR, CR):
+        self.acnt = acnt
+        self.DR = DR
+        self.CR = CR
+
+
 class JournalEntry(object):
     """
-    Each journal entry (self.data) is a dictionary as defined at the end
-    of the JournalEntry.get_entry method declaration.)
+    Each journal entry (self.data) is 
+    a dictionary: dict(
+            number: "{:0>3}".format(entry_number),
+            date: date_stamp,
+            user: name,
+            description: explanation,
+            line_entries: list of LineEntry object dictionaries     )
+    (We use 'data' rather than individual attributes to allow persistent
+    storage in a json file.
     """
     
     def __init__(self, entry):
@@ -266,7 +295,7 @@ class JournalEntry(object):
                 break
             description_array.append(description_line)
         explanation = '\n'.join(description_array)
-        account_list = []
+        line_entries = []
         sum_dr = sum_cr = 0
         tries = 0   # Keep track of blank entries.
         while True:  # Allow multiple account entries that must balance.
@@ -277,8 +306,8 @@ class JournalEntry(object):
                 # Not allowed to leave imbalance.
                 imbalance = sum_dr - sum_cr
                 if abs(imbalance) > EPSILON:
-                    print('Imbalance! Dr - Cr = {:,.2f}.'
-                                .format(imbalance))
+                    print('Imbalance! Dr - Cr = {:,.2f}. (Entry #{})'
+                                .format(imbalance, entry_number))
                     if tries > 0:  # Two empty entries in a row
                         return
                     else:
@@ -292,14 +321,14 @@ class JournalEntry(object):
             sum_cr += cr
 #           print('Dr & Cr values are of type {} and {}.'
 #                       .format(type(dr), type(cr)))
-            account_list.append({"acnt":number, "DR":dr, "CR":cr})
-        return {
-            "number":"{:0>3}".format(entry_number),
-            "date":date_stamp,
-            "user":name,
-            "description":explanation,
-            "accounts":account_list
-        }
+            line_entries.append(dict(acnt= number, DR= dr, CR= cr))
+        return dict(
+            number= "{:0>3}".format(entry_number),
+            date= date_stamp,
+            user= name,
+            description= explanation,
+            line_entries= line_entries
+            )
 
     def ok(self):
         """
@@ -307,18 +336,18 @@ class JournalEntry(object):
         """
         return hasattr(self, 'data')
 
-    def show_account_line(account_line):
+    def show_line_entry(line_entry):
         """
         Parameter is expected to be a dict with following keys:
         'accnt' (type str,) 'DR', 'CR' (both type float.)
         """
-        ret = dict(acnt= '{:>8}'.format(account_line['acnt']),)
-        if account_line['DR']:
-            ret['DR'] = '{:>10,.2f}'.format(account_line['DR'])
+        ret = dict(acnt= '{:>8}'.format(line_entry['acnt']),)
+        if line_entry['DR']:
+            ret['DR'] = '{:>10,.2f}'.format(line_entry['DR'])
         else:
             ret['DR'] = '{:>10}'.format(' ')
-        if account_line['CR']:
-            ret['CR'] = '{:>10,.2f}'.format(account_line['CR'])
+        if line_entry['CR']:
+            ret['CR'] = '{:>10,.2f}'.format(line_entry['CR'])
         else:
             ret['CR'] = '{:>10}'.format(' ')
         return ('{acnt:>8}:{DR}{CR}'
@@ -335,8 +364,8 @@ class JournalEntry(object):
 
         ret2 = ['  Acnt# {0:^10}{1:^10}'.format("DR", "CR")]
 #       print(self.data["accounts"])
-        for account in self.data["accounts"]:
-            ret2.append(JournalEntry.show_account_line(account)) 
+        for line_entry in self.data["line_entries"]:
+            ret2.append(JournalEntry.show_line_entry(line_entry)) 
         ret3 = '\n'.join(ret2)
         return '\n'.join([ret1, ret3])
 
@@ -368,18 +397,13 @@ class Journal(object):
 
         Attributes include:
             cofa: chart of accounts
-            journal:
-            metadata:
-            cofa_file:
-            journal_file:
-            metadata_file:
+            journal:               journal_file:
+            metadata:              metadata_file:
         """
         dir_name = os.path.join(DEFAULT_HOME, entity_name+'.d')
-        self.cofa_file = os.path.join(dir_name, CofA_name)
+        self.cofa = ChartOfAccounts(entity_name)
         self.journal_file = os.path.join(dir_name, Journal_name)
         self.metadata_file = os.path.join(dir_name, Metadata_name) 
-        with open(self.cofa_file, 'r') as f_object:
-            self.cofa = [row for row in csv.DictReader(f_object)]
         with open(self.journal_file, 'r') as f_object:
             journal_dict = json.load(f_object)
 #           print(journal_dict)
@@ -389,7 +413,6 @@ class Journal(object):
         with open(self.metadata_file, 'r') as f_object:
             self.metadata = json.load(f_object)
         self.next_number = self.metadata['next_journal_entry_number']
-        self.entity_name = entity_name
 
     def save(self):
 #       with open(self.cofa_file, 'w') as f_object:
@@ -416,7 +439,7 @@ class Journal(object):
         """
         """
         ret = ['{}  Journal Entries'
-            .format(self.entity_name)]
+            .format(self.cofa.entity_name)]
         for entry in self.journal:
 #           if entry:
                 ret.append(Journal.show_entry(entry))
@@ -440,11 +463,92 @@ class Journal(object):
                 print('Answer was affirmative.  Journal content:')
                 print(self.show())
 #               print("Journal content should have been printed.")
-                with open(self.journal_file, 'w') as f_object:
-                    json.dump(journal_dict, f_object)
-                with open(self.metadata_file, 'w') as f_object:
-                    json.dump(self.metadata, f_object)
+                self.save()
 #       print("Should now be all over.")
+
+def show_account_balances(args):
+    """
+    Runs through all the journal entries and posts them to the
+    respective accounts returning a multiline string showing entries
+    and balances for each account.
+    """
+    format_line = "{:>10}{:^10}{:^10}{}{}"
+    journal = Journal(args['--entity'])
+    for entry in journal.journal:  # Populated journal.cofa.posted
+        for line_entry in entry['line_entries']:
+            journal.cofa.posted.setdefault(line_entry['acnt'], [])
+            d = dict(journal_entry_number= entry['number'],
+                        acnt= line_entry['acnt'],
+                        DR= line_entry['DR'],
+                        CR= line_entry['CR'])
+            journal.cofa.posted[line_entry['acnt']].append(d)
+
+    header = "Account Balances"
+    ret = [header, " "*len(header)]
+    dr_check = cr_check = 0  # Keep track of totals of all accounts.
+    fixed_assets = expenses = 0  # Keep running totals of these.
+    for account_code in journal.cofa.ordered_codes:
+        ret.append("{:<5}{}"
+            .format(
+                journal.cofa.cofa_dict[account_code]['code'],
+                journal.cofa.cofa_dict[account_code]['name']))
+        if args['--verbosity'] > 0:  # No point if user doesn't want it.
+            if account_code in journal.cofa.posted:
+                dr = cr = 0  # Debit and credit running totals.
+                ret.append(format_line
+                    .format("Entry#", 'Debits', 'Credits', ' ', ' '))
+                for line_entry in journal.cofa.posted[account_code]:
+                    if line_entry['DR']:
+                        dr += line_entry['DR']
+                        new_line = (format_line
+                            .format(line_entry['journal_entry_number'],
+                                    line_entry['DR'], ' ', ' ', ' '))
+                    if line_entry['CR']:
+                        cr += line_entry['CR']
+                        new_line = (format_line
+                            .format(line_entry['journal_entry_number'],
+                                    ' ', line_entry['CR'], ' ', ' '))
+                    if line_entry['DR'] and line_entry['CR']:
+                        new_line = (format_line
+                            .format(line_entry['journal_entry_number'],
+                                    line_entry['DR'], line_entry['CR'],
+                                    ' ', ' '))
+                    ret.append(new_line)
+                if dr > cr:
+                    dr -= cr
+                    dr_check += dr
+                    ret.append(format_line
+                        .format("Balance:", ' ', ' ',
+                        '{:.2f}'.format(dr), 'Dr'))
+                    if account_code[:1] == '5':
+                        expenses += dr
+                    if account_code[:2] == '15':
+                        fixed_assets += dr
+                else:
+                    cr -= dr
+                    cr_check += cr
+                    ret.append(format_line
+                        .format("Balance:", ' ', ' ',
+                        '{:.2f}'.format(cr), 'Cr'))
+    ret.append("The following should balance: {}Dr and {}Cr."
+                .format(dr_check, cr_check))
+    ret.append("""
+Value of fixed assets: {:.2f}
+    The above should be totaled and divided up into eight parts
+    to be moved from the 'equity' to the 'liability' accounts
+    of the 'group of 8'.
+    This has already been done (Journal entry 018) but may have
+    to be updated if more 'fixed asset' entries are made.
+Total of all expenses: {:.2f}
+    This should be divided into 10 equal parts and charged
+    against the participants' equity accounts.
+    See entry #017 to see if this process has been comleted.
+    (If the value given above doesn't match that value in entry 017,
+    then an update is required.)
+"""
+                    .format(fixed_assets, expenses))
+    return '\n'.join(ret)
+
 
 def main():
     args = docopt.docopt(__doc__, version=VERSION)
@@ -464,13 +568,14 @@ def main():
 #       for key in cofa.cofa_dict:
 #           print("{:<6}{}".format(key, cofa.cofa_dict[key]))
     if args['show_journal']:
-        cofa = ChartOfAccounts(args['--entity'])
+#       cofa = ChartOfAccounts(args['--entity'])
         journal = Journal(args['--entity'])
         print(journal.show())
     if args['journal_entry']:
         journal = Journal(args['--entity'])
         journal.get()
-        
+    if args['show_account_balances']:
+        print(show_account_balances(args))
 
 if __name__ == '__main__':  # code block to run the application
     main()
