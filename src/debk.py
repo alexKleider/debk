@@ -43,32 +43,25 @@ Commands:
   journal_entry provides for user entry.
 
 Comments:
-  The --entity=ENTITY option is mandatory with the 'mew' command.
-  For the other commands, and attempt will be made to read the 
-
+  The --entity=ENTITY option is mandatory with the 'new' command.
+  For the other commands, an attempt will be made to set the entity to
+  the last one used (and persistently stored in
+  DEFULT_HOME/DEFAULT_Entity.
 """
-#
-# hash-bang line
-# encoding cookie
-# licence
-# doc string explaining what the module does
-# from __future__ imports
-# import standard library modules
+
 import os
 import sys
+import curses.ascii
 import shutil
 import json
 import csv
 
-# import custom modules
 import docopt
 
-# metadata such as version number
 VERSION = "0.0.0"
 
-# other constants
 EPSILON = 0.01
-i_mult = 2  # Indentation multiplier
+INDENTATION_MULTIPLIER = 2  
 
 DEFAULT_HOME = '/var/opt/debk.d'
 # Each entity will have its home directory in DEFAULT_HOME.
@@ -98,11 +91,6 @@ expected_field_names = ['code', 'type', 'full_name', 'name',
 # print(CSV_FIELD_NAMES)
 # print(expected_field_names)
 assert CSV_FIELD_NAMES == expected_field_names
-# global variables
-# custom exception types
-# private functions and classes
-# public functions and classes
-# main function
 
 def none2float(n):
     """ Solves the need to interpret a non-entry as zero."""
@@ -117,6 +105,19 @@ def next_value(n=0):
     while True:
         n += 1
         yield n
+
+def dr_or_cr(code):
+    """
+    Returns the account type, either 'DR' or 'CR' 
+    determined by the account's code/number.
+    Later processing may change an Accounts type to
+    'place_holder'.
+    """
+    number = int(code)
+    if  number  <= 1999: return('DR')   # Assets
+#   elif number <= 3999: return('CR')   # Liabilities and Equity
+    elif number <= 4999: return('CR')   # Income
+    elif number <= 5999: return('DR')   # Expenses
 
 def set_indentation(indentation_level, 
                     previous_place_holder_value,
@@ -194,12 +195,187 @@ def create_entity(entity_name):
     else:
         return entity_name
 
+class LineEntry(object): 
+    """
+    Serves as a line entry for accounts, NOT journal.
+    Each instance has the following attributes:
+        num    a journal entry number
+        DR     a debit amount
+        CR     a credit amount
+    An instance of one of the line_entries of a Journal instance
+    can be used to populate the DR and CR keys but the num key value
+    (the Journal instance's number) must be known as well.
+    Instances of LineEntry are used to populate the line_entries
+    attribute of instances of the Account class which is in turn used
+    by the ChartOfAccounts class.
+    """
+    
+    def __init__(self, dr, cr, entry_number):
+        self.entry_number = entry_number
+        self.DR = dr
+        self.CR = cr
+
+    def show(self):
+        return ("{}  {:>10.2f}Dr   {:>10.2f}Cr"
+                .format(self.entry_number, self.DR, self.CR))
+
+class Account(object):
+    """Provides data type for values of the dict
+    ChartOfAccounts.accounts keyed by account code.
+    """
+
+    def __init__(self, csv):
+        self.csv = csv
+        self.code = csv['code']
+        self.line_entries = []  # list of LineEntry objects.
+        self.balance = 0
+        self.dr_cr = ''  # Specifies if the balance is 'DR' or 'CR'
+        if csv['place_holder'] in 'tT':
+            self.place_holder = True 
+            self.acnt_type = 'place_holder'
+        else:
+            self.place_holder = False 
+            self.acnt_type = dr_or_cr(self.code)  # Specifies account type.
+                # Possible values: 'DR', 'CR', 'place_holder'
+
+    def dump(self):
+        """ A 'quick and dirty' way to show an account.
+        Expect to only use it during development.
+        """
+        ret = ['Account#{}'.format(self.code)]
+        if self.place_holder: ret.append("Place holder.")
+        else: 
+            ret.append("{} {:.2f}".format(self.dr_cr, self.balance))
+        ret = [' '.join(ret)]
+        for line_entry in self.line_entries:
+            ret.append(line_entry.show())
+        return '\n'.join(ret)
+
+    def update_balance(self):
+        """
+        Traverses line_entries to populate the balance and dr_cr
+        attributes.  Accounts (all the place holder accounts for sure)
+        with no entries will continue to have their dr_cr attribute set
+        to the empty string.
+        Note: the line_entries themselves are populated by the
+        ChartOfAccounts load_journal method.
+        """
+        if self.csv['place_holder'] == 'T':
+            return  # Defaults have already been set.
+        dr = cr = 0
+        for line_entry in self.line_entries:
+            dr += line_entry.DR
+            cr += line_entry.CR
+        if dr > cr:
+            self.balance = dr - cr
+            self.dr_cr = 'DR'
+        elif dr < cr:
+            self.balance = cr - dr
+            self.dr_cr = 'CR'
+        else:  
+            assert self.balance == 0
+#           self.dr_cr = ' '
+            self.dr_cr = ''
+
+    def show_balance(self, indent = 0):
+        """Returns a string representation of an account's balance
+        formatted to serve as a last line.  Use strip method if you want
+        just the value.
+        ########  CURRENTLY SEEMS NOT TO WORK  ##################
+        """
+        if self.dr_cr == 'DR':
+            dr_cr_type = 'Dr'
+        elif self.dr_cr == 'CR':
+            dr_cr_type = 'Cr'
+        else:
+            dr_cr_type = 'Unspecified'
+        return(ChartOfAccounts.format_line
+            .format("{}".format(' '*INDENTATION_MULTIPLIER*indent),
+                    ' ', ' ', ' ',
+                    '{:.2f}'.format(self.balance),
+                    dr_cr_type))
+
+
+    def show(self, args, indent = 0, place_holder = 0):
+        """
+        Returns a string representation of itself (an account.)
+        The 'place_holder' parameter is used to control indentation.
+        """
+        print("Calling the show method on an account. (verbosity is {})"
+                .format(args['--verbosity']))
+        ret = []
+        assert type(self.place_holder) == type(True) 
+        if self.place_holder is True:
+            header_choice = 'full_name'
+        elif self.place_holder is False:
+            header_choice = 'name'
+        else: 
+            print("ERROR Condition: place holder neither T nor F")
+        indent, place_holder = (
+                set_indentation(indent,   # { These two parameters
+                        place_holder,     # {    are modified.
+                        self.csv['place_holder'],
+                        self.code))
+        header_line =("{}{:<5}{}"
+            .format("{}".format(' '*INDENTATION_MULTIPLIER*indent),
+                self.code,
+                self.csv[header_choice]))
+        if args['--verbosity'] == 1:
+            print('--verbosity is only 1')
+            return header_line + ('{:>6.2f}{}'
+                                .format(self.balance, self.dr_cr))
+        ret = [header_line]
+        if args['--verbosity'] > 1:
+            print('--verbosity is > 1')
+            if self.line_entries:
+                print("There are entries for this account ({})"
+                        .format(self.code))
+                ret.append(ChartOfAccounts.format_line
+                    .format("{}".format(' '*INDENTATION_MULTIPLIER*indent),
+                            "Entry#", 'Debits', 'Credits', 'Balance', ' '))
+                for line_entry in (self.line_entries):
+                    if line_entry.DR:
+                        new_line = (ChartOfAccounts.format_line
+                            .format("{}"
+                                .format(' '*INDENTATION_MULTIPLIER*indent),
+                                        line_entry.entry_number,
+                                        line_entry.DR, ' ', ' ', ' '))
+                    if line_entry.CR:
+                        cr_check += line_entry.DR
+                        new_line = (ChartOfAccounts.format_line
+                            .format("{}".format(' '*i_mult*indent),
+                                    line_entry.entry_number,
+                                    ' ', line_entry.CR, ' ', ' '))
+                    if line_entry.DR and line_entry.CR:
+                        new_line = (ChartOfAccounts.format_line
+                            .format("{}".format(' '*i_mult*indent),
+                                    line_entry.entry_number,
+                                    line_entry.DR, line_entry.CR,
+                                    ' ', ' '))
+                    ret.append(new_line)
+                if account.dr_cr == 'DR':
+                    dr_cr_type = 'Dr'
+                else: dr_cr_type = 'Cr'
+                ret.append(ChartOfAccounts.format_line
+                    .format("{}".format(' '*i_mult*indent),
+                            ' ', ' ', ' ',
+                            '{:.2f}'.format(account.balance),
+                            dr_cr_type))
+            else:
+                print("There are no entries for this account!!!")
+        return '\n'.join(ret)
+
+
+
 class ChartOfAccounts(object):
     """
     A class to manage an entity's chart of accounts.
-    Instantiation loads such a chart from a file.
-    The 'show' method returns text displaying the accounts in a way
-    determined by the 'verbosity' parameter:
+    Instantiation loads such a chart from a file 
+    but this includes only what's in the CSV file,
+    NOT any accounting information. When accounting
+    information is required, it is calculated on the fly.  
+    The 'show' method returns text displaying the accounts
+    in a way determined by the 'verbosity' parameter:
         0: Listing if the accounts only.
         1: Accounts with totals.
         2: Accounts with all entries affecting each account.
@@ -207,18 +383,18 @@ class ChartOfAccounts(object):
     now being left for the user to do using journal entries.
     """
 
+    format_line = "{}{:>10}{:^10}{:^10}{}{}"
+
     def __init__(self, entity_name):
         """
         Loads the chart of accounts belonging to a specified entity.
+        The accounts attribute is a dict keyed by account codes and
+        values are instances of the Account class.
         """
-        self.entity_name = entity_name
+        self.entity_name = entity_name  # Used by self.load_journal().
         self.home = os.path.join(DEFAULT_HOME, entity_name+'.d')
         self.cofa_file = os.path.join(self.home, CofA_name)
-        self.cofa_dict = {}  # Keyed by account number ('code'.)
-        self.posted = {} # Keyed by 'code',
-                         # Values are dicts keyed by
-                         #     journal_entry_number  and
-                         #     the keys of journal-entry-lines
+        self.csv_dict = {}  # Keyed by account number ('code'.)
         self.code_set = set()
         with open(self.cofa_file, 'r') as cofa_file_object:
             reader = csv.DictReader(cofa_file_object)
@@ -229,47 +405,142 @@ class ChartOfAccounts(object):
                     print("Fix before rerunning the script.")
                     sys.exit()
                 self.code_set.add(row['code'])
-                self.cofa_dict[row['code']] = row
+                self.csv_dict[row['code']] = row
         self.ordered_codes = sorted([key for key in self.code_set])
+        self.accounts = {key:
+                Account(self.csv_dict[key]) for key in self.code_set}
+        # The accounts attribute is not fully populated until if and
+        # when needed.  This is done using the load_journal() method.
 
-    def show(self, verbosity=0):    
+    def load_journal(self):
         """
-        # Will probably do this within the Journal class
+        Posts the journal to the ledger.
+        Returns a tuple: (expenses, fixed_assets)
+            This is for my convenience- it's NOT std accounting
+            proceedure!
         """
-        if verbosity:
+        journal = Journal(self.entity_name)
+        print("Journal Contains the following......................")
+#       print(journal.journal)
+#       print("....................................................")
+        for je in journal.journal:  # Populate accounts with entries.
+            for le in je["line_entries"]:
+                if le['acnt'] not in self.code_set:
+                    print(
+                    "Error Condition: AcntCode {} is not recognized."
+                        .format(le['acnt']))
+                line_entry = LineEntry(le['DR'],
+                                        le['CR'],
+                                        je['number'])
+                print("   {}      {}"
+                                    .format(line_entry.show(),
+                                            le['acnt']))
 
-            journal = Journal(self.entity_name)
-            for entry in journal.journal:
-                for acnt_code in entry["acounts"]:
-                    # add Dr|Cr to self.cofa_dict[acnt_code][Dr|Cr]
-                    pass
-        acnt_codes = sorted(self.cofa_dict)
-#       print(acnt_codes)
-        ret = ['{} Chart of Accounts'.format(self.entity)]
-        for code in acnt_codes:
-#           print("'code' is '{}, value is '{}'."
-#               format(code, self.cofa_dict[code]))
-            if 'T' in self.cofa_dict[code]['place_holder']:
-                place_holder_indicator = ' --'
+                self.accounts[le['acnt']].line_entries.append(
+                                                line_entry)
+        fixed_assets = expenses = 0  # Keep running totals of these.
+        dr_check = cr_check = 0  # To check totals balance.
+        for code in self.ordered_codes:
+            # Populate the accounts with balances, specify Dr or Cr, and
+            # do a running total to check that all is in balance.
+            # I'm also keeping a running total of fixed assets and
+            # expenses (a custom requirement. -Not part of standard
+            # accounting practices.
+            self.accounts[code].update_balance()
+            balance = self.accounts[code].balance
+
+            if self.accounts[code].dr_cr == 'DR':
+                dr_check += balance
+#               print("For {} dr_cr is 'DR' {:,.2f}"
+#                   .format(code, balance))
+            elif self.accounts[code].dr_cr == 'CR':
+                cr_check += balance
+#               print("For {} dr_cr is 'CR' {:,.2f}"
+#                   .format(code, balance))
             else:
-                place_holder_indicator = ''
-            ret.append("{code:<5}{full_name}"
-                                .format(**self.cofa_dict[code])
-                        + place_holder_indicator)
-        return '\n'.join(ret)
+                pass
+#               print("For {} no dr_cr entry {:,.2f}"
+#                       .format(code, balance))
+            if code[:1] == '5':
+                expenses += balance
+#               print("For {}: Expense Account".format(code))
+            if code[:2] == '15':
+                fixed_assets += balance
+#               print("For {}: Asset Account".format(code))
+        imbalance = dr_check - cr_check
+        if abs(imbalance) > EPSILON:
+            print("MAJOR ERROR! Balance sheet doesn't balance!")
+            print(" Debits - Credits = {:,.2f}.".format(imbalance))
+        return (expenses, fixed_assets)
 
-class LineEntry(object):
-    """
-    Each instance has the following attributes:
-    acnt   a chart of accounts code/number
-    DR     a debit amount
-    CR     a credit amount
-    """
-    
-    def __init__(self, acnt, DR, CR):
-        self.acnt = acnt
-        self.DR = DR
-        self.CR = CR
+    def show(self, args):
+        """
+        Return a string representation of the Ledger.
+        Parameter args('--verbosity') determines how much
+        information is displayed.
+        """
+        indent = 0  # Keep track of indentation level.
+        place_holder = ''  # Used by indentation mechanism.
+        header = "Account Balances"
+        ret = [header, "-"*len(header)]
+        for account_code in self.ordered_codes:
+            account = Account(self.csv_dict[account_code])
+            ret.append(account.show(args, indent, place_holder))
+        return '\n'.join(ret)
+#
+#           if account.place_holder == 'T':
+#               header_choice = 'full_name'
+#           else:
+#               header_choice = 'name'
+#           indent, place_holder = (
+#               set_indentation(indent,   # { These two parameters
+#                       place_holder,     # {    are modified.
+#                       account.place_holder,
+#                       account_code))
+#           ret.append("{}{:<5}{}"
+#               .format("{}".format(' '*INDENTATION_MULTIPLIER*indent),
+#                   account.code,
+#                   header_choice))
+#           if args['--verbosity'] > 0:
+#               if account.line_entries:
+#                   ret.append(ChartOfAccounts.format_line
+#                       .format("{}"
+#                           .format(' '*INDENTATION_MULTIPLIER*indent),
+#                               "Entry#", 'Debits',
+#                               'Credits', 'Balance', ' '))
+#                   for line_entry in (
+#                       account.line_entries):
+#                       if line_entry.DR:
+#                           new_line = (ChartOfAccounts.format_line
+#                               .format("{}"
+#                                   .format(
+#                                   ' '*INDENTATION_MULTIPLIER*indent),
+#                                   line_entry.entry_number,
+#                                   line_entry.DR, ' ', ' ', ' '))
+#                       if line_entry.CR:
+#                           cr_check += line_entry.CR
+#                           new_line = (ChartOfAccounts.format_line
+#                               .format("{}".format(
+#                                   ' '*INDENTATION_MULTIPLIER*indent),
+#                                       line_entry.entry_number,
+#                                       ' ', line_entry.CR, ' ', ' '))
+#                       if line_entry.DR and line_entry.CR:
+#                           new_line = (ChartOfAccounts.format_line
+#                               .format("{}".format(
+#                                       ' '*i_mult*indent),
+#                                       line_entry.entry_number,
+#                                       line_entry.DR, line_entry.CR,
+#                                       ' ', ' '))
+#                       ret.append(new_line)
+#                   if account.dr_cr == 'DR':
+#                       dr_cr_type = 'Dr'
+#                   else: dr_cr_type = 'Cr'
+#                   ret.append(ChartOfAccounts.format_line
+#                       .format("{}".format(
+#                                   ' '*INDENT_MULTIPLIER*indent),
+#                               ' ', ' ', ' ',
+#                               '{:.2f}'.format(account.balance),
+#                               dr_cr_type))
 
 
 class JournalEntry(object):
@@ -280,7 +551,8 @@ class JournalEntry(object):
             date: date_stamp,
             user: name,
             description: explanation,
-            line_entries: list of LineEntry object dictionaries     )
+            line_entries: list of {'acnt', 'DR', 'CR' keyed values},
+            )
     (We use 'data' rather than individual attributes to allow persistent
     storage in a json file.
     """
@@ -349,6 +621,7 @@ class JournalEntry(object):
 #           print('Dr & Cr values are of type {} and {}.'
 #                       .format(type(dr), type(cr)))
             line_entries.append(dict(acnt= number, DR= dr, CR= cr))
+        print("Captured entry # {}.".format (entry_number))
         return dict(
             number= "{:0>3}".format(entry_number),
             date= date_stamp,
@@ -427,8 +700,8 @@ class Journal(object):
             journal:               journal_file:
             metadata:              metadata_file:
         """
+        self.entity_name = entity_name
         dir_name = os.path.join(DEFAULT_HOME, entity_name+'.d')
-        self.cofa = ChartOfAccounts(entity_name)
         self.journal_file = os.path.join(dir_name, Journal_name)
         self.metadata_file = os.path.join(dir_name, Metadata_name) 
         with open(self.journal_file, 'r') as f_object:
@@ -437,6 +710,8 @@ class Journal(object):
             self.journal = journal_dict["Journal"]
             # The json file consists of a dict with only one entry keyed
             # by "journal" and its value is a list of journal entries.
+            # SO THE journal ATTRIBUTE IS A LIST of dicts each
+            # representing a journal entry.
         with open(self.metadata_file, 'r') as f_object:
             self.metadata = json.load(f_object)
         self.next_number = self.metadata['next_journal_entry_number']
@@ -466,7 +741,7 @@ class Journal(object):
         """
         """
         ret = ['{}  Journal Entries'
-            .format(self.cofa.entity_name)]
+            .format(self.entity_name)]
         for entry in self.journal:
 #           if entry:
                 ret.append(Journal.show_entry(entry))
@@ -493,110 +768,10 @@ class Journal(object):
                 self.save()
 #       print("Should now be all over.")
 
-def show_account_balances(args):
-    """
-    Runs through all the journal entries and posts them to the
-    respective accounts returning a multiline string showing entries
-    and balances for each account.
-    """
-    format_line = "{}{:>10}{:^10}{:^10}{}{}"
-    journal = Journal(args['--entity'])
-    for entry in journal.journal:  # Populated journal.cofa.posted
-        for line_entry in entry['line_entries']:
-            journal.cofa.posted.setdefault(line_entry['acnt'], [])
-            d = dict(journal_entry_number= entry['number'],
-                        acnt= line_entry['acnt'],
-                        DR= line_entry['DR'],
-                        CR= line_entry['CR'])
-            journal.cofa.posted[line_entry['acnt']].append(d)
-
-    header = "Account Balances"
-    ret = [header, "-"*len(header)]
-    dr_check = cr_check = 0  # Keep track of totals of all accounts.
-    fixed_assets = expenses = 0  # Keep running totals of these.
-    indent = 0  # Keep track of indentation level.
-    place_holder = ''
-    for account_code in journal.cofa.ordered_codes:
-        if journal.cofa.cofa_dict[account_code]['place_holder'] == 'T':
-            header_choice = 'full_name'
-        else:
-            header_choice = 'name'
-        indent, place_holder = (
-            set_indentation(indent,   # { These two parameters
-                    place_holder,     # {    are modified.
-                    journal.cofa.cofa_dict[account_code]['place_holder'],
-                    account_code))
-        ret.append("{}{:<5}{}"
-            .format("{}".format(' '*i_mult*indent),
-                journal.cofa.cofa_dict[account_code]['code'],
-                journal.cofa.cofa_dict[account_code][header_choice]))
-        if args['--verbosity'] > 0:  # No point if user doesn't want it.
-            if account_code in journal.cofa.posted:
-                dr = cr = 0  # Debit and credit running totals.
-                ret.append(format_line
-                    .format("{}".format(' '*i_mult*indent),
-                            "Entry#", 'Debits', 'Credits', 'Balance', ' '))
-                for line_entry in journal.cofa.posted[account_code]:
-                    if line_entry['DR']:
-                        dr += line_entry['DR']
-                        new_line = (format_line
-                            .format("{}".format(' '*i_mult*indent),
-                                    line_entry['journal_entry_number'],
-                                    line_entry['DR'], ' ', ' ', ' '))
-                    if line_entry['CR']:
-                        cr += line_entry['CR']
-                        new_line = (format_line
-                            .format("{}".format(' '*i_mult*indent),
-                                    line_entry['journal_entry_number'],
-                                    ' ', line_entry['CR'], ' ', ' '))
-                    if line_entry['DR'] and line_entry['CR']:
-                        new_line = (format_line
-                            .format("{}".format(' '*i_mult*indent),
-                                    line_entry['journal_entry_number'],
-                                    line_entry['DR'], line_entry['CR'],
-                                    ' ', ' '))
-                    ret.append(new_line)
-                if dr > cr:
-                    dr -= cr
-                    dr_check += dr
-                    ret.append(format_line
-                        .format("{}".format(' '*i_mult*indent),
-                                ' ', ' ', ' ',
-                        '{:.2f}'.format(dr), 'Dr'))
-                    if account_code[:1] == '5':
-                        expenses += dr
-                    if account_code[:2] == '15':
-                        fixed_assets += dr
-                else:
-                    cr -= dr
-                    cr_check += cr
-                    ret.append(format_line
-                        .format("{}".format(' '*i_mult*indent),
-                                "Balance:", ' ', ' ',
-                        '{:.2f}'.format(cr), 'Cr'))
-    ret.append("The following should balance: {:.2f}Dr and {:.2f}Cr."
-                .format(dr_check, cr_check))
-    ret.append("""
-Value of fixed assets: {:.2f}
-    The above should be totaled and divided up into eight parts
-    to be moved from the 'equity' to the 'liability' accounts
-    of the 'group of 8'.
-    This has already been done (Journal entry 018) but may have
-    to be updated if more 'fixed asset' entries are made.
-Total of all expenses: {:.2f}
-    This should be divided into 10 equal parts and charged
-    against the participants' equity accounts.
-    See entry #017 to see if this process has been completed.
-    (If the value given above doesn't match that value in entry 017,
-    then an update is required.)
-"""
-                    .format(fixed_assets, expenses))
-    return '\n'.join(ret)
-
 
 def main():
     args = docopt.docopt(__doc__, version=VERSION)
-#   print(args)
+    print(args)
     if args['new']:
         if args['--entity'] == create_entity(args['--entity']):
             print(
@@ -608,18 +783,24 @@ def main():
             args['--entity'] = entity_file_object.read()
     if args['show_accounts']:
         cofa = ChartOfAccounts(args['--entity'])
-        print(cofa.show())
-#       for key in cofa.cofa_dict:
-#           print("{:<6}{}".format(key, cofa.cofa_dict[key]))
+        print(cofa.show(args))
     if args['show_journal']:
-#       cofa = ChartOfAccounts(args['--entity'])
         journal = Journal(args['--entity'])
         print(journal.show())
     if args['journal_entry']:
         journal = Journal(args['--entity'])
         journal.get()
     if args['show_account_balances']:
-        print(show_account_balances(args))
+        cofa = ChartOfAccounts(args['--entity'])
+        assets, expenses = cofa.load_journal()
+        print(chr(curses.ascii.FF) + 
+            "Here's the cofa.accounts attribute............")
+        for key in cofa.ordered_codes:
+            print(cofa.accounts[key].dump())
+        print("..............................................")
+#       print(cofa.show(args))
+        print("Assets total: ${:.2f}".format(assets))
+        print("Expenses total: ${:.2f}".format(expenses))
 
 if __name__ == '__main__':  # code block to run the application
     main()

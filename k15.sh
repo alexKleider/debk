@@ -1,3 +1,4 @@
+#!/user/bin/bash
 ./src/debk.py new --entity=Kazan15
 ./src/debk.py journal_entry < input
 echo '
@@ -22,7 +23,7 @@ The amount in account 5000 is meant to equal the sum of all the other
 expense (5000) accounts and has been divided up and subtracted from the
 participant equity accounts.
 ' > output
-./src/debk.py show_journal >> output
+#./src/debk.py show_journal >> output
 echo '
 Ledger follows:
 ' >> output

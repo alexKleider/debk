@@ -2,11 +2,12 @@ code,type,full_name,name,notes,hidden,place_holder
 1000,ASSET,Assets,Assets,Assets,F,T
 1100,ASSET,Assets:Liquid,Liquid,LiquidAssets,F,T
 1110,ASSET,Assets:Liquid:Bank,Bank,BankAccount,F,F
-1500,ASSET,Assets:Fixed,Fixed,FixedAssets,F,T
+1500,ASSET,Assets:Fixed,Fixed,FixedAssets,FixedAssetsF,T
 1510,ASSET,Assets:Fixed:Equipment,Equipment,Equipment,F,T
 1511,ASSET,Assets:Fixed:Equipment:Canoes,Canoes,Canoes,F,F
 1512,ASSET,Assets:Fixed:Equipment:Paddles,Paddles,Paddles,F,F
 1513,ASSET,Assets:Fixed:Equipment:Packs,Packs,Packs,F,F
+1514,ASSET,Assets:Fixed:Equipment:Bug Tent,Bug Tent,Bug Tent,F,F
 
 3000,EQUITY,Equity,Equity,Equity,F,T
 3001,EQUITY,Equity:DH,DH,Participant Equity,F,F
@@ -36,7 +37,12 @@ code,type,full_name,name,notes,hidden,place_holder
 4001,INCOME,Income:Interest,Interest,Interest,F,F
 
 5000,EXPENSE,Expenses,Expenses,Expenses,F,T
-5020,EXPENSE,Expenses:KasbaLodge,KasbaLodge,Charter, freight and float,F,F
-5030,EXPENSE,Expenses:CalmAir,CalmAir,Return flight & freight,F,F
+5001,EXPENSE,Expense Adjustment,Zero out expenses,F,F
+5020,EXPENSE,Expenses:KasbaLodge,KasbaLodge,Charter&freight&fuel&float,F,F
+5030,EXPENSE,Expenses:CalmAir,CalmAir,Return flight&freight,F,F
 5040,EXPENSE,Expenses:Pakcanoe,Pakcanoe,Canoes & accessories,F,F
+5051,EXPENSE,Expenses:Shipping,Shipping Rick's packs,F,F
+5310,EXPENSE,Expenses:Food,Food,F,F
+5320,EXPENSE,Expenses:Drink,Drink,F,F
+5501,EXPENSE,Expenses:Petrol,Petrol,F,F
 
