@@ -28,3 +28,7 @@ following files:
     Metadata.json
 Any user of **debk.py** must of course have read/write privileges.
 A **debk.d** directory is provided for use as a template.
+
+Journal entry can be automated using redirection as described in the
+file **how2input**.  Further automation can be done using a bash script
+as demonstrated in **k15.sh**.

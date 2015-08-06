@@ -51,7 +51,6 @@ Comments:
 
 import os
 import sys
-import curses.ascii
 import shutil
 import json
 import csv
@@ -216,8 +215,12 @@ class LineEntry(object):
         self.CR = cr
 
     def show(self):
-        return ("{}  {:>10.2f}Dr   {:>10.2f}Cr"
-                .format(self.entry_number, self.DR, self.CR))
+        if self.DR: dr = '{:>10.2f}Dr'.format(self.DR)
+        else: dr = '{:>10}'.format(' ')
+        if self.CR: cr = '{:>10.2f}Cr'.format(self.CR)
+        else: cr = '{:>10}'.format(' ')
+        return ("  {}  {}   {}"
+                .format(self.entry_number, dr, cr))
 
 class Account(object):
     """Provides data type for values of the dict
@@ -242,10 +245,11 @@ class Account(object):
         """ A 'quick and dirty' way to show an account.
         Expect to only use it during development.
         """
-        ret = ['Account#{}'.format(self.code)]
-        if self.place_holder: ret.append("Place holder.")
+        ret = ['Acnt#{}'.format(self.code)]
+        if self.place_holder: ret.append(self.csv['full_name'])
         else: 
-            ret.append("{} {:.2f}".format(self.dr_cr, self.balance))
+            ret.append("{:<15}{:>10.2f}{} "
+                    .format(self.csv['name'], self.balance, self.dr_cr))
         ret = [' '.join(ret)]
         for line_entry in self.line_entries:
             ret.append(line_entry.show())
@@ -420,7 +424,7 @@ class ChartOfAccounts(object):
             proceedure!
         """
         journal = Journal(self.entity_name)
-        print("Journal Contains the following......................")
+#       print("Journal Contains the following......................")
 #       print(journal.journal)
 #       print("....................................................")
         for je in journal.journal:  # Populate accounts with entries.
@@ -432,9 +436,9 @@ class ChartOfAccounts(object):
                 line_entry = LineEntry(le['DR'],
                                         le['CR'],
                                         je['number'])
-                print("   {}      {}"
-                                    .format(line_entry.show(),
-                                            le['acnt']))
+#               print("   {}      {}"
+#                                   .format(line_entry.show(),
+#                                           le['acnt']))
 
                 self.accounts[le['acnt']].line_entries.append(
                                                 line_entry)
@@ -487,60 +491,6 @@ class ChartOfAccounts(object):
             account = Account(self.csv_dict[account_code])
             ret.append(account.show(args, indent, place_holder))
         return '\n'.join(ret)
-#
-#           if account.place_holder == 'T':
-#               header_choice = 'full_name'
-#           else:
-#               header_choice = 'name'
-#           indent, place_holder = (
-#               set_indentation(indent,   # { These two parameters
-#                       place_holder,     # {    are modified.
-#                       account.place_holder,
-#                       account_code))
-#           ret.append("{}{:<5}{}"
-#               .format("{}".format(' '*INDENTATION_MULTIPLIER*indent),
-#                   account.code,
-#                   header_choice))
-#           if args['--verbosity'] > 0:
-#               if account.line_entries:
-#                   ret.append(ChartOfAccounts.format_line
-#                       .format("{}"
-#                           .format(' '*INDENTATION_MULTIPLIER*indent),
-#                               "Entry#", 'Debits',
-#                               'Credits', 'Balance', ' '))
-#                   for line_entry in (
-#                       account.line_entries):
-#                       if line_entry.DR:
-#                           new_line = (ChartOfAccounts.format_line
-#                               .format("{}"
-#                                   .format(
-#                                   ' '*INDENTATION_MULTIPLIER*indent),
-#                                   line_entry.entry_number,
-#                                   line_entry.DR, ' ', ' ', ' '))
-#                       if line_entry.CR:
-#                           cr_check += line_entry.CR
-#                           new_line = (ChartOfAccounts.format_line
-#                               .format("{}".format(
-#                                   ' '*INDENTATION_MULTIPLIER*indent),
-#                                       line_entry.entry_number,
-#                                       ' ', line_entry.CR, ' ', ' '))
-#                       if line_entry.DR and line_entry.CR:
-#                           new_line = (ChartOfAccounts.format_line
-#                               .format("{}".format(
-#                                       ' '*i_mult*indent),
-#                                       line_entry.entry_number,
-#                                       line_entry.DR, line_entry.CR,
-#                                       ' ', ' '))
-#                       ret.append(new_line)
-#                   if account.dr_cr == 'DR':
-#                       dr_cr_type = 'Dr'
-#                   else: dr_cr_type = 'Cr'
-#                   ret.append(ChartOfAccounts.format_line
-#                       .format("{}".format(
-#                                   ' '*INDENT_MULTIPLIER*indent),
-#                               ' ', ' ', ' ',
-#                               '{:.2f}'.format(account.balance),
-#                               dr_cr_type))
 
 
 class JournalEntry(object):
@@ -690,7 +640,7 @@ class Journal(object):
         all journal entries to date in preparation for further
         journal entries.
         In future, may well load only journal entries created
-        since last last end of year close out of the books.
+        since last end of year close out of the books.
         As of yet have not dealt with end of year.
         Also consider collecting new entries and not even loading
         those in persistent storage until user decides to save.
@@ -739,12 +689,18 @@ class Journal(object):
 
     def show(self):
         """
+        Returns a string representation of the journal attribute.
         """
-        ret = ['{}  Journal Entries'
-            .format(self.entity_name)]
-        for entry in self.journal:
-#           if entry:
-                ret.append(Journal.show_entry(entry))
+        journal = self.journal
+
+        ret = ["Journal Entries:......"]
+        for je in self.journal:
+            ret.append("  #{:>3} on {:<12} by {}."
+                .format(je['number'], je['date'], je['user']))
+            ret.append("    {}".format(je['description']))
+            for le in je["line_entries"]:
+                ret.append("        {:>10.2f}Dr {:>10.2f}Cr"
+                    .format(le['DR'], le['CR']))
         return '\n'.join(ret)
 
     def get(self):
@@ -771,7 +727,7 @@ class Journal(object):
 
 def main():
     args = docopt.docopt(__doc__, version=VERSION)
-    print(args)
+#   print(args)
     if args['new']:
         if args['--entity'] == create_entity(args['--entity']):
             print(
@@ -790,14 +746,15 @@ def main():
     if args['journal_entry']:
         journal = Journal(args['--entity'])
         journal.get()
+
+
     if args['show_account_balances']:
         cofa = ChartOfAccounts(args['--entity'])
         assets, expenses = cofa.load_journal()
-        print(chr(curses.ascii.FF) + 
-            "Here's the cofa.accounts attribute............")
         for key in cofa.ordered_codes:
             print(cofa.accounts[key].dump())
-        print("..............................................")
+
+
 #       print(cofa.show(args))
         print("Assets total: ${:.2f}".format(assets))
         print("Expenses total: ${:.2f}".format(expenses))

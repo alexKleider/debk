@@ -1,0 +1,49 @@
+
+EXPLANATION:
+Journal entries appear in the first half of this file, 
+followed in the second half by the ledger: a listing of entries
+and balances for each account.
+Place holder accounts are simply listed without any corresponding
+entries or balances (except for 5001- explained below.)
+
+The value of canoes and other "fixed assets" has been moved from
+the equity to the liability accounts of the "group of 8" who are now
+owners of the canoes, and other things bought.  Do not be alarmed by
+the word "liability."  This does not mean a liability born by you.  It means 
+that the "trip entity" owes you the value of those assets.  (The
+liability is on the part of the trip entity.)
+The equity accounts reflect how much of your initial investment
+remains (or, if negative, how much you owe.)
+
+The total of the expense accounts has been balanced against the equity
+accounts of all the participants:
+This was done by adding all the (typically Dr) expense entries, entering that
+sum as a Cr entry in account 5001, and balancing that amount by equal
+Dr entries in each of the participants equity accounts.
+
+I believe this all to be in keeping with standard double entry book
+keeping said to first have been devised by Franciscan friar Luca
+Pacioli [1] (although there is some contoversy as to who was truely the
+first [2].)
+
+[1] https://en.wikipedia.org/wiki/Double-entry_bookkeeping_system
+[2] http://www.huffingtonpost.com/steve-mariotti/so-who-invented-double-en_b_3588941.html
+
+Other items that might be of interest:
+1. Hauling the gear from Bolinas to Winnipeg:
+    It proved to be only a three day journey each way.
+    The return journey was by a different route to accommodate Keith's
+    plans to visit friends in the mid West but it turns out that the 
+    distance was little different, in fact a bit less although keep in
+    mind that the inbound distance includes all the driving I did during
+    the 5 days I spent in Winnipeg before others began arriving.
+    Bolinas to Winnipeg: 2142mi, fuel cost US$419.84
+    Winnipeg to Bolinas: 2101mi, .............392.51
+    Totals               4243                 812.35
+
+    Miles per gallon came in at 15.88 which is pretty good given that I
+    was pulling a lot of weight in the trailer and that I generally get
+    about 17mi/USGal.  Also, there was more in the tank when I returned
+    than when I left which would make the true figure even higher.
+
+
