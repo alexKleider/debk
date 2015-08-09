@@ -163,31 +163,43 @@ def create_entity(entity_name):
     cofa_source = os.path.join(  # Use a prepopulated chart of
                 DEFAULT_HOME,    # accounts if it exists.
                 entity_name + 'ChartOfAccounts')
-#   print("#Looking for {}.#".format(cofa_source))
+    print("#Looking for {}.#".format(cofa_source))
     if not os.path.isfile(cofa_source):
+        print("Could not find file '{}'.."
+            .format(cofa_source))
         cofa_source = os.path.join(DEFAULT_HOME, DEFAULT_CofA)
+        print("... so default '{}' is being used"
+            .format(cofa_source))
     new_dir = os.path.join(DEFAULT_HOME, entity_name+'.d')
+    print("new_dir is {}.".format(new_dir))
     new_CofA_file_name = os.path.join(new_dir, CofA_name)
+    print("new_CofA_file_name is {}.".format(new_CofA_file_name))
     new_Journal = os.path.join(new_dir, Journal_name)
     meta_source = os.path.join(DEFAULT_HOME, DEFAULT_Metadata)
     meta_dest = os.path.join(new_dir, Metadata_name)
     with open(meta_source, 'r') as meta_file:
         metadata = json.load(meta_file)
     metadata['entity_name'] = entity_name
+    entity_file_path = os.path.join(DEFAULT_HOME, DEFAULT_Entity)
     try:
-        # The following keeps 
-        with open(os.path.join(DEFAULT_HOME,
-                    DEFAULT_Entity), 'w') as entity_file_object:
+        # The following keeps track of the last entity referenced.
+        with open(entity_file_path, 'w') as entity_file_object:
             entity_file_object.write(entity_name)
+        print("Wrote entity name to {}.".format(entity_file_path))
         os.mkdir(new_dir)
+        print("Created new directory {}.".format(new_dir))
         shutil.copy(cofa_source, new_CofA_file_name)
+        print("Copied {} to {}.".format(cofa_source,
+        new_CofA_file_name))
         with open(new_Journal, 'w') as journal_file_object:
             journal_file_object.write('{"Journal": []}')
+        print("Wrote to {}.".format(new_Journal))
         with open(meta_dest, 'w') as json_file:
             json.dump(metadata, json_file)
+        print("Dumped to {}.".format(meta_dest))
     except FileExistsError:
         print("ERROR: Directory '{}' already exists"
-                            .format(entity_name))
+                            .format(new_dir))
     except OSError:
         print("ERROR: Destination '{}' &/or '{}' may not be writeable."
                             .format(new_CofA_file_name, new_Journal))
@@ -196,7 +208,9 @@ def create_entity(entity_name):
 
 class LineEntry(object): 
     """
-    Serves as a line entry for accounts, NOT journal.
+    Serves as a line entry for ledger accounts. 
+    Do NOT confuse this class with journal line entries which
+    have NOT been given their own class.
     Each instance has the following attributes:
         num    a journal entry number
         DR     a debit amount
@@ -225,31 +239,56 @@ class LineEntry(object):
 class Account(object):
     """Provides data type for values of the dict
     ChartOfAccounts.accounts keyed by account code.
+    Attributes include csv, code, balance, dr_cr, place_holder,
+    acnt_type, split
     """
 
     def __init__(self, csv):
         self.csv = csv
         self.code = csv['code']
+#       print('Dealing with account code {}'.format(self.code))
+        if csv['split']:
+            self.split = int(csv['split'])
+        else:
+            self.split = 0
         self.line_entries = []  # list of LineEntry objects.
         self.balance = 0
         self.dr_cr = ''  # Specifies if the balance is 'DR' or 'CR'
-        if csv['place_holder'] in 'tT':
+#       print("csv['place_holder'] for Acnt {} is {}."
+#           .format(self.code, csv['place_holder']))
+        if csv['place_holder'] in 'Tt':
             self.place_holder = True 
             self.acnt_type = 'place_holder'
-        else:
+        elif csv['place_holder'] in 'Ff':
             self.place_holder = False 
             self.acnt_type = dr_or_cr(self.code)  # Specifies account type.
                 # Possible values: 'DR', 'CR', 'place_holder'
+        else:
+            self.place_holder = None
+            print("Problem with Acnt {}: Place holder or not??"
+                    .format(self.code))
 
     def dump(self):
         """ A 'quick and dirty' way to show an account.
         Expect to only use it during development.
         """
+        if self.split: split = "{}".format(self.split)
+        else: split = ''
         ret = ['Acnt#{}'.format(self.code)]
-        if self.place_holder: ret.append(self.csv['full_name'])
+        if self.split:
+            split = self.split
+        else:
+            split = ''
+        if self.place_holder: ret.append(
+                "{}  < place holder{}".
+                format(self.csv['full_name'].upper(),
+                    split))
         else: 
-            ret.append("{:<15}{:>10.2f}{} "
-                    .format(self.csv['name'], self.balance, self.dr_cr))
+            ret.append("{:<15}{:>10.2f}{} <TOTAL {}"
+                    .format(self.csv['name'],
+                            self.balance,
+                            self.dr_cr,
+                            split))
         ret = [' '.join(ret)]
         for line_entry in self.line_entries:
             ret.append(line_entry.show())
@@ -405,12 +444,14 @@ class ChartOfAccounts(object):
             for row in reader:
 #               print(row)
                 if row['code'] in self.code_set:
-                    print("Error Condition: Duplicate account code.")
+                    print("Error Condition: Duplicate account code:{}."
+                            .format(row['code']))
                     print("Fix before rerunning the script.")
                     sys.exit()
                 self.code_set.add(row['code'])
                 self.csv_dict[row['code']] = row
         self.ordered_codes = sorted([key for key in self.code_set])
+#       print(self.ordered_codes)
         self.accounts = {key:
                 Account(self.csv_dict[key]) for key in self.code_set}
         # The accounts attribute is not fully populated until if and
@@ -444,6 +485,7 @@ class ChartOfAccounts(object):
                                                 line_entry)
         fixed_assets = expenses = 0  # Keep running totals of these.
         dr_check = cr_check = 0  # To check totals balance.
+        print("\nACCOUNTS FOR SPECIAL TREATMENT:")
         for code in self.ordered_codes:
             # Populate the accounts with balances, specify Dr or Cr, and
             # do a running total to check that all is in balance.
@@ -465,12 +507,19 @@ class ChartOfAccounts(object):
                 pass
 #               print("For {} no dr_cr entry {:,.2f}"
 #                       .format(code, balance))
-            if code[:1] == '5':
+            ##############################################
+            if (code[:1] == '5') and (not
+                        self.accounts[code].place_holder):
                 expenses += balance
-#               print("For {}: Expense Account".format(code))
-            if code[:2] == '15':
+                print("Expense {}: ${:.2f}  /by {}"
+                    .format(code, balance, self.accounts[code].split))
+            if (code[:2] == '15') and (not
+                        self.accounts[code].place_holder):
                 fixed_assets += balance
-#               print("For {}: Asset Account".format(code))
+                print("FixedAsset {}: ${:.2f}  /by {}"
+                    .format(code, balance, self.accounts[code].split))
+        print("\nEND OF ACCOUNTS FOR SPECIAL TREATMENT:\n")
+            ##############################################
         imbalance = dr_check - cr_check
         if abs(imbalance) > EPSILON:
             print("MAJOR ERROR! Balance sheet doesn't balance!")
@@ -590,6 +639,8 @@ class JournalEntry(object):
         """
         Parameter is expected to be a dict with following keys:
         'accnt' (type str,) 'DR', 'CR' (both type float.)
+        Note: don't confuse this line entry in the journal
+        whith line entries in Chart of Accounts.
         """
         ret = dict(acnt= '{:>8}'.format(line_entry['acnt']),)
         if line_entry['DR']:
@@ -604,51 +655,60 @@ class JournalEntry(object):
                             .format(**ret))
 
     def show(self):
-        """Presents a printable version of a journal entry (self.)
+        """Presents a printable version of a journal entry, more
+        specifically, a representation of its only attribute: data which
+        is a dictionary.
         Returns None if parameter is False in a Boolean context.
         """
-        if not self.ok(): return
-        ret0 = ["Entry {number} created {date} by {user}"]
-        ret0.append('  {description}')
-        ret1 = ('\n'.join(ret0)).format(**self.data)
+        if not self.ok(): return  # Check for data attribute.
+        data = self.data
+        ret = []
+        ret.append("  #{:>3} on {:<12} by {}."
+            .format(data['number'], data['date'], data['user']))
 
-        ret2 = ['  Acnt# {0:^10}{1:^10}'.format("DR", "CR")]
-#       print(self.data["accounts"])
-        for line_entry in self.data["line_entries"]:
-            ret2.append(JournalEntry.show_line_entry(line_entry)) 
-        ret3 = '\n'.join(ret2)
-        return '\n'.join([ret1, ret3])
+        description_lines = data["description"].split('\n')
+#       print(description_lines)
+        for line in description_lines:
+            ret.append("    {}".format(line))
+
+        for line_entry in data["line_entries"]:
+            ret.append(JournalEntry.show_line_entry(line_entry)) 
+
+        return '\n'.join(ret)
 
 class Journal(object):
     """
-    Deals with the whole journal, loading it from persistent storage ,
-    adding to it and then sending it back to be stored.
+    peals with the whole journal, loading it from persistent storage,
+    adding to it, and then sending it back to be stored.
+    It keeps track of journal entry numbers, the next one of which is
+    kept in persistent storage as part of the metadata for an entity.
     See docstring for __init__ method.
     NOTE: this class's get_entry and show methods rely on 
-    JournalEntry methods get_entry and show_entry methods.
+    JournalEntry methods get_entry and show.
     """
-
-    def show_entry(entry):
-        journal_entry = JournalEntry(entry)
-        return journal_entry.show()
-
-    # code was developed in journal.py
 
     def __init__(self, entity_name):
         """
-        Loads an entity's metadata, chart of accounts, and 
-        all journal entries to date in preparation for further
-        journal entries.
+        Loads an entity's metadata and all journal entries to date:
+        in preparation for further journal entries.
+        Attributes include:
+            entity_name:
+            journal_file:
+            metadata_file:
+            next_entry
+            journal: a list of dicts
+                In persistent storage it is a json file consisting of 
+                a dict with only one entry keyed by "Journal" with a 
+                value that is a list of dicts. The journal attribute
+                becomes this list.  Each item of this list is a dict and
+                corresponds to the data attribute of instances of the
+                class JournalEntry.
+            metadata:
         In future, may well load only journal entries created
         since last end of year close out of the books.
         As of yet have not dealt with end of year.
         Also consider collecting new entries and not even loading
         those in persistent storage until user decides to save.
-
-        Attributes include:
-            cofa: chart of accounts
-            journal:               journal_file:
-            metadata:              metadata_file:
         """
         self.entity_name = entity_name
         dir_name = os.path.join(DEFAULT_HOME, entity_name+'.d')
@@ -659,33 +719,12 @@ class Journal(object):
 #           print(journal_dict)
             self.journal = journal_dict["Journal"]
             # The json file consists of a dict with only one entry keyed
-            # by "journal" and its value is a list of journal entries.
-            # SO THE journal ATTRIBUTE IS A LIST of dicts each
-            # representing a journal entry.
+            # by "journal" and its value is a list of dicts, each
+            # corresponding to the data attribute of the JournalEntry
+            # class.
         with open(self.metadata_file, 'r') as f_object:
             self.metadata = json.load(f_object)
-        self.next_number = self.metadata['next_journal_entry_number']
-
-    def save(self):
-#       with open(self.cofa_file, 'w') as f_object:
-#           writer = csv.DictWriter(f_object)
-#           self.cofa = csv.DictWriter(f_object)
-#       May in the future allow adding accounts during journal entry.
-        with open(self.journal_file, 'w', newline='') as f_object:
-            json.dump({"Journal": self.journal}, f_object)
-        with open(self.metadata_file, 'w') as f_object:
-            json.dump(self.metadata, f_object)
-
-    def get_entry(self):
-#       print("\na journal entry is of type {}\n"
-#                   .format(type(self.journal)))
-        new_entry = (
-            JournalEntry(self.metadata['next_journal_entry_number']))
-        if new_entry.ok():
-            self.metadata['next_journal_entry_number'] += 1
-            self.journal.append(new_entry.data)
-            return new_entry
-        # else returns None
+        self.next_entry = self.metadata['next_journal_entry_number']
 
     def show(self):
         """
@@ -695,15 +734,44 @@ class Journal(object):
 
         ret = ["Journal Entries:......"]
         for je in self.journal:
-            ret.append("  #{:>3} on {:<12} by {}."
-                .format(je['number'], je['date'], je['user']))
-            ret.append("    {}".format(je['description']))
-            for le in je["line_entries"]:
-                ret.append("        {:>10.2f}Dr {:>10.2f}Cr"
-                    .format(le['DR'], le['CR']))
+            entry = JournalEntry(je)
+            ret.append(entry.show())
         return '\n'.join(ret)
 
+    def save(self):
+        """Saves journal to persistent storage.
+        Only called after entries have been made and approved."""
+        self.metadata['next_journal_entry_number'] = self.next_entry
+        with open(self.journal_file, 'w', newline='') as f_object:
+            json.dump({"Journal": self.journal}, f_object)
+        with open(self.metadata_file, 'w') as f_object:
+            json.dump(self.metadata, f_object)
+
+    def get_entry(self):
+        """Used by the get method do add an entry to the the journal
+        attribute of 'self', an instance of the Journal class.
+        The next_number attribute is updated each time.
+        Each entry is a dict corresponding to the data attribute of
+        an instance of the JournalEntry class.
+        An instance of the JournalEntry class is returned.
+        """
+#       print("\na journal entry is of type {}\n"
+#                   .format(type(self.journal)))
+        new_entry = (
+            JournalEntry(self.next_entry))
+        if new_entry.ok():
+            self.next_entry += 1
+            self.journal.append(new_entry.data)
+            return new_entry
+        # else returns None
+
     def get(self):
+        """Gets journal entries from the user.
+        Does this using the get_entry method.
+        Once user input is completed, checks the next_number attribute
+        to see if entries have been made, and if so, confirms with user
+        before calling the save method to save them.
+        """
         while True:
 #           print("Beginning journal entry.")
             entry = self.get_entry()
@@ -711,17 +779,22 @@ class Journal(object):
 #               print("Breaking out of journal entry.")
                 break
 #           else: print(entry.show())
-        if self.next_number <= self.metadata[
-                                    'next_journal_entry_number']:
+        print('next numbers are self {} and metadata {}.'
+                .format(self.next_entry,
+                self.metadata['next_journal_entry_number']))
+        if self.next_entry > self.metadata[
+                            'next_journal_entry_number']:
+            # Entries have been made; will probably want to save.
             journal_dict = {'Journal': self.journal}
 #           print("journal_dict (to be stored) is:")
 #           print(journal_dict)
             answer = input("Would you like to save the entries?: ")
             if answer and (answer[0] in 'yY'):
+                self.save()
                 print('Answer was affirmative.  Journal content:')
                 print(self.show())
-#               print("Journal content should have been printed.")
-                self.save()
+                print(
+                "Journal content as it appears above, has been saved.")
 #       print("Should now be all over.")
 
 
@@ -737,27 +810,30 @@ def main():
         with open(os.path.join(DEFAULT_HOME,
                     DEFAULT_Entity), 'r') as entity_file_object:
             args['--entity'] = entity_file_object.read()
-    if args['show_accounts']:
-        cofa = ChartOfAccounts(args['--entity'])
-        print(cofa.show(args))
-    if args['show_journal']:
-        journal = Journal(args['--entity'])
-        print(journal.show())
+    
     if args['journal_entry']:
         journal = Journal(args['--entity'])
         journal.get()
 
+    if args['show_journal']:
+        journal = Journal(args['--entity'])
+        print(journal.show())
+
+    if args['show_accounts']:
+        cofa = ChartOfAccounts(args['--entity'])
+        print(cofa.show(args))
+
 
     if args['show_account_balances']:
         cofa = ChartOfAccounts(args['--entity'])
-        assets, expenses = cofa.load_journal()
+        expenses, fixed_assets = cofa.load_journal()
         for key in cofa.ordered_codes:
             print(cofa.accounts[key].dump())
 
 
 #       print(cofa.show(args))
-        print("Assets total: ${:.2f}".format(assets))
-        print("Expenses total: ${:.2f}".format(expenses))
+        print("\nAssets total: ${:.2f}".format(fixed_assets))
+        print("\nExpenses total: ${:.2f}".format(expenses))
 
 if __name__ == '__main__':  # code block to run the application
     main()

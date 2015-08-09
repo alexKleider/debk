@@ -1,25 +1,13 @@
-code,type,full_name,name,notes,hidden,place_holder
-1000,ASSET,Assets,Assets,Assets,F,T
-1100,ASSET,Assets:Liquid,Liquid,LiquidAssets,F,T
+code,type,full_name,name,notes,hidden,place_holder,split
+1000,ASSET,ASSETS,ASSETS,ASSETS,F,T
+1100,ASSET,ASSETS:LIQUID,LIQUID,LIQUID ASSETS,F,T
 1110,ASSET,Assets:Liquid:Bank,Bank,BankAccount,F,F
-1500,ASSET,Assets:Fixed,Fixed,FixedAssets,FixedAssetsF,T
-1510,ASSET,Assets:Fixed:Equipment,Equipment,Equipment,F,T
-1511,ASSET,Assets:Fixed:Equipment:Canoes,Canoes,Canoes,F,F
-1512,ASSET,Assets:Fixed:Equipment:Paddles,Paddles,Paddles,F,F
-1513,ASSET,Assets:Fixed:Equipment:Packs,Packs,Packs,F,F
-1514,ASSET,Assets:Fixed:Equipment:Bug Tent,Bug Tent,Bug Tent,F,F
-
-3000,EQUITY,Equity,Equity,Equity,F,T
-3001,EQUITY,Equity:DH,DH,Participant Equity,F,F
-3002,EQUITY,Equity:CW,CW,Participant Equity,F,F
-3003,EQUITY,Equity:SB,SB,Participant Equity,F,F
-3004,EQUITY,Equity:HB,HB,Participant Equity,F,F
-3005,EQUITY,Equity:CD,CD,Participant Equity,F,F
-3006,EQUITY,Equity:JH,JH,Participant Equity,F,F
-3007,EQUITY,Equity:KS,KS,Participant Equity,F,F
-3008,EQUITY,Equity:RS,RS,Participant Equity,F,F
-3009,EQUITY,Equity:KK,KK,Participant Equity,F,F
-3010,EQUITY,Equity:AK,AK,Participant Equity,F,F
+1500,ASSET,ASSETS:FIXED,FIXEDASSETS,FIXEDASSETS,F,T
+1501,ASSET,Asset Adjustment,Zero out,Zero out,F,F,8
+1511,ASSET,Assets:Fixed:Equipment:Canoes,Canoes,Canoes,F,F,8
+1512,ASSET,Assets:Fixed:Equipment:Paddles,Paddles,Paddles,F,F,8
+1513,ASSET,Assets:Fixed:Equipment:Packs,Packs,Packs,F,F,8
+1514,ASSET,Assets:Fixed:Equipment:Bug Tent,Bug Tent,Bug Tent,F,F,8
 
 2000,LIABILITY,Liabilities,Liabilities,Liabilities,F,T
 2001,LIABILITY,Liability:DH,DH,Value owned,F,F
@@ -29,20 +17,38 @@ code,type,full_name,name,notes,hidden,place_holder
 2005,LIABILITY,Liability:CD,CD,Value owned,F,F
 2006,LIABILITY,Liability:JH,JH,Value owned,F,F
 2007,LIABILITY,Liability:KS,KS,Value owned,F,F
-2008,LIABILITY,Liability:RS,RS,Value owned,F,F
-2009,LIABILITY,Liability:KK,KK,Value owned,F,F
-2010,LIABILITY,Liability:AK,AK,Value owned,F,F
+2008,LIABILITY,Liability:KK,KK,Value owned,F,F
+2009,LIABILITY,Liability:AK,AK,Value owned,F,F
+2010,LIABILITY,Liability:RS,RS,Value owned,F,F
+
+3000,EQUITY,Equity,Equity,Equity,F,T
+3001,EQUITY,Equity:DH,DH,Participant Equity,F,F
+3002,EQUITY,Equity:CW,CW,Participant Equity,F,F
+3003,EQUITY,Equity:SB,SB,Participant Equity,F,F
+3004,EQUITY,Equity:HB,HB,Participant Equity,F,F
+3005,EQUITY,Equity:CD,CD,Participant Equity,F,F
+3006,EQUITY,Equity:JH,JH,Participant Equity,F,F
+3007,EQUITY,Equity:KS,KS,Participant Equity,F,F
+3008,EQUITY,Equity:KK,KK,Participant Equity,F,F
+3009,EQUITY,Equity:AK,AK,Participant Equity,F,F
+3010,EQUITY,Equity:RS,RS,Participant Equity,F,F
 
 4000,INCOME,Income,Income,Income,F,T
 4001,INCOME,Income:Interest,Interest,Interest,F,F
 
 5000,EXPENSE,Expenses,Expenses,Expenses,F,T
-5001,EXPENSE,Expense Adjustment,Zero out expenses,F,F
-5020,EXPENSE,Expenses:KasbaLodge,KasbaLodge,Charter&freight&fuel&float,F,F
-5030,EXPENSE,Expenses:CalmAir,CalmAir,Return flight&freight,F,F
-5040,EXPENSE,Expenses:Pakcanoe,Pakcanoe,Canoes & accessories,F,F
-5051,EXPENSE,Expenses:Shipping,Shipping Rick's packs,F,F
-5310,EXPENSE,Expenses:Food,Food,F,F
-5320,EXPENSE,Expenses:Drink,Drink,F,F
-5501,EXPENSE,Expenses:Petrol,Petrol,F,F
+5001,EXPENSE,Expense Adjustment,Zero out,Zero out,F,F,9
+5002,EXPENSE,Expense Adjustment (all),Zero out(all),Zero out(all),F,F,10
+5020,EXPENSE,Expenses:KasbaLodge,KasbaLodge,Charter&freight&fuel&float,F,F,9
+5021,EXPENSE,Expenses:KasbaLodge (all),KasbaLodge (all),Charter&freight&fuel&float (all),F,F,10
+5030,EXPENSE,Expenses:CalmAir,CalmAir,Return flight&freight,F,F,9
+5031,EXPENSE,Expenses:CalmAir (all),CalmAir (all),Return flight&freight (all),F,F,10
+5051,EXPENSE,Expenses:Shipping,Shipping Rick's packs,Shipping Rick's packs,F,F,10
+5310,EXPENSE,Expenses:Food,Food,Food,F,F,10
+5320,EXPENSE,Expenses:Drink,Drink,Drink,F,F,10
+5400,EXPENSE,Expenses:Miscelaneous,Odds&Ends,Odds&Ends,F,T
+5401,EXPENSE,Expenses:Miscelaneous:Ods&Ends,Odds&Ends,Odds&Ends,F,F,10
+5500,EXPENSE,Expenses:Auto,Auto Expenses,Auto expenses,F,T
+5501,EXPENSE,Expenses:Petrol,Petrol,Petrol,F,F,10
+5502,EXPENSE,Expenses:Parking,Parking,Parking,F,F,10
 
