@@ -25,10 +25,12 @@ debk.py is a module that supports double entry book keeping.
 Usage:
   debk.py -h | --version
   debk.py new --entity=ENTITY
+  debk.py journal_entry [<infiles>...] [--entity=ENTITY]
+  debk.py show_journal [--entity=ENTITY]
   debk.py show_accounts [--entity=ENTITY]
   debk.py [-v|-vv|-vvv] show_account_balances [--entity=ENTITY]
-  debk.py show_journal [--entity=ENTITY]
-  debk.py journal_entry [--entity=ENTITY]
+  debk.py test_load [<infiles>...] [--entity=ENTITY]
+
 
 Options:
   -h --help  Print usage statement.
@@ -41,6 +43,7 @@ Commands:
   show_accounts displays the chart of accounts.
   show_journal displays the journal entries.
   journal_entry provides for user entry.
+  test_load is being used only for testing, not for production.
 
 Comments:
   The --entity=ENTITY option is mandatory with the 'new' command.
@@ -163,17 +166,17 @@ def create_entity(entity_name):
     cofa_source = os.path.join(  # Use a prepopulated chart of
                 DEFAULT_HOME,    # accounts if it exists.
                 entity_name + 'ChartOfAccounts')
-    print("#Looking for {}.#".format(cofa_source))
+#   print("#Looking for {}.#".format(cofa_source))
     if not os.path.isfile(cofa_source):
-        print("Could not find file '{}'.."
-            .format(cofa_source))
+#       print("Could not find file '{}'.."
+#           .format(cofa_source))
         cofa_source = os.path.join(DEFAULT_HOME, DEFAULT_CofA)
-        print("... so default '{}' is being used"
-            .format(cofa_source))
+#       print("... so default '{}' is being used"
+#           .format(cofa_source))
     new_dir = os.path.join(DEFAULT_HOME, entity_name+'.d')
-    print("new_dir is {}.".format(new_dir))
+#   print("new_dir is {}.".format(new_dir))
     new_CofA_file_name = os.path.join(new_dir, CofA_name)
-    print("new_CofA_file_name is {}.".format(new_CofA_file_name))
+#   print("new_CofA_file_name is {}.".format(new_CofA_file_name))
     new_Journal = os.path.join(new_dir, Journal_name)
     meta_source = os.path.join(DEFAULT_HOME, DEFAULT_Metadata)
     meta_dest = os.path.join(new_dir, Metadata_name)
@@ -185,18 +188,19 @@ def create_entity(entity_name):
         # The following keeps track of the last entity referenced.
         with open(entity_file_path, 'w') as entity_file_object:
             entity_file_object.write(entity_name)
-        print("Wrote entity name to {}.".format(entity_file_path))
+#       print("Wrote entity name to {}.".format(entity_file_path))
         os.mkdir(new_dir)
-        print("Created new directory {}.".format(new_dir))
+#       print("Created new directory {}.".format(new_dir))
         shutil.copy(cofa_source, new_CofA_file_name)
-        print("Copied {} to {}.".format(cofa_source,
-        new_CofA_file_name))
+#       print("Copied {} to {}."
+#           .format(cofa_source,
+#                   new_CofA_file_name))
         with open(new_Journal, 'w') as journal_file_object:
             journal_file_object.write('{"Journal": []}')
-        print("Wrote to {}.".format(new_Journal))
+#       print("Wrote to {}.".format(new_Journal))
         with open(meta_dest, 'w') as json_file:
             json.dump(metadata, json_file)
-        print("Dumped to {}.".format(meta_dest))
+#       print("Dumped to {}.".format(meta_dest))
     except FileExistsError:
         print("ERROR: Directory '{}' already exists"
                             .format(new_dir))
@@ -428,14 +432,13 @@ class ChartOfAccounts(object):
 
     format_line = "{}{:>10}{:^10}{:^10}{}{}"
 
-    def __init__(self, entity_name):
+    def __init__(self, args):
         """
         Loads the chart of accounts belonging to a specified entity.
         The accounts attribute is a dict keyed by account codes and
         values are instances of the Account class.
         """
-        self.entity_name = entity_name  # Used by self.load_journal().
-        self.home = os.path.join(DEFAULT_HOME, entity_name+'.d')
+        self.home = os.path.join(DEFAULT_HOME, args['--entity']+'.d')
         self.cofa_file = os.path.join(self.home, CofA_name)
         self.csv_dict = {}  # Keyed by account number ('code'.)
         self.code_set = set()
@@ -457,14 +460,14 @@ class ChartOfAccounts(object):
         # The accounts attribute is not fully populated until if and
         # when needed.  This is done using the load_journal() method.
 
-    def load_journal(self):
+    def load_journal(self, args):
         """
         Posts the journal to the ledger.
         Returns a tuple: (expenses, fixed_assets)
             This is for my convenience- it's NOT std accounting
             proceedure!
         """
-        journal = Journal(self.entity_name)
+        journal = Journal(args)
 #       print("Journal Contains the following......................")
 #       print(journal.journal)
 #       print("....................................................")
@@ -549,7 +552,7 @@ class JournalEntry(object):
             number: "{:0>3}".format(entry_number),
             date: date_stamp,
             user: name,
-            description: explanation,
+            description: explanation, (a string with imbedded CRs
             line_entries: list of {'acnt', 'DR', 'CR' keyed values},
             )
     (We use 'data' rather than individual attributes to allow persistent
@@ -644,11 +647,11 @@ class JournalEntry(object):
         """
         ret = dict(acnt= '{:>8}'.format(line_entry['acnt']),)
         if line_entry['DR']:
-            ret['DR'] = '{:>10,.2f}'.format(line_entry['DR'])
+            ret['DR'] = '{:>10,.2f}'.format(float(line_entry['DR']))
         else:
             ret['DR'] = '{:>10}'.format(' ')
         if line_entry['CR']:
-            ret['CR'] = '{:>10,.2f}'.format(line_entry['CR'])
+            ret['CR'] = '{:>10,.2f}'.format(float(line_entry['CR']))
         else:
             ret['CR'] = '{:>10}'.format(' ')
         return ('{acnt:>8}:{DR}{CR}'
@@ -687,10 +690,11 @@ class Journal(object):
     JournalEntry methods get_entry and show.
     """
 
-    def __init__(self, entity_name):
+    def __init__(self, args):
         """
         Loads an entity's metadata and all journal entries to date:
         in preparation for further journal entries.
+        The entity comes from args: args[--entity].
         Attributes include:
             entity_name:
             journal_file:
@@ -710,8 +714,8 @@ class Journal(object):
         Also consider collecting new entries and not even loading
         those in persistent storage until user decides to save.
         """
-        self.entity_name = entity_name
-        dir_name = os.path.join(DEFAULT_HOME, entity_name+'.d')
+#       self.entity_name = args["--entity"]
+        dir_name = os.path.join(DEFAULT_HOME, args["--entity"]+'.d')
         self.journal_file = os.path.join(dir_name, Journal_name)
         self.metadata_file = os.path.join(dir_name, Metadata_name) 
         with open(self.journal_file, 'r') as f_object:
@@ -747,6 +751,12 @@ class Journal(object):
         with open(self.metadata_file, 'w') as f_object:
             json.dump(self.metadata, f_object)
 
+    def add(self, journal_entry):
+        """Adds an instance of JournalEntry to the journal (self.)
+        Incriments the next_number attribute at the same time."""
+        self.journal.append(journal_entry.data)
+        self.next_entry += 1
+
     def get_entry(self):
         """Used by the get method do add an entry to the the journal
         attribute of 'self', an instance of the Journal class.
@@ -764,6 +774,58 @@ class Journal(object):
             self.journal.append(new_entry.data)
             return new_entry
         # else returns None
+
+    def load_entries(self, file_name):
+        """Assumes 'file_name' to be the name of an existing file of the
+        form as in in0, in1, etc.  This file is read and corresponding
+        entries are made to the journal.
+        """
+
+        def initialize():
+            start_new_entry = True
+            new_entry =  dict(number= self.next_entry,
+                                date= '',
+                                user= '',
+                                description = [],
+                                line_entries= [],
+                                )
+            return (start_new_entry, new_entry)
+
+        def parse_DrCr_amnt(line):
+            part = line.split()
+            code = part[0]
+            if part[1] == 'Dr':
+                dr = part[2]
+                cr = 0
+            elif part[1] == 'Cr':
+                dr = 0
+                cr = part[2]
+            else:
+                print("Something is wrong!: bad format in {}?"
+                        .format(infile))
+            return dict(acnt= code,
+                        DR= dr,
+                        CR= cr)
+
+        start_new_entry, new_entry = initialize()
+        with open(file_name, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    # Save current entry.
+                    new_entry['description'] = (
+                        '\n'.join(new_entry['description']))
+                    self.add(JournalEntry(new_entry))
+                    start_new_entry, new_entry = initialize()
+                    continue
+                if not new_entry['date']: new_entry['date'] = line
+                elif not new_entry['user']: new_entry['user'] = line
+                elif (not 'Dr' in line) and (not 'Cr' in line):
+                    new_entry['description'].append(line)
+                else:  # Parse acnt Dr/Cr amnt
+                    new_entry['line_entries'].append(
+                                                parse_DrCr_amnt(line))
+        
 
     def get(self):
         """Gets journal entries from the user.
@@ -800,7 +862,11 @@ class Journal(object):
 
 def main():
     args = docopt.docopt(__doc__, version=VERSION)
-#   print(args)
+#   print("Args are:")
+#   for arg in args:
+#       print("{}: {}"
+#           .format(arg, args[arg]))
+#   print("")
     if args['new']:
         if args['--entity'] == create_entity(args['--entity']):
             print(
@@ -812,28 +878,37 @@ def main():
             args['--entity'] = entity_file_object.read()
     
     if args['journal_entry']:
-        journal = Journal(args['--entity'])
+        journal = Journal(args)
         journal.get()
 
     if args['show_journal']:
-        journal = Journal(args['--entity'])
+        journal = Journal(args)
         print(journal.show())
 
     if args['show_accounts']:
-        cofa = ChartOfAccounts(args['--entity'])
+        cofa = ChartOfAccounts(args)
         print(cofa.show(args))
 
-
     if args['show_account_balances']:
-        cofa = ChartOfAccounts(args['--entity'])
-        expenses, fixed_assets = cofa.load_journal()
+        cofa = ChartOfAccounts(args)
+        expenses, fixed_assets = cofa.load_journal(args)
         for key in cofa.ordered_codes:
             print(cofa.accounts[key].dump())
 
 
+    if args['test_load']:
+        assert "Kazan15" == create_entity("Kazan15")
+        journal = Journal(args)
+        for infile in args["<infiles>"]:
+            journal.load_entries(infile)
+        print(journal.show())
+        journal.save()
+
+
+
 #       print(cofa.show(args))
-        print("\nAssets total: ${:.2f}".format(fixed_assets))
-        print("\nExpenses total: ${:.2f}".format(expenses))
+#       print("\nAssets total: ${:.2f}".format(fixed_assets))
+#       print("\nExpenses total: ${:.2f}".format(expenses))
 
 if __name__ == '__main__':  # code block to run the application
     main()

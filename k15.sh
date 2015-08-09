@@ -1,6 +1,6 @@
 #!/user/bin/bash
 ./src/debk.py new --entity=Kazan15
-./src/debk.py journal_entry < input
+./src/debk.py journal_entry in1 in2 < input
 cat explanation > output
 printf "\n\f" >> output
 ./src/debk.py show_journal >> output
