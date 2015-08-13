@@ -1,11 +1,13 @@
 
 EXPLANATION:
-Journal entries appear in the first half of this file, 
-followed in the second half by the ledger: a listing of entries
-and balances for each account.
-Place holder accounts are simply listed without any corresponding
-entries or balances.  Accounts 1501 and 5001 are used for a special
-purpose explained below.
+Journal entries appear immediately following this explanation. After
+that can be found the ledger- The Chart of Accounts, with each entry
+cross referenced to the corresponding journal entry.
+Each account is specified as either a place holder (heading) account or
+a total is provided.  Accounts with a number (8, 9 or 10) following the
+total, are those that have been balanced against the specified number of
+participants. This is done by using special accounts 1501, 5001 & 5002
+as described in the next two paragraphs.
 
 The value of canoes and other "fixed assets" is reflected in the 
 liability accounts of the eight participants who 'bought' them.
@@ -18,16 +20,22 @@ It means that the "trip entity" owes you the value of those assets.
 (The liability is on the part of the trip entity.)
 
 The total of the expense accounts has been balanced against the equity
-accounts of all the participants. This was done in a manner similar to
-what was done for the fixed assets:
-All the (typically Dr) expense entries were added up, that sum was
-entered as a Cr entry in account 5001, which in turn was balanced by
-equal Dr entries in each of the participants equity accounts.
+accounts. This was done in a manner similar to what was done for the
+fixed assets:
+All the (typically Dr) expense entries were added up into one of two
+sums (depending on whether the item is to be split 9 or 10 ways.) Those
+sums were entered as Cr entries in either account 5001 or 5002, which
+in turn were balanced by equal Dr entries in each of the participants'
+equity accounts. By way of further explanation:
+This was done separately for expence accounts which involved everyone,
+and those involving only nine participants.  (Rick made many of his
+payments directly in Canadian funds.)
 
-The equity accounts reflect how much of your initial investment
-remains (which presumably will be refunded with a check from the
-treasurer (or, if negative, how much you owe, in which case I expect the
-treasurer would appreciate a check from you fro that amount.)
+Your equity account less the amount in your liability account, reflects
+how much of your initial investment remains.  This presumably will be
+refunded with a check from the treasurer (or, if it is negative, it
+represents how much you still owe, in which case I'm sure the treasurer
+would appreciate a check from you for that amount.)
 
 I believe this all to be in keeping with standard double entry book
 keeping said to first have been devised by Franciscan friar Luca
