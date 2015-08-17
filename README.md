@@ -37,3 +37,10 @@ The project was inspired by the book keeping needs of a group (Kazan15)
 taking a wilderness canoe trip on the Kazan River, Nunavit, Canada. The
 soft ware includes facilities specialized for this group.  The
 accompanying 'explanation' file provides details.
+
+As of this version (0.0.1,) there is still no support for adding
+accounts except to create and then use a custom chart of accounts
+prior to account creation as described in the create_entity()
+docstring.  Although not tested, it should be possible after entity
+creation to add accounts by simply editing the entity's CofA file.
+Deleting accounts will likely create havoc!

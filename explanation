@@ -6,32 +6,27 @@ cross referenced to the corresponding journal entry.
 Each account is specified as either a place holder (heading) account or
 a total is provided.  Accounts with a number (8, 9 or 10) following the
 total, are those that have been balanced against the specified number of
-participants. This is done by using special accounts 1501, 5001 & 5002
-as described in the next two paragraphs.
-
-The value of canoes and other "fixed assets" is reflected in the 
-liability accounts of the eight participants who 'bought' them.
-This was done by adding all the (typically Dr) fixed asset entries,
-entering that sum as a Cr entry in account 1501 with a balancing Dr
-entry distributed evenly among the Liability accounts of the 'group
-of 8' who are now owners of these assets.  Do not be alarmed by the
-word "liability."  This does not mean a liability born by you.
-It means that the "trip entity" owes you the value of those assets.
-(The liability is on the part of the trip entity.)
+participants. Accounts 5001 & 5002 serve a special service as described
+in the next paragraph.
 
 The total of the expense accounts has been balanced against the equity
-accounts. This was done in a manner similar to what was done for the
-fixed assets:
+accounts. This was done as follows: 
 All the (typically Dr) expense entries were added up into one of two
 sums (depending on whether the item is to be split 9 or 10 ways.) Those
 sums were entered as Cr entries in either account 5001 or 5002, which
 in turn were balanced by equal Dr entries in each of the participants'
-equity accounts. By way of further explanation:
-This was done separately for expence accounts which involved everyone,
-and those involving only nine participants.  (Rick made many of his
-payments directly in Canadian funds.)
+equity accounts.
 
-Your equity account less the amount in your liability account, reflects
+The value of canoes and other "fixed assets" is reflected in the 
+liability accounts of the eight participants who 'bought' them.
+This was done by adding all the (typically Dr) fixed asset entries,
+dividing that sum by the number of asset owners (8) and moving these
+amounts from equity (Dr) to liability (Cr.) Do not be alarmed by the
+word "liability."  This does not mean a liability born by you.
+It means that the "trip entity" owes you the value of those assets.
+(The liability is on the part of the trip entity; you are a creditor.)
+
+After these adjustments have been made, each equity account reflects
 how much of your initial investment remains.  This presumably will be
 refunded with a check from the treasurer (or, if it is negative, it
 represents how much you still owe, in which case I'm sure the treasurer

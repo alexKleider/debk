@@ -20,9 +20,13 @@
 #   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #   Look for file named COPYING.
 """
-debk.py is a module that supports double entry book keeping.
-It was inspired by and serves the special accounting needs of the
-Kazan15 'group of 10.' [1]
+
+        ******************   debk.py   *****************
+
+        A module that supports double entry book keeping.
+
+This project was inspired by and serves the special accounting
+needs of the Kazan15 'group of 10.' [1]
 
 Usage:
   debk.py -h | --version
@@ -52,12 +56,6 @@ Comments:
   For the other commands, an attempt will be made to set the entity
   to the last one used (and persistently stored in a file with the
   name specified by DEFAULT_HOME/DEFAULT_Entity.)
-  As of this version (0.01,) there is still no support for adding
-  accounts except to create and then use a custom chart of accounts
-  prior to account creation as described in the create_entity()
-  docstring.  Although not tested, it should be possible to add accounts
-  by simply editing an entity's CofA file.  Deleting accounts might
-  create havoc!
 
 [1] canoetripping.info:5380
 """
@@ -70,10 +68,12 @@ import csv
 
 import docopt
 
-VERSION = "0.0.0"
+VERSION = "0.0.1"
 
 EPSILON = 0.01
-INDENTATION_MULTIPLIER = 2  
+INDENTATION_MULTIPLIER = 3  
+INDENTATION_CONSTANT = ' ' * INDENTATION_MULTIPLIER  
+N_ASSET_OWNERS = 8  # Must jive with 'split' values in CofAs.
 
 DEFAULT_HOME = '/var/opt/debk.d'
 # Each entity will have its home directory in DEFAULT_HOME.
@@ -95,26 +95,17 @@ CofA_name = 'CofA'               #| These three files will appear
 Journal_name = 'Journal.json'    #| in the home directory of
 Metadata_name = 'Metadata.json'  #| each newly created entity.
 
-with open(os.path.join(DEFAULT_HOME, DEFAULT_CofA), 'r') as f:
-    reader = csv.reader(f)
-    CSV_FIELD_NAMES = next(reader)
-expected_field_names = ['code', 'type', 'full_name', 'name',
-                        'notes', 'hidden', 'place_holder']
+#with open(os.path.join(DEFAULT_HOME, DEFAULT_CofA), 'r') as f:
+#    reader = csv.reader(f)
+#    CSV_FIELD_NAMES = next(reader)
+#expected_field_names = ['code', 'type', 'full_name', 'name',
+#                        'notes', 'hidden', 'place_holder']
 # Custom addition of 'split' to the field names for Kazan15.
 # ... see divider() and custom() functions.
 
 # print(CSV_FIELD_NAMES)
 # print(expected_field_names)
-assert CSV_FIELD_NAMES == expected_field_names
-
-def signed_balance(account_code, balance, dr_cr):
-    """Checks (based on its code) if an account's balance is positive
-    or negative and returns the balance appropriately signed.
-    """
-    if ((account_code[:1] in '15' and dr_cr == 'Cr')
-    or (account_code[:1] in '234' and dr_cr == 'Dr')):
-        return balance * -1
-    else: return balance 
+#assert CSV_FIELD_NAMES == expected_field_names
 
 def none2float(n):
     """ Solves the need to interpret a non-entry as zero."""
@@ -165,7 +156,7 @@ def zero_out(preamble,
     ret = preamble
     for i in range(len(split_list)):
         ret.append(format_line.format(i + 1, split_list[i]))
-    ret.append('\n')
+    ret.append('\n')  # Journal entry depends on this trailing CR
     return '\n'.join(ret)
 
 def dr_or_cr(code):
@@ -296,22 +287,28 @@ class Account(object):
     ChartOfAccounts.accounts keyed by account code.
     Attributes include: csv, code, balance,
     dr_cr (specifies if the balance is a debit or credit,)
-    place_holder, split,
+    place_holder, split, indent,
     acnt_type (DR if debits are positive,
                CR if credits are positive,
                or 'place_holder'.)
+    Place holder accounts will have totals that are signed
+    depending on their acnt_type: Dr totals in Cr accounts
+    and Cr totals in Dr accounts will be shown as negative.
+    This is done by the signed_balance method.
     """
 
     def __init__(self, csv):
         self.csv = csv
         self.code = csv['code']
+        self.indent = INDENTATION_CONSTANT * int(csv['indent'])
 #       print('Dealing with account code {}'.format(self.code))
         if csv['split']:
             self.split = int(csv['split'])
         else:
             self.split = 0
         self.line_entries = []  # list of LineEntry objects.
-        self.balance = 0
+        self.balance = 0    # To be used for sub-totals
+                            # in place holder accounts.
         self.dr_cr = ''  # Specifies if the balance is 'DR' or 'CR'
         if csv['place_holder'] in 'Tt':
             self.place_holder = True 
@@ -324,30 +321,51 @@ class Account(object):
             print("Problem with Acnt {}: Place holder or not??"
                     .format(self.code))
 
+    def signed_balance(self):
+        """Checks (based on its code) if an account's balance is positive
+        or negative and returns the balance appropriately signed.
+        """
+        if (self.balance < EPSILON or 
+        (self.code[:1] in '15' and self.dr_cr == 'DR')
+        #  Asset and Expense accounts are Debit accounts.
+        or (self.code[:1] in '234' and self.dr_cr == 'CR')
+        #  Liability, Equity and Income accounts are Credit accounts.
+        ):
+#           print("Accnt {}{} has the appropriate Dr/Cr balance: {:.2f}"
+#               .format(self.code, self.dr_cr, self.balance))
+            return self.balance  # As it should be.
+        else:
+#           print("Accnt {}{} has a NEGATIVE Dr/Cr balance:      {:.2f}"
+#               .format(self.code, self.dr_cr, self.balance))
+            return self.balance * -1
+
     def dump(self):
         """ A 'quick and dirty' way to show an account.
         Expect to only use it during development.
         """
         if self.split: split = "{}".format(self.split)
         else: split = ''
-        ret = ['Acnt#{}'.format(self.code)]
-        if self.split:
-            split = self.split
-        else:
-            split = ''
+        ret = ['{}Acnt#{}'.format(self.indent, self.code)]
+#       if self.split:
+#           split = self.split
+#       else:
+#           split = ''
         if self.place_holder: ret.append(
-                "{}  < place holder{}".
-                format(self.csv['full_name'].upper(),
+                "{}{}  < place holder{}".
+                format(self.indent,
+                    self.csv['full_name'].upper(),
                     split))
         else: 
-            ret.append("{:<15}{:>10.2f}{} <TOTAL {}"
-                    .format(self.csv['name'],
+            ret.append("{}{:<15}{:>10.2f}{} <TOTAL {}"
+                    .format(self.indent,
+                            self.csv['name'],
                             self.balance,
                             self.dr_cr,
                             split))
         ret = [' '.join(ret)]
         for line_entry in self.line_entries:
-            ret.append(line_entry.show())
+            ret.append('{}{}'.format(self.indent,
+                                    line_entry.show()))
         return '\n'.join(ret)
 
     def update_balance(self):
@@ -565,8 +583,10 @@ class ChartOfAccounts(object):
         """This is the show method currently being used.
         """
         ret = []
-        for key in self.ordered_codes:
-            ret.append(self.accounts[key].dump())
+        for code in self.ordered_codes:
+            ret.append(self.accounts[code].dump())
+#           print("Signed balance Acnt {}: {:.2f}"
+#               .format(code, self.accounts[code].signed_balance()))
         return '\n'.join(ret)
 
     def show(self, args):
@@ -899,47 +919,64 @@ class Journal(object):
                 print(self.show())
                 print(
                 "Journal content as it appears above, has been saved.")
+
+def adjust4assets(chart_of_accounts):
+    """
+    Returns a string that can be provided as a parameter to the load
+    method of a Journal instance.  Such an entry adjusts the equity and
+    liability accounts to reflect the fact that the 'group of 8' own the
+    fixed assets but that ownership comes as a cost to them: hence the
+    Dr entries against their equity accounts.  See file 'explanation'.
+    """
+    total2split = 0
+    codes2check = [ code for code in chart_of_accounts.ordered_codes
+            if (code[:2] == '15') ]
+    for code in codes2check:
+        acnt = chart_of_accounts.accounts[code]
+        if (not acnt.place_holder
+        and hasattr(acnt, 'split')):
+            assert acnt.split == N_ASSET_OWNERS
+            total2split += acnt.signed_balance()
+    entries = divider(total2split, 8)
+    journal_input = ['August 10, 2015', 'book keeper',
+                    'Adjust equity and liability accounts to reflect'
+                    "ownership of assets by the 'group of 8'."
+                    ]
+    for i in range(N_ASSET_OWNERS):
+        journal_input.append(
+            '20{:0>2} Cr {:.2f}'.format(i + 1, entries[i]))
+        journal_input.append(
+            '30{:0>2} Dr {:.2f}'.format(i + 1, entries[i]))
+    journal_input.append('\n')
+    # Need the above CR to satisfy journal entry requirements.
+    return '\n'.join(journal_input)
     
-def custom(chart_of_accounts):
+def zero_expenses(chart_of_accounts):
     """This function provides support for a special need unique to
-    our (Kazan15) group.  It has no relevance to a general
-    accounting system.
+    our (Kazan15) group.  It is unlikely to have relevance to a
+    general accounting system.
     It's parameter is expected to be a journal populated instance of
     the ChartOfAccounts class.
     It returns text (representing journal entries) that can then be
     added to the journal (using its load method.)  These additional
     entries preform the 'custom' requirements described in the
     accompanying 'explanation' file.
-    This custom process depends on the final (otherwise optional)
-    'split' field of the fixed asset accounts and the expence accounts.
+    This zero_expenses method depends on the final (otherwise optional)
+    'split' field of the expence account.
     Typical usage would be as follows:  load a ChartOfAccounts with
     all the journal entries and run this function with it as the
     parameter. Then load the returned value to the journal and populate
     another chartofaccounts with this updated journal. 
     """
-    expenses = {}      #| Both of these are dicts of
-    fixed_assets = {}  #| totals keyed by 'split'
+    expenses = {}      # Dict of totals keyed by 'split'
     for code in chart_of_accounts.ordered_codes:
-        c = chart_of_accounts.accounts[code]
-        balance = c.balance
+        acnt = chart_of_accounts.accounts[code]
         if (code[:1] == '5') and (not
-                    c.place_holder):
+                    acnt.place_holder):
         # if expense account that isn't a place holder:
             _value = expenses.setdefault(
-                        c.split, 0)
-            expenses[c.split] += balance
-        if (code[:2] == '15') and (not
-                    c.place_holder):
-        # if fixed asset account that isn't a place holder:
-            value = fixed_assets.setdefault(c.split, 0)
-            fixed_assets[c.split] += balance
-    # fixed_assets[8]: Cr 1501  Dr 2001..2008
-    journal_input_fa8 = zero_out(
-            ['August 10, 2015', 'book keeper',
-            'Assign value of fixed assets to Liability accounts.',
-            '1501 Cr {:.2f}'.format(fixed_assets[8])],
-            '20{:0>2} Dr {:.2f}',
-            divider(fixed_assets[8], 8))
+                        acnt.split, 0)
+            expenses[acnt.split] += acnt.signed_balance()
     # expenses[9]: Cr 5001  Dr 3001..3009
     journal_input_ex9 = zero_out(
             ['August 10, 2015', 'book keeper',
@@ -954,41 +991,32 @@ def custom(chart_of_accounts):
             '5002 Cr {:.2f}'.format(expenses[10])],
             '30{:0>2} Dr {:.2f}',
             divider(expenses[10], 10))
-    return ''.join([journal_input_fa8,
-                    journal_input_ex9,
+    # Note: the following join method is used on the empty string rather
+    # than a CR because a CR was added to each string in the list by the
+    # zero_out method (because journal reading depends on it.
+    return ''.join([journal_input_ex9,
                     journal_input_ex10 ])
 
-def refunds(cofa):
-    """Uses an instance of the ChartOfAccounts class to calculate how
-    much is to be refunded (or is still outstanding) for each
-    participant.  Returns a string showing this information.
+def check_equity_vs_bank(chart_of_accounts):
     """
-    owing = ['Refunds due (Outstanding if negative):',
-            "(Calculated by subtracting each participant's liability",
-            "account from her/his asset account.)"]
-    total = 0
-    for i in range(10):
-        id = i+1
-        liability_code = '20{:0>2}'.format(id)
-        asset_code = '30{:0>2}'.format(id)
-        if ((liability_code in cofa.code_set)
-        and (asset_code in cofa.code_set)):
-            name = cofa.csv_dict[asset_code]['name']
-            balance = (
-                signed_balance(asset_code,
-                        cofa.accounts[asset_code].balance,
-                        cofa.accounts[asset_code].dr_cr)
-                -
-                signed_balance(liability_code,
-                        cofa.accounts[liability_code].balance,
-                        cofa.accounts[liability_code].dr_cr)
-                    )
-            total += balance
-            owing.append('  {}: ${:.2f}'
-                    .format(name, balance))
-    owing.append("Total: ${:.2f}".format(total))
-
-    return '\n'.join(owing)
+    Checks that the sum of the equity accounts balances against liquid
+    assets, in our case, just the bank account.
+    Returns a string.
+    """
+    assets = 0
+    codes2check = [ code for code in chart_of_accounts.ordered_codes
+            if (code[:2] == '30') ]  # Equity accounts
+    for code in codes2check:
+        acnt = chart_of_accounts.accounts[code]
+        if not acnt.place_holder:
+            assets += acnt.signed_balance()
+    ret = ["Total assets of participants:  {:.2f}"
+                .format(assets)]
+    ret.append(
+        "...which balances nicely against the total liquid assets...")
+    ret.append("... remaining in bank account: {:.2f}"
+        .format(chart_of_accounts.accounts['1110'].signed_balance()))
+    return '\n'.join(ret)
 
 def main():
     args = docopt.docopt(__doc__, version=VERSION)
@@ -1025,41 +1053,36 @@ def main():
         print(cofa.show_accounts(args))
 
     if args['custom']:
-        assert "Kazan15" == create_entity("Kazan15")
+        ret = []
+        entity = create_entity(args['--entity'])
+        assert args["--entity"] == entity
         journal = Journal(args)  # Loaded from persistent storage.
         for infile in args["<infiles>"]:
             journal.load(infile)
         journal.save()  # Sends journal to persistent storage.
 
-#       print("\nJOURNAL - after initial entries")
-#       print(journal.show())
         cofa = ChartOfAccounts(args)
         cofa.load_journal(args)  # Gets journal from persistent storage.
 
-#       print("\nCHART of ACCOUNTS - after initial entries")
-#       print(cofa.show_accounts(args))
-        
-        new_entries = custom(cofa)
-#       print("\nNEW ENTRIES:")
-#       print(new_entries)
+        expense_adjustment = zero_expenses(cofa)
+        asset_adjustment = adjust4assets(cofa)
 
-#       print('\nAbout to do zeroing entries....')
         journal = Journal(args)  # ?unnecessary retrieval?
-        journal.load(custom(cofa))
+        journal.load(expense_adjustment)
+        journal.load(asset_adjustment)
         cofa = ChartOfAccounts(args)  # A virgin ledger.
         journal.save()
 
-#       print("\nJOURNAL - after zeroing entries")
-        print(journal.show())
+        ret.append(journal.show())
 
         cofa.load_journal(args)
-        print("\nCHART of ACCOUNTS: \n")
-        print(cofa.show_accounts(args))
+        ret.append("\nCHART of ACCOUNTS: \n")
+        ret.append(cofa.show_accounts(args))
+        ret.append('\n')
+        ret.append(check_equity_vs_bank(cofa))
 
-        print('\n... and now for the punch line:\n')
-        print(refunds(cofa))
-        print("Which should equal the bank account: ${:.2f}"
-            .format(cofa.accounts['1110'].balance))
+        with open("Report", 'w') as report_file:
+            report_file.write('\n'.join(ret))
 
 if __name__ == '__main__':  # code block to run the application
     main()
