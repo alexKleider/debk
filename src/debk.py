@@ -173,36 +173,6 @@ def dr_or_cr(code):
     elif number <= 4999: return('CR')   # Income
     elif number <= 5999: return('DR')   # Expenses
 
-def set_indentation(indentation_level, 
-                    previous_place_holder_value,
-                    current_place_holder_value,
-                    account_code):
-    """REQUIRES FURTHER THOUGHT!  May solve this problem by simply
-    adding an 'indent' field to the CofA.csv file in which case this
-    function can be deleted.
-    
-    Uses the account's place_holder value to algorithmicly change
-    indentation_level. The first two parameters are both changed.
-    Tried to use a generator but didn't work."""
-    assert current_place_holder_value in {'T', 'F'}
-    if account_code in {'1000', '2000', '3000', '4000', '5000'}:
-        return(0, 'T')
-#   print("PREVIOUS AND CURRENT: {}, {}"
-#       .format(previous_place_holder_value,
-#               current_place_holder_value))
-    if previous_place_holder_value == 'T':
-        indentation_level += 1
-    elif (previous_place_holder_value == 'F' and 
-            current_place_holder_value == 'T'):
-        indentation_level -= 1
-    previous_place_holder_value = current_place_holder_value
-#   print("PREVIOUS AND CURRENT: {}, {}"
-#       .format(previous_place_holder_value,
-#               current_place_holder_value))
-#   print("INDENT SET TO {}.".format(indentation_level))
-    return (indentation_level, previous_place_holder_value)
-
-
 def create_entity(entity_name):
     """
     Establishes a new accounting system.
@@ -291,10 +261,11 @@ class Account(object):
     acnt_type (DR if debits are positive,
                CR if credits are positive,
                or 'place_holder'.)
-    Place holder accounts will have totals that are signed
+    Place holder accounts will have the attribute s_balance
     depending on their acnt_type: Dr totals in Cr accounts
     and Cr totals in Dr accounts will be shown as negative.
-    This is done by the signed_balance method.
+    Non place_holder accounts have the signed_balance method to return
+    the corresponding (signed) value.
     """
 
     def __init__(self, csv):
@@ -313,9 +284,14 @@ class Account(object):
         if csv['place_holder'] in 'Tt':
             self.place_holder = True 
             self.acnt_type = 'place_holder'
+            self.s_balance = 0  # This attribute is populated by the
+                                # set_place_holder_signed_balances method
+                                # of the ChartOfAccounts class and
+                                # applies only to place_holder accounts.
         elif csv['place_holder'] in 'Ff':
             self.place_holder = False 
             self.acnt_type = dr_or_cr(self.code)  # Specifies account type.
+            self.balance = 0
         else:
             self.place_holder = None
             print("Problem with Acnt {}: Place holder or not??"
@@ -343,25 +319,23 @@ class Account(object):
         """ A 'quick and dirty' way to show an account.
         Expect to only use it during development.
         """
-        if self.split: split = "{}".format(self.split)
+        if self.split: split = "(\{})".format(self.split)
         else: split = ''
         ret = ['{}Acnt#{}'.format(self.indent, self.code)]
-#       if self.split:
-#           split = self.split
-#       else:
-#           split = ''
         if self.place_holder: ret.append(
-                "{}{}  < place holder{}".
+#               "{}{}  < {} place holder subtotal: {:.2f}".
+                "{}{} {} Title_Account- subtotal: {:.2f}".
                 format(self.indent,
                     self.csv['full_name'].upper(),
-                    split))
+                    split,
+                    self.s_balance))
         else: 
-            ret.append("{}{:<15}{:>10.2f}{} <TOTAL {}"
+            ret.append("{}{:<15} {} Total:{:>10.2f}{}"
                     .format(self.indent,
                             self.csv['name'],
+                            split,
                             self.balance,
-                            self.dr_cr,
-                            split))
+                            self.dr_cr))
         ret = [' '.join(ret)]
         for line_entry in self.line_entries:
             ret.append('{}{}'.format(self.indent,
@@ -414,85 +388,9 @@ class Account(object):
                     '{:.2f}'.format(self.balance),
                     dr_cr_type))
 
-
-    def show(self, args, indent = 0, place_holder = 0):
-        """
-        Returns a string representation of itself (an account.)
-        The 'place_holder' parameter is used to control indentation.
-        ########   CURRENTLY NOT BEING USED    ##################
-        ########  CURRENTLY USING dump METHOD  ##################
-        Thinking of using an extra 'indent' parameter in the CofA csv
-        file to solve the indentation problem.
-        """
-        print("Calling the show method on an account. (verbosity is {})"
-                .format(args['--verbosity']))
-        ret = []
-        assert type(self.place_holder) == type(True) 
-        if self.place_holder is True:
-            header_choice = 'full_name'
-        elif self.place_holder is False:
-            header_choice = 'name'
-        else: 
-            print("ERROR Condition: place holder neither T nor F")
-        indent, place_holder = (
-                set_indentation(indent,   # { These two parameters
-                        place_holder,     # {    are modified.
-                        self.csv['place_holder'],
-                        self.code))
-        header_line =("{}{:<5}{}"
-            .format("{}".format(' '*INDENTATION_MULTIPLIER*indent),
-                self.code,
-                self.csv[header_choice]))
-        if args['--verbosity'] == 1:
-            print('--verbosity is only 1')
-            return header_line + ('{:>6.2f}{}'
-                                .format(self.balance, self.dr_cr))
-        ret = [header_line]
-        if args['--verbosity'] > 1:
-            print('--verbosity is > 1')
-            if self.line_entries:
-                print("There are entries for this account ({})"
-                        .format(self.code))
-                ret.append(ChartOfAccounts.format_line
-                    .format("{}".format(' '*INDENTATION_MULTIPLIER*indent),
-                            "Entry#", 'Debits', 'Credits', 'Balance', ' '))
-                for line_entry in (self.line_entries):
-                    if line_entry.DR:
-                        new_line = (ChartOfAccounts.format_line
-                            .format("{}"
-                                .format(' '*INDENTATION_MULTIPLIER*indent),
-                                        line_entry.entry_number,
-                                        line_entry.DR, ' ', ' ', ' '))
-                    if line_entry.CR:
-                        cr_check += line_entry.DR
-                        new_line = (ChartOfAccounts.format_line
-                            .format("{}".format(' '*i_mult*indent),
-                                    line_entry.entry_number,
-                                    ' ', line_entry.CR, ' ', ' '))
-                    if line_entry.DR and line_entry.CR:
-                        new_line = (ChartOfAccounts.format_line
-                            .format("{}".format(' '*i_mult*indent),
-                                    line_entry.entry_number,
-                                    line_entry.DR, line_entry.CR,
-                                    ' ', ' '))
-                    ret.append(new_line)
-                if account.dr_cr == 'DR':
-                    dr_cr_type = 'Dr'
-                else: dr_cr_type = 'Cr'
-                ret.append(ChartOfAccounts.format_line
-                    .format("{}".format(' '*i_mult*indent),
-                            ' ', ' ', ' ',
-                            '{:.2f}'.format(account.balance),
-                            dr_cr_type))
-            else:
-                print("There are no entries for this account!!!")
-        return '\n'.join(ret)
-
-
-
 class ChartOfAccounts(object):
     """
-    A class to manage an entity's chart of accounts.
+    A class to manage an entity's chart of accounts (AKA the Ledger.)
     Instantiation loads such a chart from a file 
     but this includes only what's in the CSV file,
     NOT any accounting information. When accounting
@@ -536,6 +434,29 @@ class ChartOfAccounts(object):
         # The accounts attribute is not fully populated until if and
         # when needed.  This is done using the load_journal() method.
 
+    def set_place_holder_signed_balances(self):
+        """
+        Iterates through the accounts setting the signed_balance
+        attribute for each of the place_holder accounts.
+        """
+        I = len(self.ordered_codes)
+        for code in self.ordered_codes:
+            acnt = self.accounts[code]
+            if acnt.place_holder:
+                indent = acnt.indent
+                balance = 0
+                i = self.ordered_codes.index(code) + 1
+                while True:
+                    if (i >= I
+                    or (self.accounts[self.ordered_codes[i]].indent
+                                                    <= indent)):
+                        self.accounts[code].s_balance = balance
+                        break
+                    sub_acnt = self.accounts[self.ordered_codes[i]]
+                    if not sub_acnt.place_holder:
+                        balance += sub_acnt.signed_balance()
+                    i += 1
+
     def load_journal(self, args):
         """
         Posts the journal to the ledger.
@@ -575,6 +496,7 @@ class ChartOfAccounts(object):
 #               print("For {} no dr_cr entry {:,.2f}"
 #                       .format(code, balance))
         imbalance = dr_check - cr_check
+        self.set_place_holder_signed_balances()
         if abs(imbalance) > EPSILON:
             print("MAJOR ERROR! Balance sheet doesn't balance!")
             print(" Debits - Credits = {:,.2f}.".format(imbalance))
@@ -939,7 +861,7 @@ def adjust4assets(chart_of_accounts):
             total2split += acnt.signed_balance()
     entries = divider(total2split, 8)
     journal_input = ['August 10, 2015', 'book keeper',
-                    'Adjust equity and liability accounts to reflect'
+                    'Adjust equity and liability accounts to reflect',
                     "ownership of assets by the 'group of 8'."
                     ]
     for i in range(N_ASSET_OWNERS):
