@@ -21,20 +21,20 @@
 #   Look for file named COPYING.
 """
 
-        ******************   debk.py   *****************
+       ******************   debk.py   *****************
 
-        A module that supports double entry book keeping.
+       A module that supports double entry book keeping.
 
 This project was inspired by and serves the special accounting
-needs of the Kazan15 'group of 10.' [1]
+needs of the Kazan15 'group of 10.'[1]  Perhaps it might serve
+other needs as well.
 
 Usage:
   debk.py -h | --version
   debk.py new --entity=ENTITY
   debk.py journal_entry [<infiles>...] [--entity=ENTITY]
   debk.py show_journal [--entity=ENTITY]
-  debk.py show_accounts [--entity=ENTITY]
-  debk.py [-v|-vv|-vvv] show_account_balances [--entity=ENTITY]
+  debk.py [-v|-vv|-vvv] show_accounts [--entity=ENTITY]
   debk.py [-v|-vv|-vvv] custom [<infiles>...] [--entity=ENTITY]
 
 
@@ -53,93 +53,87 @@ Commands:
 
 Comments:
   The --entity=ENTITY option is mandatory with the 'new' command.
-  For the other commands, an attempt will be made to set the entity
-  to the last one used (and persistently stored in a file with the
-  name specified by DEFAULT_HOME/DEFAULT_Entity.)
+  When not provided, it defaults to the last entity referenced.
 
 [1] canoetripping.info:5380
 """
 
 import os
 import sys
-import shutil
-import json
 import csv
+import json
+import shutil
 
 import docopt
 
 VERSION = "0.0.1"
 
-EPSILON = 0.01
+MAXIMUM_VERBOSITY = 3
+EPSILON = 0.01  # We want acuracy to the nearest penney only.
 INDENTATION_MULTIPLIER = 3  
 INDENTATION_CONSTANT = ' ' * INDENTATION_MULTIPLIER  
+
 N_ASSET_OWNERS = 8  # Must jive with 'split' values in CofAs.
+                    # This is specific to Kazan15.
 
 DEFAULT_HOME = '/var/opt/debk.d'
 # Each entity will have its home directory in DEFAULT_HOME.
 
 # The following files are expected to be in the DEFAULT_HOME directory:
-DEFAULT_CofA = "defaultChartOfAccounts"
+DEFAULT_CofA = "defaultChartOfAccounts"     # A file name.
 # The default chart of accounts. (For now: place holders only.)
 # A file of this name is kept in DEFAULT_HOME to serve as a template
 # during entity creation although a different file can be used, see
 # docstring for create_entity().
-DEFAULT_Metadata = "defaultMetadata.json"
+DEFAULT_Metadata = "defaultMetadata.json"   # A file name.
 # A template used during entity creation.
-DEFAULT_Entity = "defaultEntity"
+DEFAULT_Entity = "defaultEntity"            # A file name.
 # DEFAULT_Entity  - Keeps track of the last entity accessed.
 # Its content serves as a default if an entity is required but
-# specified on the command line.
+# not specified on the command line.
 
 CofA_name = 'CofA'               #| These three files will appear
 Journal_name = 'Journal.json'    #| in the home directory of
 Metadata_name = 'Metadata.json'  #| each newly created entity.
 
-#with open(os.path.join(DEFAULT_HOME, DEFAULT_CofA), 'r') as f:
-#    reader = csv.reader(f)
-#    CSV_FIELD_NAMES = next(reader)
-#expected_field_names = ['code', 'type', 'full_name', 'name',
-#                        'notes', 'hidden', 'place_holder']
-# Custom addition of 'split' to the field names for Kazan15.
-# ... see divider() and custom() functions.
-
-# print(CSV_FIELD_NAMES)
-# print(expected_field_names)
-#assert CSV_FIELD_NAMES == expected_field_names
+NotesAboutAccountCodes = """
+Account codes are assumed to consist of 4 digits each,
+with the first digit being one of the following:
+1 for Assets
+2 for Liabilities
+3 for Equity
+4 for Income, and 
+5 for Expenses.
+If you wish to adapt the code for a different scheme, corresponding
+changes will have to be made in the following:
+The global function dr_or_cr
+Account class methods signed_balance, show_balance
+Global functions that are 'custom' for the Kazan15 entity:
+    adjust4assets, zero_expenses, check_equity_vs_bank.
+"""
 
 def none2float(n):
     """ Solves the need to interpret a non-entry as zero."""
     if not n: return 0
     else: return float(n)
 
-def next_value(n=0):
-    """ Used to assign numbers to journal entries.
-    The value for 'n' will have to be kept in persistent storage
-    (in metadata.)
-    """
-    while True:
-        n += 1
-        yield n
-
-def divider(amount, split):
-    """Attempts to divide 'amount' into 'split' equal parts.
-    Returns a list of floats.  Expects 'amount to be a float,
-    'split' to be an int.  Works to the nearest "cent."
+def divider(dollar_amount, split):
+    """Attempts to divide 'dollar_amount' into 'split' equal parts.
+    Returns a 'split' list of floats.  Expects 'dollar_amount' to be
+    a float, 'split' to be an int.  Works to the nearest penney.
     When equal amounts are not possible, the first numbers in
     the list will be greater than the last by one.
-    Checks that the sum of the list is equal to 'amount'.
-    Stops execution if it is not.
+    An assertionError is raised if the sum of the list is not equal
+    to 'dollar_amount'.
     """
     ret = []
-    dividend = int(amount * 100)  # money/float => pennies/int
+    dividend = int(dollar_amount * 100)  # money/float => pennies/int
     quotient, rem = divmod(dividend, split)
     for split in range(1, split + 1):
         if split > rem:
           ret.append(quotient/100.0)
         else: ret.append((quotient + 1)/100.0)
-    if (sum(ret) - amount) >= EPSILON:
-        print("Warning: divider function not working properly.")
-        sys.exit(2)
+    assert (sum(ret) - dollar_amount) < EPSILON
     return ret
 
 def zero_out(preamble,
@@ -167,11 +161,16 @@ def dr_or_cr(code):
     'place_holder'.
     Used to set the Account attribute acnt_type.
     """
-    number = int(code)
-    if  number  <= 1999: return('DR')   # Assets
-#   elif number <= 3999: return('CR')   # Liabilities and Equity
-    elif number <= 4999: return('CR')   # Income
-    elif number <= 5999: return('DR')   # Expenses
+    first = code[:1]
+    if first in ('1', '5'):          # Assets and Expenses
+        return('DR')
+    elif first in ('2',  '3', '4'):  # Liabilities, Equity, Income
+        return('CR')
+    else:
+        print(
+        "WARNING: malformed account code: '{}'.  Unable to continue."
+                    .format(code))
+        sys.exit(2)
 
 def create_entity(entity_name):
     """
@@ -188,6 +187,8 @@ def create_entity(entity_name):
         2. not able to write to new directory.
     Also sets up an empty journal file and a metadata file.
     Reports success if no errors are recognized.
+    Leaves a record of the entity_name to serve as a default for future
+    commands.
     """
     cofa_source = os.path.join(  # Use a prepopulated chart of
                 DEFAULT_HOME,    # accounts if it exists.
@@ -231,9 +232,9 @@ class LineEntry(object):
         num    a journal entry number
         DR     a debit amount
         CR     a credit amount
-    An instance of one of the line_entries of a Journal instance
-    can be used to populate the DR and CR keys but the num key value
-    (the Journal instance's number) must be known as well.
+    A single line entry of a Journal instance can be used to populate
+    the DR and CR attributes (one of them is generally 0) but the num
+    attribute (the Journal instance's number) must be known as well.
     Instances of LineEntry are used to populate the line_entries
     attribute of instances of the Account class which is in turn used
     by the ChartOfAccounts class.
@@ -249,7 +250,7 @@ class LineEntry(object):
         else: dr = '{:>10}'.format(' ')
         if self.CR: cr = '{:>10.2f}Cr'.format(self.CR)
         else: cr = '{:>10}'.format(' ')
-        return ("  {}  {}   {}"
+        return ("  je#{:0>3}  {}   {}"
                 .format(self.entry_number, dr, cr))
 
 class Account(object):
@@ -272,14 +273,12 @@ class Account(object):
         self.csv = csv
         self.code = csv['code']
         self.indent = INDENTATION_CONSTANT * int(csv['indent'])
-#       print('Dealing with account code {}'.format(self.code))
         if csv['split']:
             self.split = int(csv['split'])
         else:
             self.split = 0
         self.line_entries = []  # list of LineEntry objects.
-        self.balance = 0    # To be used for sub-totals
-                            # in place holder accounts.
+        self.balance = 0
         self.dr_cr = ''  # Specifies if the balance is 'DR' or 'CR'
         if csv['place_holder'] in 'Tt':
             self.place_holder = True 
@@ -315,13 +314,18 @@ class Account(object):
 #               .format(self.code, self.dr_cr, self.balance))
             return self.balance * -1
 
-    def dump(self):
+    def dump(self, v = MAXIMUM_VERBOSITY):
         """ A 'quick and dirty' way to show an account.
         Expect to only use it during development.
+        Verbosity defaults to the maximum.
         """
+        # Prepare <split> string as numeric or blank:
         if self.split: split = "(\{})".format(self.split)
         else: split = ''
+
+        # Assign first part of first line:
         ret = ['{}Acnt#{}'.format(self.indent, self.code)]
+        # Assign second part of first line- depending if place_holder:
         if self.place_holder: ret.append(
 #               "{}{}  < {} place holder subtotal: {:.2f}".
                 "{}{} {} Title_Account- subtotal: {:.2f}".
@@ -336,10 +340,15 @@ class Account(object):
                             split,
                             self.balance,
                             self.dr_cr))
+        # Join the two parts to complete the first (header) line:
         ret = [' '.join(ret)]
+
+        # Add the line entries:
         for line_entry in self.line_entries:
             ret.append('{}{}'.format(self.indent,
                                     line_entry.show()))
+
+        # Put it all together and return it:
         return '\n'.join(ret)
 
     def update_balance(self):
@@ -394,7 +403,8 @@ class ChartOfAccounts(object):
     Instantiation loads such a chart from a file 
     but this includes only what's in the CSV file,
     NOT any accounting information. When accounting
-    information is required, it is calculated on the fly.  
+    information is required, it is calculated on the fly by loading the
+    journal.
     The 'show' method returns text displaying the accounts
     in a way determined by the 'verbosity' parameter:
         0: Listing if the accounts only.
@@ -496,17 +506,17 @@ class ChartOfAccounts(object):
 #               print("For {} no dr_cr entry {:,.2f}"
 #                       .format(code, balance))
         imbalance = dr_check - cr_check
-        self.set_place_holder_signed_balances()
         if abs(imbalance) > EPSILON:
             print("MAJOR ERROR! Balance sheet doesn't balance!")
             print(" Debits - Credits = {:,.2f}.".format(imbalance))
+        self.set_place_holder_signed_balances()
 
     def show_accounts(self,args):
         """This is the show method currently being used.
         """
         ret = []
         for code in self.ordered_codes:
-            ret.append(self.accounts[code].dump())
+            ret.append(self.accounts[code].dump(args['--verbosity']))
 #           print("Signed balance Acnt {}: {:.2f}"
 #               .format(code, self.accounts[code].signed_balance()))
         return '\n'.join(ret)
@@ -548,7 +558,9 @@ class JournalEntry(object):
         directly or by providing an entry number (as a string.)
         In the later case, the user is prompted for data entry.
         """
-        if not (type(entry) is dict):
+        if not (type(entry) is dict):   # Not a dict so assume
+                                        # it's an entry number
+                                        # and turn it into a dict.
             entry = JournalEntry.get_entry(entry)
         if entry: self.data = entry
         else: return
@@ -590,7 +602,7 @@ class JournalEntry(object):
                 # Not allowed to leave imbalance.
                 imbalance = sum_dr - sum_cr
                 if abs(imbalance) > EPSILON:
-                    print('Imbalance! Dr - Cr = {:,.2f}. (Entry #{})'
+                    print('Imbalance! Dr - Cr = {:,.2f}. (Entry #{:0>3})'
                                 .format(imbalance, entry_number))
                     if tries > 0:  # Two empty entries in a row
                         return
@@ -604,7 +616,7 @@ class JournalEntry(object):
             cr = none2float(input("    CR: "))
             sum_cr += cr
             line_entries.append(dict(acnt= number, DR= dr, CR= cr))
-        print("Captured entry # {}.".format (entry_number))
+        print("Captured entry # {:0>3}.".format (entry_number))
         return dict(
             number= "{:0>3}".format(entry_number),
             date= date_stamp,
@@ -650,7 +662,7 @@ class JournalEntry(object):
         if not self.ok(): return  # No data atribute or it is empty.
         data = self.data
         ret = []
-        ret.append("  #{:>3} on {:<12} by {}."
+        ret.append("  #{:0>3} on {:<12} by {}."
             .format(data['number'], data['date'], data['user']))
 
         description_lines = data["description"].split('\n')
@@ -664,7 +676,7 @@ class Journal(object):
     """
     Deals with the whole journal, providing methods for loading it from
     persistent storage (__init__,) adding to it (get, load,) and sending
-    it back to be stored.
+    it back to be stored (save.)
     It keeps track of journal entry numbers, the next one of which is
     kept in persistent storage as part of the metadata for an entity.
     See docstring for __init__ method.
@@ -759,7 +771,8 @@ class Journal(object):
         """<text_or_file> can be either text suitable for journal entry
         or a file name containing such text.  The text must be in the
         same format as in the accompanying files in0, in1, ...
-        JournalEntry instances are created and added to the Journal.
+        JournalEntry instances are created and _added_ to the (already
+        existing) Journal.
         Note: No user approval mechanism for this form of journal entry.
         """
 
@@ -842,8 +855,12 @@ class Journal(object):
                 print(
                 "Journal content as it appears above, has been saved.")
 
+
+## The following 3 global functions are specific to the Kazan15 entity.
+
 def adjust4assets(chart_of_accounts):
-    """
+    """This is one of several 'custom' procedures specific to the
+    needs of Kazan15.
     Returns a string that can be provided as a parameter to the load
     method of a Journal instance.  Such an entry adjusts the equity and
     liability accounts to reflect the fact that the 'group of 8' own the
@@ -874,14 +891,13 @@ def adjust4assets(chart_of_accounts):
     return '\n'.join(journal_input)
     
 def zero_expenses(chart_of_accounts):
-    """This function provides support for a special need unique to
-    our (Kazan15) group.  It is unlikely to have relevance to a
-    general accounting system.
+    """This is one of several 'custom' procedures specific to the
+    needs of Kazan15.
     It's parameter is expected to be a journal populated instance of
     the ChartOfAccounts class.
     It returns text (representing journal entries) that can then be
     added to the journal (using its load method.)  These additional
-    entries preform the 'custom' requirements described in the
+    entries preform one of the 'custom' requirements described in the
     accompanying 'explanation' file.
     This zero_expenses method depends on the final (otherwise optional)
     'split' field of the expence account.
@@ -920,7 +936,8 @@ def zero_expenses(chart_of_accounts):
                     journal_input_ex10 ])
 
 def check_equity_vs_bank(chart_of_accounts):
-    """
+    """This is one of several 'custom' procedures specific to the
+    needs of Kazan15.
     Checks that the sum of the equity accounts balances against liquid
     assets, in our case, just the bank account.
     Returns a string.
@@ -939,6 +956,8 @@ def check_equity_vs_bank(chart_of_accounts):
     ret.append("... remaining in bank account: {:.2f}"
         .format(chart_of_accounts.accounts['1110'].signed_balance()))
     return '\n'.join(ret)
+## End of Kazan15 'custom' functions.
+
 
 def main():
     args = docopt.docopt(__doc__, version=VERSION)
@@ -946,7 +965,7 @@ def main():
 #   for arg in args:
 #       print("{}: {}"
 #           .format(arg, args[arg]))
-#   print("")
+#   print()
     if args['new']:
         if args['--entity'] == create_entity(args['--entity']):
             print(
@@ -966,10 +985,6 @@ def main():
         print(journal.show())
 
     if args['show_accounts']:
-        cofa = ChartOfAccounts(args)
-        print(cofa.show(args))
-
-    if args['show_account_balances']:
         cofa = ChartOfAccounts(args)
         cofa.load_journal(args)
         print(cofa.show_accounts(args))
