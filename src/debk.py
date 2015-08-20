@@ -34,26 +34,33 @@ Usage:
   debk.py new --entity=ENTITY
   debk.py journal_entry [<infiles>...] [--entity=ENTITY]
   debk.py show_journal [--entity=ENTITY]
-  debk.py [-v|-vv|-vvv] show_accounts [--entity=ENTITY]
-  debk.py [-v|-vv|-vvv] custom [<infiles>...] [--entity=ENTITY]
+  debk.py [-v ...] show_accounts [--entity=ENTITY]
+  debk.py [-v ...] custom [<infiles>...] [--entity=ENTITY]
+  debk.py [-v ...] test [--entity=ENTITY]
 
 
 Options:
   -h --help  Print usage statement.
   --version  Print version.
-  -v --verbosity  How much info to show [default: 0]
+  -v --verbosity  How much info to show (>2 = 2)
   --entity=ENTITY  Specify entity.
 
 Commands:
-  new creates a new set of books.
-  show_accounts displays the chart of accounts.
-  show_journal displays the journal entries.
-  journal_entry provides for user entry.
-  custom serves the specialized needs of Kazan15.
+  <new> creates a new set of books.
+  <show_accounts> displays the chart of accounts.
+  <show_journal> displays the journal entries.
+  <journal_entry> provides for user entry.
+  <custom> serves the specialized needs of Kazan15:
+    prompt> ./src/debk.py -vvv custom ./debk.d/kazan_journal --entity=Kazan15
+    Then look for a file 'Report'.
+    To make the above work, the following files are provided:
+      ./debk.d/kazan_journal
+      /var/opt/debk.d/KazanChartOfAccounts
 
 Comments:
   The --entity=ENTITY option is mandatory with the 'new' command.
-  When not provided, it defaults to the last entity referenced.
+  In the case of other commands: when not provided, it defaults to the
+  last entity referenced.
 
 [1] canoetripping.info:5380
 """
@@ -275,22 +282,25 @@ class Account(object):
         self.indent = INDENTATION_CONSTANT * int(csv['indent'])
         if csv['split']:
             self.split = int(csv['split'])
+            self.split_as_str = "(\{})".format(self.split)
         else:
             self.split = 0
+            self.split_as_str = ''
         self.line_entries = []  # list of LineEntry objects.
         self.balance = 0
         self.dr_cr = ''  # Specifies if the balance is 'DR' or 'CR'
+        self.s_balance = 0  # This attribute is populated by the
+                            # set_place_holder_signed_balances method
+                            # of the ChartOfAccounts class and
+                            # applies only to place_holder accounts.
         if csv['place_holder'] in 'Tt':
             self.place_holder = True 
-            self.acnt_type = 'place_holder'
-            self.s_balance = 0  # This attribute is populated by the
-                                # set_place_holder_signed_balances method
-                                # of the ChartOfAccounts class and
-                                # applies only to place_holder accounts.
+            self.acnt_type = 'header'
+            self.header_str = 'Header'
         elif csv['place_holder'] in 'Ff':
             self.place_holder = False 
-            self.acnt_type = dr_or_cr(self.code)  # Specifies account type.
-            self.balance = 0
+            self.acnt_type = dr_or_cr(self.code)  # Dr, Cr, or 'header'
+            self.header_str = ''
         else:
             self.place_holder = None
             print("Problem with Acnt {}: Place holder or not??"
@@ -314,14 +324,37 @@ class Account(object):
 #               .format(self.code, self.dr_cr, self.balance))
             return self.balance * -1
 
-    def dump(self, v = MAXIMUM_VERBOSITY):
+    def acnt_dict(self):
+        """Returns a dict that can be used to format output for reports.
+        """
+        return dict(code= self.code,
+                    balance= self.balance,
+                    s_balance= self.s_balance,
+                    _type= self.acnt_type,
+                    category= self.csv['type'],
+                    full_name= self.csv['full_name'],
+                    name= self.csv['name'],
+                    notes= self.csv['notes'],
+                    indent= self.indent,
+                    split= self.split_as_str,
+                    header= self.header_str
+                    )
+
+    def dump(self, verbosity = MAXIMUM_VERBOSITY):
         """ A 'quick and dirty' way to show an account.
         Expect to only use it during development.
         Verbosity defaults to the maximum.
         """
-        # Prepare <split> string as numeric or blank:
-        if self.split: split = "(\{})".format(self.split)
-        else: split = ''
+        if not verbosity:    # Just show the account metadata.
+            ret = []
+            if self.place_holder:
+                ret.append(
+                '{indent}{code}: {header}: {category}- {notes}'
+                    .format(**self.acnt_dict()))
+            else:
+                ret.append('{indent}{code}: {name}{split}'
+                    .format(**self.acnt_dict()))
+            return '\n'.join(ret)        # That's all.
 
         # Assign first part of first line:
         ret = ['{}Acnt#{}'.format(self.indent, self.code)]
@@ -331,22 +364,22 @@ class Account(object):
                 "{}{} {} Title_Account- subtotal: {:.2f}".
                 format(self.indent,
                     self.csv['full_name'].upper(),
-                    split,
+                    self.split_as_str,
                     self.s_balance))
         else: 
             ret.append("{}{:<15} {} Total:{:>10.2f}{}"
                     .format(self.indent,
                             self.csv['name'],
-                            split,
+                            self.split_as_str,
                             self.balance,
                             self.dr_cr))
         # Join the two parts to complete the first (header) line:
         ret = [' '.join(ret)]
 
-        # Add the line entries:
-        for line_entry in self.line_entries:
-            ret.append('{}{}'.format(self.indent,
-                                    line_entry.show()))
+        if verbosity > 1: # Add the line entries:
+            for line_entry in self.line_entries:
+                ret.append('{}{}'.format(self.indent,
+                                        line_entry.show()))
 
         # Put it all together and return it:
         return '\n'.join(ret)
@@ -422,7 +455,8 @@ class ChartOfAccounts(object):
         The accounts attribute is a dict keyed by account codes and
         values are instances of the Account class.
         """
-        self.home = os.path.join(DEFAULT_HOME, args['--entity']+'.d')
+        self.entity = args['--entity']
+        self.home = os.path.join(DEFAULT_HOME, self.entity  + '.d')
         self.cofa_file = os.path.join(self.home, CofA_name)
         self.csv_dict = {}  # Keyed by account number ('code'.)
         self.code_set = set()
@@ -441,6 +475,7 @@ class ChartOfAccounts(object):
 #       print(self.ordered_codes)
         self.accounts = {key:
                 Account(self.csv_dict[key]) for key in self.code_set}
+        self.journal_loaded = False
         # The accounts attribute is not fully populated until if and
         # when needed.  This is done using the load_journal() method.
 
@@ -510,11 +545,15 @@ class ChartOfAccounts(object):
             print("MAJOR ERROR! Balance sheet doesn't balance!")
             print(" Debits - Credits = {:,.2f}.".format(imbalance))
         self.set_place_holder_signed_balances()
+        self.journal_loaded = True
 
-    def show_accounts(self,args):
+    def show_accounts(self, args):
         """This is the show method currently being used.
         """
-        ret = []
+        if args['--verbosity'] and not self.journal_loaded:
+            self.load_journal(args)
+        ret = ["\nLEDGER/CHART of ACCOUNTS:......  Entity: '{}'\n"
+            .format(self.entity)]
         for code in self.ordered_codes:
             ret.append(self.accounts[code].dump(args['--verbosity']))
 #           print("Signed balance Acnt {}: {:.2f}"
@@ -691,6 +730,7 @@ class Journal(object):
         further journal entries or to populate the Ledger.
         The entity comes from args: args[--entity].
         Attributes include:
+            entity:
             journal_file:
             metadata_file:
             next_entry
@@ -708,7 +748,8 @@ class Journal(object):
         Also consider collecting new entries and not even loading
         those in persistent storage until user decides to save.
         """
-        dir_name = os.path.join(DEFAULT_HOME, args["--entity"]+'.d')
+        self.entity = args["--entity"]
+        dir_name = os.path.join(DEFAULT_HOME, self.entity + '.d')
         self.journal_file = os.path.join(dir_name, Journal_name)
         self.metadata_file = os.path.join(dir_name, Metadata_name) 
         with open(self.journal_file, 'r') as f_object:
@@ -729,7 +770,9 @@ class Journal(object):
         """
         journal = self.journal
 
-        ret = ["Journal Entries:......"]
+        ret = ["\nJOURNAL ENTRIES:......           Entity: '{}'\n"
+#       ret = ["\nJOURNAL ENTRIES:......      Entity: '{}'\n"
+            .format(self.entity)]
         for je in self.journal:
             entry = JournalEntry(je)
             ret.append(entry.show())
@@ -976,6 +1019,15 @@ def main():
                     DEFAULT_Entity), 'r') as entity_file_object:
             args['--entity'] = entity_file_object.read()
     
+    if args['test']:
+        print("Args are:")
+        for arg in args:
+            print("{}: {}"
+                .format(arg, args[arg]))
+        print()
+        cofa = ChartOfAccounts(args)
+        print(cofa.show_accounts(args))
+    
     if args['journal_entry']:
         journal = Journal(args)
         journal.get()
@@ -1013,7 +1065,7 @@ def main():
         ret.append(journal.show())
 
         cofa.load_journal(args)
-        ret.append("\nCHART of ACCOUNTS: \n")
+        ret.append("\n")
         ret.append(cofa.show_accounts(args))
         ret.append('\n')
         ret.append(check_equity_vs_bank(cofa))
