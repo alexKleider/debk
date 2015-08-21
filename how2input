@@ -1,13 +1,14 @@
-Journal entries can be accomplished by using manual entry, using
+Journal entries can be accomplished by manual entry, using
 redirection, or by specifying one or more input files.
+
 0. Manual entry is the default.
 
 1. Using redirection:
     This is the same as the default except input is redirected to come
     from the file specified by the name following the unix redirection
     sign ('<') on the command line.
-    The following are the rules one must follow when building an input
-    file.  (The file 'input' provides an example.)
+    The following are the rules one must follow when building such an
+    input file.  (The file 'input' provides an example.)
     a. There must be 2 blank lines between the last Credit line of the
     last entry and the final 'yes'.
     b. There must be one blank line between last Credit of one entry
@@ -29,7 +30,8 @@ redirection, or by specifying one or more input files.
 
 2. Specified input files:
     Input files can be specified as described in the docstring and must
-    be of the format exemplified by the file 'in0'.  More specifically:
+    be of the format exemplified by the file 'debk.d/kazan_journal'.
+    More specifically:
      i) Each entry must be separated from another by a blank line.
     ii) Each entry consists, in order, of the following lines:
     ii.a) one date line (any format you like.)
@@ -37,4 +39,3 @@ redirection, or by specifying one or more input files.
     ii.c) one or more lines of text explaining the entry.
     ii.d) Two or more lines of entries, each containing 3 white space
     separated fields: account, 'Dr', or 'Cr', and an amount.
-    See the 'in0' file for an example.
