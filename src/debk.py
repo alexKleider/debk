@@ -70,6 +70,7 @@ import sys
 import csv
 import json
 import shutil
+import logging
 
 import docopt
 
@@ -118,6 +119,16 @@ Account class methods signed_balance, show_balance
 Global functions that are 'custom' for the Kazan15 entity:
     adjust4assets, zero_expenses, check_equity_vs_bank.
 """
+
+def show_args(args, name = 'Arguments'):
+    """
+    Returns a string that displays a dictionary, args.
+    """
+    ret = ["{} are ...".format(name)]
+    for arg in args:
+        ret.append('  {}: {}'.format(arg, args[arg]))
+    ret.append('  ... end of report.\n')
+    return '\n'.join(ret)
 
 def none2float(n):
     """ Solves the need to interpret a non-entry as zero."""
@@ -174,8 +185,8 @@ def dr_or_cr(code):
     elif first in ('2',  '3', '4'):  # Liabilities, Equity, Income
         return('CR')
     else:
-        print(
-        "WARNING: malformed account code: '{}'.  Unable to continue."
+        logging.error(
+        "Malformed account code: '{}'.  Unable to continue."
                     .format(code))
         sys.exit(2)
 
@@ -222,11 +233,13 @@ def create_entity(entity_name):
         with open(meta_dest, 'w') as json_file:
             json.dump(metadata, json_file)
     except FileExistsError:
-        print("ERROR: Directory '{}' already exists"
+        logging.error("Directory '{}' already exists"
                             .format(new_dir))
+        sys.exit(1)
     except OSError:
-        print("ERROR: Destination '{}' &/or '{}' may not be writeable."
+        logging.error("Destination '{}' &/or '{}' may not be writeable."
                             .format(new_CofA_file_name, new_Journal))
+        sys.exit(1)
     else:
         return entity_name
 
@@ -303,8 +316,9 @@ class Account(object):
             self.header_str = ''
         else:
             self.place_holder = None
-            print("Problem with Acnt {}: Place holder or not??"
-                    .format(self.code))
+            logging.warning(
+                    "Problem with Acnt {}: Place holder or not??"
+                            .format(self.code))
 
     def signed_balance(self):
         """Checks (based on its code) if an account's balance is positive
@@ -316,12 +330,14 @@ class Account(object):
         or (self.code[:1] in '234' and self.dr_cr == 'CR')
         #  Liability, Equity and Income accounts are Credit accounts.
         ):
-#           print("Accnt {}{} has the appropriate Dr/Cr balance: {:.2f}"
-#               .format(self.code, self.dr_cr, self.balance))
+#           logging.debug(
+#               "Accnt {}{} has the appropriate Dr/Cr balance: {:.2f}"
+#                   .format(self.code, self.dr_cr, self.balance))
             return self.balance  # As it should be.
         else:
-#           print("Accnt {}{} has a NEGATIVE Dr/Cr balance:      {:.2f}"
-#               .format(self.code, self.dr_cr, self.balance))
+#           logging.debug(
+#               "Accnt {}{} has a NEGATIVE Dr/Cr balance:      {:.2f}"
+#                   .format(self.code, self.dr_cr, self.balance))
             return self.balance * -1
 
     def acnt_dict(self):
@@ -460,19 +476,27 @@ class ChartOfAccounts(object):
         self.cofa_file = os.path.join(self.home, CofA_name)
         self.csv_dict = {}  # Keyed by account number ('code'.)
         self.code_set = set()
-        with open(self.cofa_file, 'r') as cofa_file_object:
-            reader = csv.DictReader(cofa_file_object)
-            for row in reader:
-#               print(row)
-                if row['code'] in self.code_set:
-                    print("Error Condition: Duplicate account code:{}."
-                            .format(row['code']))
-                    print("Fix before rerunning the script.")
-                    sys.exit()
-                self.code_set.add(row['code'])
-                self.csv_dict[row['code']] = row
+        try:
+            with open(self.cofa_file, 'r') as cofa_file_object:
+                reader = csv.DictReader(cofa_file_object)
+                for row in reader:
+#                   logging.debug(
+#                       show_args(row, 'CofA input line values'))
+                    if row['code'] in self.code_set:
+                        logging.error(
+                    "Duplicate account code:{}; Fix before rerunning.."
+                                .format(row['code']))
+                        sys.exit()
+                    self.code_set.add(row['code'])
+                    self.csv_dict[row['code']] = row
+        except FileNotFoundError:
+            logging.critical('\n'.join([
+                "File not found attempting to initialize a Ledger.",
+                "Perhaps entity '{}' has not yet been created."
+                        .format(args['--entity'])]))
+            sys.exit(1)
         self.ordered_codes = sorted([key for key in self.code_set])
-#       print(self.ordered_codes)
+#       logging.debug(self.ordered_codes)
         self.accounts = {key:
                 Account(self.csv_dict[key]) for key in self.code_set}
         self.journal_loaded = False
@@ -507,15 +531,18 @@ class ChartOfAccounts(object):
         Posts the journal to the ledger.
         """
         journal = Journal(args)
-#       print("Journal Contains the following......................")
-#       print(journal.journal)
-#       print("....................................................")
+#       logging.debug(
+#           "Journal Contains the following......................")
+#       logging.debug(
+#           journal.journal)
+#       logging.debug(
+#           "....................................................")
         for je in journal.journal:  # Populate accounts with entries.
             for le in je["line_entries"]:
                 if le['acnt'] not in self.code_set:
-                    print(
-                    "Error Condition: AcntCode {} is not recognized."
-                        .format(le['acnt']))
+                    logging.error(
+                        "AcntCode {} is not recognized."
+                            .format(le['acnt']))
                 line_entry = LineEntry(le['DR'],
                                         le['CR'],
                                         je['number'])
@@ -530,20 +557,21 @@ class ChartOfAccounts(object):
 
             if self.accounts[code].dr_cr == 'DR':
                 dr_check += balance
-#               print("For {} dr_cr is 'DR' {:,.2f}"
+#               logging.debug("For {} dr_cr is 'DR' {:,.2f}"
 #                   .format(code, balance))
             elif self.accounts[code].dr_cr == 'CR':
                 cr_check += balance
-#               print("For {} dr_cr is 'CR' {:,.2f}"
+#               logging.debug("For {} dr_cr is 'CR' {:,.2f}"
 #                   .format(code, balance))
             else:
                 pass
-#               print("For {} no dr_cr entry {:,.2f}"
+#               logging.debug("For {} no dr_cr entry {:,.2f}"
 #                       .format(code, balance))
         imbalance = dr_check - cr_check
         if abs(imbalance) > EPSILON:
-            print("MAJOR ERROR! Balance sheet doesn't balance!")
-            print(" Debits - Credits = {:,.2f}.".format(imbalance))
+            logging.warning(
+                "Balance sheet out of balance: Dr - Cr = {:,.2f}."
+                        .format(imbalance))
         self.set_place_holder_signed_balances()
         self.journal_loaded = True
 
@@ -556,7 +584,7 @@ class ChartOfAccounts(object):
             .format(self.entity)]
         for code in self.ordered_codes:
             ret.append(self.accounts[code].dump(args['--verbosity']))
-#           print("Signed balance Acnt {}: {:.2f}"
+#           logging.debug("Signed balance Acnt {}: {:.2f}"
 #               .format(code, self.accounts[code].signed_balance()))
         return '\n'.join(ret)
 
@@ -754,7 +782,7 @@ class Journal(object):
         self.metadata_file = os.path.join(dir_name, Metadata_name) 
         with open(self.journal_file, 'r') as f_object:
             journal_dict = json.load(f_object)
-#           print(journal_dict)
+#           logging.debug(journal_dict)
             self.journal = journal_dict["Journal"]
             # The json file consists of a dict with only one entry keyed
             # by "journal" and its value is a list of dicts, each
@@ -839,7 +867,7 @@ class Journal(object):
                 dr = 0
                 cr = float(part[2])
             else:
-                print("Something is wrong!: bad format in {}?"
+                logging.error("Something is wrong!: bad format in {}?"
                         .format(infile))
             return dict(acnt= code,
                         DR= dr,
@@ -883,7 +911,7 @@ class Journal(object):
             entry = self.get_entry()
             if not entry:
                 break
-        print('next numbers are self {} and metadata {}.'
+        logging.debug('next numbers are self {} and metadata {}.'
                 .format(self.next_entry,
                 self.metadata['next_journal_entry_number']))
         if self.next_entry > self.metadata[
@@ -1004,11 +1032,7 @@ def check_equity_vs_bank(chart_of_accounts):
 
 def main():
     args = docopt.docopt(__doc__, version=VERSION)
-#   print("Args are:")
-#   for arg in args:
-#       print("{}: {}"
-#           .format(arg, args[arg]))
-#   print()
+    logging.debug(show_args(args, "Command line arguments"))
     if args['new']:
         if args['--entity'] == create_entity(args['--entity']):
             print(
@@ -1020,11 +1044,7 @@ def main():
             args['--entity'] = entity_file_object.read()
     
     if args['test']:
-        print("Args are:")
-        for arg in args:
-            print("{}: {}"
-                .format(arg, args[arg]))
-        print()
+        print(show_args(args, "Command line arguments"))
         cofa = ChartOfAccounts(args)
         print(cofa.show_accounts(args))
     
