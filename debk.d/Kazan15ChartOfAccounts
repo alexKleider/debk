@@ -43,7 +43,7 @@ code,indent,type,full_name,name,notes,hidden,place_holder,split
 5030,1,EXPENSE,Expenses:CalmAir,CalmAir,Return flight&freight,F,F,9
 5031,1,EXPENSE,Expenses:CalmAir,CalmAir,Return flight&freight,F,F,10
 5041,1,EXPENSE,Expenses:Avaala & Sons Expediting,Baker Lake Crossing,Harold,F,F,9
-5051,1,EXPENSE,Expenses:Shipping,Shipping Rick's packs,Shipping Rick's packs,F,F,10
+5051,1,EXPENSE,Expenses:Shipping,Shipping,Shipping,F,F,10
 5310,1,EXPENSE,Expenses:Food,Food,Food,F,F,10
 5320,1,EXPENSE,Expenses:Drink,Drink,Drink,F,F,10
 5400,1,EXPENSE,Expenses:Miscelaneous,Odds&Ends,Odds&Ends,F,T

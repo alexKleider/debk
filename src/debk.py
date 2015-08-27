@@ -1,4 +1,4 @@
-#!./venv/bin/python3
+#!../venv/bin/python3
 # -*- coding: utf-8 -*-
 # vim: set file encoding=utf-8 :
 #
@@ -31,13 +31,13 @@ other needs as well.
 
 Usage:
   debk.py -h | --version
-  debk.py new --entity=ENTITY
+  debk.py  new --entity=ENTITY
   debk.py journal_entry [<infiles>...] [--entity=ENTITY]
-  debk.py show_journal [--entity=ENTITY]
-  debk.py [-v ...] show_accounts [--entity=ENTITY]
-  debk.py [-v ...] custom [<infiles>...] [--entity=ENTITY]
-  debk.py [-v ...] test [--entity=ENTITY]
-
+  debk.py  [-v ...] show_journal [--entity=ENTITY]
+  debk.py  [-v ...] show_accounts [--entity=ENTITY]
+  debk.py  [-v ...] custom [<infiles>...] [--entity=ENTITY]
+  debk.py  [-v ...] test [--entity=ENTITY]
+  debk.py check_path
 
 Options:
   -h --help  Print usage statement.
@@ -50,6 +50,7 @@ Commands:
   <show_accounts> displays the chart of accounts.
   <show_journal> displays the journal entries.
   <journal_entry> provides for user entry.
+  <check_path>  NOT for production code.
   <custom> serves the specialized needs of Kazan15:
     prompt> ./src/debk.py -vvv custom ./debk.d/kazan_journal --entity=Kazan15
     Then look for a file 'Report'.
@@ -61,6 +62,7 @@ Comments:
   The --entity=ENTITY option is mandatory with the 'new' command.
   In the case of other commands: when not provided, it defaults to the
   last entity referenced.
+  Loglevel is set in config.py.
 
 [1] canoetripping.info:5380
 """
@@ -73,24 +75,24 @@ import shutil
 import logging
 
 import docopt
+import config
 
 VERSION = "0.0.1"
 
 MAXIMUM_VERBOSITY = 3
-EPSILON = 0.01  # We want acuracy to the nearest penney only.
+EPSILON = 0.01  # We want acuracy to the nearest $0.01.
 INDENTATION_MULTIPLIER = 3  
 INDENTATION_CONSTANT = ' ' * INDENTATION_MULTIPLIER  
 
-N_ASSET_OWNERS = 8  # Must jive with 'split' values in CofAs.
-                    # This is specific to Kazan15.
+N_ASSET_OWNERS = 8   # Specific to Kazan15
+                     #Must jive with 'split' values in CofAs.
+DEFAULT_DIR = '/var/opt/debk.d'
+# Each entity will have its home directory in DEFAULT_DIR.
 
-DEFAULT_HOME = '/var/opt/debk.d'
-# Each entity will have its home directory in DEFAULT_HOME.
-
-# The following files are expected to be in the DEFAULT_HOME directory:
+# The following files are expected to be in the DEFAULT_DIR directory:
 DEFAULT_CofA = "defaultChartOfAccounts"     # A file name.
 # The default chart of accounts. (For now: place holders only.)
-# A file of this name is kept in DEFAULT_HOME to serve as a template
+# A file of this name is kept in DEFAULT_DIR to serve as a template
 # during entity creation although a different file can be used, see
 # docstring for create_entity().
 DEFAULT_Metadata = "defaultMetadata.json"   # A file name.
@@ -114,24 +116,35 @@ with the first digit being one of the following:
 5 for Expenses.
 If you wish to adapt the code for a different scheme, corresponding
 changes will have to be made in the following:
-The global function dr_or_cr
-Account class methods signed_balance, show_balance
-Global functions that are 'custom' for the Kazan15 entity:
-    adjust4assets, zero_expenses, check_equity_vs_bank.
+    The global function dr_or_cr
+    Account class methods signed_balance, show_balance
+    Global functions that are 'custom' for the Kazan15 entity:
+        adjust4assets, zero_expenses, check_equity_vs_bank.
 """
 
 def show_args(args, name = 'Arguments'):
     """
-    Returns a string that displays a dictionary, args.
+    Returns a string displaying args, which can be any iteration
+    supporting collection including dictionary like objects (ones
+    that implement an items() method.)
     """
+    def show_l():
+        return('  {}'.format(arg))
+    def show():
+        return('  {}: {}'.format(arg, args[arg]))
+    try:
+        args.items()  # See if it quacks like a dictionary.
+    except AttributeError:
+        show = show_l
     ret = ["{} are ...".format(name)]
     for arg in args:
-        ret.append('  {}: {}'.format(arg, args[arg]))
+        ret.append(show())
     ret.append('  ... end of report.\n')
     return '\n'.join(ret)
 
 def none2float(n):
-    """ Solves the need to interpret a non-entry as zero."""
+    """ Solves the need to interpret a non-entry as zero.
+    [Not subjected to unittest.]"""   
     if not n: return 0
     else: return float(n)
 
@@ -142,7 +155,7 @@ def divider(dollar_amount, split):
     When equal amounts are not possible, the first numbers in
     the list will be greater than the last by one.
     An assertionError is raised if the sum of the list is not equal
-    to 'dollar_amount'.
+    to 'dollar_amount'.   [Not subjected to unittest.]
     """
     ret = []
     dividend = int(dollar_amount * 100)  # money/float => pennies/int
@@ -154,16 +167,14 @@ def divider(dollar_amount, split):
     assert (sum(ret) - dollar_amount) < EPSILON
     return ret
 
-def zero_out(preamble,
-            format_line,
-            split_list):
-    """Sets up text that can be read as a journal entry from an input
-    file.
-    'preamble' is a list of strings representing date, user,
-    descriptive text (which can be more than one line/string,)
-    and the single zeroing entry.
-    'format_line' is the format string used for the balancing entries.
-    'split_list' is expected to be the output from a call to divider().
+def zero_out(preamble, # date, user, descr text (can be more than one
+                       # line,) and zeroing entry: as a list of strings.
+            format_line, # format string used for balancing entries.
+            split_list): # returned by divider()
+    """Sets up text that can be read as a journal entry.
+    Assumes that numerically sequential accounts are being affected
+    and that the sequence begins with 1 (or 01, or 001 ... depending
+    on the format_line.   [Not subjected to unittest.]
     """
     ret = preamble
     for i in range(len(split_list)):
@@ -173,28 +184,29 @@ def zero_out(preamble,
 
 def dr_or_cr(code):
     """
-    Returns the account type, either 'DR' or 'CR' 
+    Attempts to return the account type, either 'DR' or 'CR' 
     determined by the account's code/number.
-    Later processing may change an Accounts type to
+    Logs and returns None if code is malformed.
+    Later processing may change an Account's type to
     'place_holder'.
     Used to set the Account attribute acnt_type.
+    Assumes Asset, Liability, Equity, Income, & Expense accounts
+    have codes beginning in 1, 2, 3, 4, & 5 respectively.
     """
     first = code[:1]
     if first in ('1', '5'):          # Assets and Expenses
         return('DR')
-    elif first in ('2',  '3', '4'):  # Liabilities, Equity, Income
+    elif first in ('2',  '3', '4'):  # Liability, Equity, Income
         return('CR')
-    else:
-        logging.error(
-        "Malformed account code: '{}'.  Unable to continue."
-                    .format(code))
-        sys.exit(2)
+    logging.critical(
+    "Malformed account code: '{}'."
+                .format(code))
 
 def create_entity(entity_name):
     """
     Establishes a new accounting system.
 
-    Creates a new dirctory '<entity_name>.d' within DEFAULT_HOME
+    Creates a new dirctory '<entity_name>.d' within DEFAULT_DIR
     and populates it with a set of required files including a
     default start up chart of accounts.
     An attempt will be made to find a file name that is the 
@@ -208,20 +220,20 @@ def create_entity(entity_name):
     Leaves a record of the entity_name to serve as a default for future
     commands.
     """
-    cofa_source = os.path.join(  # Use a prepopulated chart of
-                DEFAULT_HOME,    # accounts if it exists.
+    cofa_source = os.path.join(  # | Use a prepopulated chart  |
+                DEFAULT_DIR,     # | of accounts if it exists. |
                 entity_name + 'ChartOfAccounts')
     if not os.path.isfile(cofa_source):
-        cofa_source = os.path.join(DEFAULT_HOME, DEFAULT_CofA)
-    new_dir = os.path.join(DEFAULT_HOME, entity_name+'.d')
+        cofa_source = os.path.join(DEFAULT_DIR, DEFAULT_CofA)
+    new_dir = os.path.join(DEFAULT_DIR, entity_name+'.d')
     new_CofA_file_name = os.path.join(new_dir, CofA_name)
     new_Journal = os.path.join(new_dir, Journal_name)
-    meta_source = os.path.join(DEFAULT_HOME, DEFAULT_Metadata)
+    meta_source = os.path.join(DEFAULT_DIR, DEFAULT_Metadata)
     meta_dest = os.path.join(new_dir, Metadata_name)
     with open(meta_source, 'r') as meta_file:
         metadata = json.load(meta_file)
     metadata['entity_name'] = entity_name
-    entity_file_path = os.path.join(DEFAULT_HOME, DEFAULT_Entity)
+    entity_file_path = os.path.join(DEFAULT_DIR, DEFAULT_Entity)
     try:
         # The following keeps track of the last entity referenced.
         with open(entity_file_path, 'w') as entity_file_object:
@@ -243,21 +255,18 @@ def create_entity(entity_name):
     else:
         return entity_name
 
+## Ledger related classes:  LineEntry, Account, ChartOfAccounts ##
+
 class LineEntry(object): 
     """
-    Serves as a line entry for ledger accounts. 
+    Instances are used to populate the line_entries attribute of
+    instances of the Account class.
+    Each instance has the following attributes:
+        num    a journal entry number: discoverable from Journal
+        DR     a debit amount   }|  Both discoverable from
+        CR     a credit amount  }|  a JournalEntry instance.
     Do NOT confuse this class with journal line entries which
     have NOT been given their own class.
-    Each instance has the following attributes:
-        num    a journal entry number
-        DR     a debit amount
-        CR     a credit amount
-    A single line entry of a Journal instance can be used to populate
-    the DR and CR attributes (one of them is generally 0) but the num
-    attribute (the Journal instance's number) must be known as well.
-    Instances of LineEntry are used to populate the line_entries
-    attribute of instances of the Account class which is in turn used
-    by the ChartOfAccounts class.
     """
     
     def __init__(self, dr, cr, entry_number):
@@ -275,7 +284,7 @@ class LineEntry(object):
 
 class Account(object):
     """Provides data type for values of the dict
-    ChartOfAccounts.accounts keyed by account code.
+    ChartOfAccounts.accounts which is keyed by account code.
     Attributes include: csv, code, balance,
     dr_cr (specifies if the balance is a debit or credit,)
     place_holder, split, indent,
@@ -356,10 +365,9 @@ class Account(object):
                     header= self.header_str
                     )
 
-    def dump(self, verbosity = MAXIMUM_VERBOSITY):
-        """ A 'quick and dirty' way to show an account.
-        Expect to only use it during development.
-        Verbosity defaults to the maximum.
+    def show_account(self, verbosity = MAXIMUM_VERBOSITY):
+        """Returns a string representation of an account.
+        May want to rename this __str__ or __repr__ in the future.
         """
         if not verbosity:    # Just show the account metadata.
             ret = []
@@ -425,27 +433,6 @@ class Account(object):
             assert self.balance == 0
             self.dr_cr = ''
 
-    def show_balance(self, indent = 0):
-        """Returns a string representation of an account's balance
-        formatted to serve as a last line.  Use strip method if you want
-        just the value.
-        ########  CURRENTLY SEEMS NOT TO WORK  ##################
-        ########  CURRENTLY USING dump METHOD  ##################
-        Thinking of using an extra 'indent' parameter in the CofA csv
-        file to solve the indentation problem.
-        """
-        if self.dr_cr == 'DR':
-            dr_cr_type = 'Dr'
-        elif self.dr_cr == 'CR':
-            dr_cr_type = 'Cr'
-        else:
-            dr_cr_type = 'Unspecified'
-        return(ChartOfAccounts.format_line
-            .format("{}".format(' '*INDENTATION_MULTIPLIER*indent),
-                    ' ', ' ', ' ',
-                    '{:.2f}'.format(self.balance),
-                    dr_cr_type))
-
 class ChartOfAccounts(object):
     """
     A class to manage an entity's chart of accounts (AKA the Ledger.)
@@ -472,7 +459,7 @@ class ChartOfAccounts(object):
         values are instances of the Account class.
         """
         self.entity = args['--entity']
-        self.home = os.path.join(DEFAULT_HOME, self.entity  + '.d')
+        self.home = os.path.join(DEFAULT_DIR, self.entity  + '.d')
         self.cofa_file = os.path.join(self.home, CofA_name)
         self.csv_dict = {}  # Keyed by account number ('code'.)
         self.code_set = set()
@@ -576,32 +563,20 @@ class ChartOfAccounts(object):
         self.journal_loaded = True
 
     def show_accounts(self, args):
-        """This is the show method currently being used.
+        """Returns a string representation of the Ledger.
+        Consider renaming this to __str__ or __repr__.
+        If this is done, verbosity will have to be passed in a different
+        way- perhaps it can be assigned to an attribute at
+        instantiation.
         """
         if args['--verbosity'] and not self.journal_loaded:
             self.load_journal(args)
         ret = ["\nLEDGER/CHART of ACCOUNTS:......  Entity: '{}'\n"
             .format(self.entity)]
         for code in self.ordered_codes:
-            ret.append(self.accounts[code].dump(args['--verbosity']))
+            ret.append(self.accounts[code].show_account(args['--verbosity']))
 #           logging.debug("Signed balance Acnt {}: {:.2f}"
 #               .format(code, self.accounts[code].signed_balance()))
-        return '\n'.join(ret)
-
-    def show(self, args):
-        """
-        Return a string representation of the Ledger.
-        Parameter args('--verbosity') determines how much
-        information is displayed.
-        ##############  NOT BEING USED  ################
-        """
-        indent = 0  # Keep track of indentation level.
-        place_holder = ''  # Used by indentation mechanism.
-        header = "Account Balances"
-        ret = [header, "-"*len(header)]
-        for account_code in self.ordered_codes:
-            account = Account(self.csv_dict[account_code])
-            ret.append(account.show(args, indent, place_holder))
         return '\n'.join(ret)
 
 
@@ -747,29 +722,35 @@ class Journal(object):
     It keeps track of journal entry numbers, the next one of which is
     kept in persistent storage as part of the metadata for an entity.
     See docstring for __init__ method.
+    Attributes include:
+        entity: comes from args: args[--entity].
+        journal_file:
+        metadata_file:
+        next_entry
+        journal: a list of dicts
+            In persistent storage it is a json file consisting of 
+            a dict with only one entry keyed by "Journal" with a 
+            value that is a list of dicts. The journal attribute
+            becomes this list.  Each item of this list is a dict and
+            corresponds to the data attribute of instances of the
+            class JournalEntry.
+        metadata:
+    Public methods include:
+        __init__() - loads data from persistent storage.
+        show() - probably will replace with __str__.
+        get() - get new entries from user
+        load()- load new entries from text, either a string or text
+        collected from a file.
+        save()- save new entries to persistent storage.
     NOTE: this class's get_entry and show methods rely on 
     JournalEntry methods get_entry and show.
     """
 
     def __init__(self, args):
         """
-        Loads from persistent storage an entity's metadata and
-        all journal entries to date in preparation for
+        Loads (from persistent storage) an entity's metadata
+        and all journal entries to date in preparation for
         further journal entries or to populate the Ledger.
-        The entity comes from args: args[--entity].
-        Attributes include:
-            entity:
-            journal_file:
-            metadata_file:
-            next_entry
-            journal: a list of dicts
-                In persistent storage it is a json file consisting of 
-                a dict with only one entry keyed by "Journal" with a 
-                value that is a list of dicts. The journal attribute
-                becomes this list.  Each item of this list is a dict and
-                corresponds to the data attribute of instances of the
-                class JournalEntry.
-            metadata:
         In future, may well load only journal entries created
         since last end of year close out of the books.
         As of yet have not dealt with end of year.
@@ -777,7 +758,7 @@ class Journal(object):
         those in persistent storage until user decides to save.
         """
         self.entity = args["--entity"]
-        dir_name = os.path.join(DEFAULT_HOME, self.entity + '.d')
+        dir_name = os.path.join(DEFAULT_DIR, self.entity + '.d')
         self.journal_file = os.path.join(dir_name, Journal_name)
         self.metadata_file = os.path.join(dir_name, Metadata_name) 
         with open(self.journal_file, 'r') as f_object:
@@ -815,15 +796,15 @@ class Journal(object):
         with open(self.metadata_file, 'w') as f_object:
             json.dump(self.metadata, f_object)
 
-    def add(self, journal_entry):
+    def _add(self, journal_entry):
         """Adds an instance of JournalEntry to the journal (self.)
         Incriments the next_number attribute at the same time."""
         if journal_entry.ok():
             self.journal.append(journal_entry.data)
             self.next_entry += 1
 
-    def get_entry(self):
-        """Used by the get method do add an entry to the the journal.
+    def _get_entry(self):
+        """Used by the get method to add an entry to the the journal.
         Instanciates a JournalEntry and, if it passes its ok method,
         saves its data atribute to the Journal (self.)
         The next_number attribute is updated each time.
@@ -889,7 +870,7 @@ class Journal(object):
                     '\n'.join(new_entry['description']))
                 new_je = JournalEntry(new_entry)
                 if new_je.ok():
-                    self.add(new_je)
+                    self._add(new_je)
                 start_new_entry, new_entry = initialize()
                 continue
             if not new_entry['date']: new_entry['date'] = line
@@ -902,13 +883,13 @@ class Journal(object):
 
     def get(self):
         """Gets journal entries from the user.
-        Does this using the get_entry method.
+        Does this using the _get_entry method.
         Once user input is completed, checks the next_number attribute
         to see if entries have been made, and if so, confirms with user
         before calling the save method to save them.
         """
         while True:
-            entry = self.get_entry()
+            entry = self._get_entry()
             if not entry:
                 break
         logging.debug('next numbers are self {} and metadata {}.'
@@ -1031,6 +1012,7 @@ def check_equity_vs_bank(chart_of_accounts):
 
 
 def main():
+    logging.basicConfig(level = config.LOGLEVEL)
     args = docopt.docopt(__doc__, version=VERSION)
     logging.debug(show_args(args, "Command line arguments"))
     if args['new']:
@@ -1039,7 +1021,7 @@ def main():
         "An accounting system for '{}' has been successfully created."
                         .format(args['--entity']))
     if not args['--entity']:
-        with open(os.path.join(DEFAULT_HOME,
+        with open(os.path.join(DEFAULT_DIR,
                     DEFAULT_Entity), 'r') as entity_file_object:
             args['--entity'] = entity_file_object.read()
     
@@ -1061,7 +1043,11 @@ def main():
         cofa.load_journal(args)
         print(cofa.show_accounts(args))
 
+    if args['check_path']:
+        print(show_args(sys.path, "Contents of sys.path"))
+
     if args['custom']:
+        print(show_args(args))
         ret = []
         entity = create_entity(args['--entity'])
         assert args["--entity"] == entity
