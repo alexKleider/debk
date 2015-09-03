@@ -43,3 +43,4 @@ redirection, or by specifying one or more input files.
         separated (no white space) list of account codes.
         This last format alows one to evenly distribute one amount
         amongst several accounts.
+
