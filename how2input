@@ -32,10 +32,14 @@ redirection, or by specifying one or more input files.
     Input files can be specified as described in the docstring and must
     be of the format exemplified by the file 'debk.d/kazan_journal'.
     More specifically:
-     i) Each entry must be separated from another by a blank line.
-    ii) Each entry consists, in order, of the following lines:
-    ii.a) one date line (any format you like.)
-    ii.b) one line containing the ID of the one making the entry.
-    ii.c) one or more lines of text explaining the entry.
-    ii.d) Two or more lines of entries, each containing 3 white space
-    separated fields: account, 'Dr', or 'Cr', and an amount.
+     I) Each entry must be separated from another by a blank line.
+    II) Each entry consists, in order, of the following lines:
+    II.a) one date line (any format you like.)
+    II.b) one line containing the ID of the one making the entry.
+    II.c) one or more lines of text explaining the entry.
+    II.d) Two or more lines following the following format:
+            account(s), 'Dr' or 'Cr', and an amount.
+        'account(s)' can either be a single account code or a coma
+        separated (no white space) list of account codes.
+        This last format alows one to evenly distribute one amount
+        amongst several accounts.

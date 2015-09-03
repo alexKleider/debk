@@ -231,6 +231,56 @@ class CreateAccount(unittest.TestCase):
         self.acnt.dr_cr = 'CR'
         self.assertEqual(self.acnt.signed_balance(),
                         self.acnt.balance)
+class JournalClass(unittest.TestCase):
+
+    def setUp(self):
+        debk.create_entity("Kazan15")
+
+    def test_load(self):
+        self.maxDiff = None
+        journal = debk.Journal({"--entity": 'Kazan15'})
+        journal.load(
+"""August 26, 2015
+book keeper
+Reflect ownership of fixed assets.
+3001,3002,3003,3004,3005,3006,3007,3008 Dr 2100.50
+2001,2002,2003,2004,2005,2006,2007,2008 Cr 2100.50
+
+""")
+        report = journal.show()
+        expected = (
+"""
+JOURNAL ENTRIES:......           Entity: 'Kazan15'
+
+  #001 on August 26, 2015 by book keeper.
+    Reflect ownership of fixed assets.
+    3001:    262.57          
+    3002:    262.57          
+    3003:    262.56          
+    3004:    262.56          
+    3005:    262.56          
+    3006:    262.56          
+    3007:    262.56          
+    3008:    262.56          
+    2001:              262.57
+    2002:              262.57
+    2003:              262.56
+    2004:              262.56
+    2005:              262.56
+    2006:              262.56
+    2007:              262.56
+    2008:              262.56""")
+        print("Expected is:\n{}".format(expected))
+        print("report is:\n{}".format(report))
+        self.assertEqual(report, expected)
+
+    def tearDown(self):
+        try:
+            shutil.rmtree('/var/opt/debk/Kazan15.d')
+        except FileNotFoundError:
+            print(
+        "'/var/opt/debk/Kazan15.d' doesn't exist; can't delete.")
+
 
 if __name__ == '__main__':  # code block to run the application
     unittest.main()

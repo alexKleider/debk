@@ -71,6 +71,7 @@ import os
 import sys
 import csv
 import json
+import copy
 import shutil
 import logging
 
@@ -158,13 +159,18 @@ def divider(dollar_amount, split):
     to 'dollar_amount'.   [Not subjected to unittest.]
     """
     ret = []
-    dividend = int(dollar_amount * 100)  # money/float => pennies/int
+    try:   # money as float or string => pennies/int
+        dollars = float(dollar_amount)  # Might come in as a string.
+        dividend = int(dollars * 100)
+    except ValueError:
+        logging.critical(
+        "Unable to convert 'divide()'s first paramter into a float.")
     quotient, rem = divmod(dividend, split)
     for split in range(1, split + 1):
         if split > rem:
           ret.append(quotient/100.0)
         else: ret.append((quotient + 1)/100.0)
-    assert (sum(ret) - dollar_amount) < EPSILON
+    assert (sum(ret) - float(dollars)) < EPSILON
     return ret
 
 def zero_out(preamble, # date, user, descr text (can be more than one
@@ -585,9 +591,9 @@ class JournalEntry(object):
     Each journal entry (self.data) is 
     a dictionary: dict(
             number: "{:0>3}".format(entry_number),
-            date: date_stamp,
-            user: name,
-            description: explanation, (a string with imbedded CRs
+            date: date_stamp,  # string- any format
+            user: name,  # person making the journal entry
+            description: explanation, # string with imbedded CRs
             line_entries: list of {'acnt', 'DR', 'CR' keyed values},
             )
     We use 'data' (a dict) rather than individual attributes to
@@ -600,12 +606,15 @@ class JournalEntry(object):
         directly or by providing an entry number (as a string.)
         In the later case, the user is prompted for data entry.
         """
+        param = copy.deepcopy(entry)
         if not (type(entry) is dict):   # Not a dict so assume
                                         # it's an entry number
                                         # and turn it into a dict.
             entry = JournalEntry.get_entry(entry)
         if entry: self.data = entry
-        else: return
+        else: logging.error(
+                "Unable to create a journal entry from '{}'."
+                    .format(param))
 
     def get_entry(entry_number):
         """
@@ -672,6 +681,10 @@ class JournalEntry(object):
         Checks that a journal entry was actually created and has
         substance.
         """
+        print('Self check on a journal entry:')
+        for key, value in self.data.items():
+            print("  {}: {}".format(key, value))
+        print("    ... end of self check")
         return (hasattr(self, 'data')
                 and
                 self.data['line_entries'])
@@ -683,6 +696,7 @@ class JournalEntry(object):
         Note: don't confuse this line entry in the journal
         whith line entries in Chart of Accounts.
         """
+        print(line_entry)
         ret = dict(acnt= '{:>8}'.format(line_entry['acnt']),)
         if line_entry['DR']:
             ret['DR'] = '{:>10,.2f}'.format(float(line_entry['DR']))
@@ -821,65 +835,111 @@ class Journal(object):
 
     def load(self, text_or_file):
         """<text_or_file> can be either text suitable for journal entry
-        or a file name containing such text.  The text must be in the
-        same format as in the accompanying files in0, in1, ...
-        JournalEntry instances are created and _added_ to the (already
+        or the name of a file containing such text.  The text must be in
+        a specific format described in an accompanying file: 'how2input'
+        and exemplified in the accompanying file 'input'.
+        JournalEntry instances are created and added to the (already
         existing) Journal.
         Note: No user approval mechanism for this form of journal entry.
         """
 
         def initialize():
-            start_new_entry = True
+            print("Initializing a new journal entry.")
             new_entry =  dict(number= self.next_entry,
                                 date= '',
                                 user= '',
                                 description = [],
                                 line_entries= [],
                                 )
-            return (start_new_entry, new_entry)
+            return new_entry
 
         def parse_DrCr_amnt(line):
+#           print("Parsing dr/cr line: '{}'".format(line))
+            dr = cr = 0
             part = line.split()
-            code = part[0]
-            if part[1] == 'Dr':
-                dr = float(part[2])
-                cr = 0
-            elif part[1] == 'Cr':
-                dr = 0
-                cr = float(part[2])
-            else:
-                logging.error("Something is wrong!: bad format in {}?"
-                        .format(infile))
-            return dict(acnt= code,
-                        DR= dr,
-                        CR= cr)
+            codes = part[0].split(',')
+            num = len(codes)
+            if num > 1:     # Set up list of dicts to
+                            # extend entry line list.
+#               print("..a multi-account line.")
+                dr_cr = part[1]
+                amnt = part[2]
+                print("'amnt' is (part[2]): {}"
+                        .format(amnt))
+                amnts = divider(amnt, num)
+                ret = []
+                for i in range(num):
+                    amnt = amnts[i]
+                    if dr_cr.upper() == 'DR':
+                        ret.append(dict(acnt= codes[i],
+                                        DR = amnt,
+                                        CR = cr))
+                    elif dr_cr.upper() == 'CR':
+                        ret.append(dict(acnt = codes[i],
+                                        DR = dr,
+                                        CR = amnt))
+                    else:
+                        logging.critical(
+                                "Dr vs Cr not specified!!!!!!!!!!!")
+                return ret  # Returning a list of dicts to extend list.
+            elif num == 1:           # Return a dict to append to list.
+#               print("..a single-account line.")
+                acnt = codes[0]
+                if part[1].upper() == 'DR':
+                    dr = float(part[2])
+                elif part[1].upper() == 'CR':
+                    cr = float(part[2])
+                else:
+                    logging.error(
+                        "Bad format in {}.  Dr or Cr not specified?"
+                            .format(infile))
+                return dict(acnt= acnt,  #| Returning a dict to append
+                            DR= dr,      #| to entry line list.
+                            CR= cr)      #|
+            else:  # This is probably dead code.
+                logging.error(
+                        "Bad format in {}.  Line with no accounts?"
+                            .format(infile))
 
-        journal_entries = []
-        start_new_entry, new_entry = initialize()
         if os.path.isfile(text_or_file):
             with open(text_or_file, 'r') as f:
                 raw_data = f.read()
         else:
             raw_data = text_or_file
         data = raw_data.split('\n')
+        journal_entries = []
+        # Initialize what will potentially be the first entry...
+        new_entry = initialize()
         for line in data:
             line = line.strip()
-            if not line:
-                # Save the description & then save the current entry:
+            if not line:  # Blank line.
+                # Assume have collected a journal entry so ...
+                # save the description & then save the entry:
+                print(
+    "Empty line being processed: assume an entry has been collected...")
                 new_entry['description'] = (
                     '\n'.join(new_entry['description']))
                 new_je = JournalEntry(new_entry)
+                print("\nEntry being considered: ".format(new_je))
                 if new_je.ok():
+                    print("JE passed: {}".format(new_je.show()))
                     self._add(new_je)
-                start_new_entry, new_entry = initialize()
+                else:
+                    print("JE failed: '{}'".format(new_je.show()))
+                new_entry = initialize()
                 continue
+            # Not a blank line.
             if not new_entry['date']: new_entry['date'] = line
             elif not new_entry['user']: new_entry['user'] = line
             elif (not 'Dr' in line) and (not 'Cr' in line):
                 new_entry['description'].append(line)
             else:  # Parse acnt Dr/Cr amnt
-                new_entry['line_entries'].append(
-                                            parse_DrCr_amnt(line))
+                to_add = parse_DrCr_amnt(line)
+                if type(to_add) == type([]):
+                    new_entry['line_entries'].extend(to_add)
+                else:
+                    new_entry['line_entries'].append(to_add)
+                                            
 
     def get(self):
         """Gets journal entries from the user.
@@ -1027,8 +1087,24 @@ def main():
     
     if args['test']:
         print(show_args(args, "Command line arguments"))
-        cofa = ChartOfAccounts(args)
-        print(cofa.show_accounts(args))
+        print("Creating a new Entity: '{}'."
+                .format(create_entity(args["--entity"])))
+        journal = Journal(args)
+        journal.load(
+        """August 26, 2015
+        book keeper
+        Reflect ownership of fixed assets.
+        3001,3002,3003,3004,3005,3006,3007,3008 Dr 2100.50
+        2001,2002,2003,2004,2005,2006,2007,2008 Cr 2100.50
+
+        August 26, 2015
+        book keeper
+        Pay for a fixed asset: a pakboat.
+        1110 Cr 2100.50
+        1511 Dr 2100.50
+
+        """)
+        print(journal.show())
     
     if args['journal_entry']:
         journal = Journal(args)
