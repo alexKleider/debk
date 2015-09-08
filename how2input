@@ -1,7 +1,7 @@
 Journal entries can be accomplished by manual entry, using
 redirection, or by specifying one or more input files.
 
-0. Manual entry is the default.
+0. Manual entry (the default):  the user is prompted for entries.
 
 1. Using redirection:
     This is the same as the default except input is redirected to come

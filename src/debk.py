@@ -74,6 +74,7 @@ import json
 import copy
 import shutil
 import logging
+import datetime
 
 import docopt
 import config
@@ -124,7 +125,7 @@ changes will have to be made in the following:
 """
 
 def show_args(args, name = 'Arguments'):
-    """
+    """                           [tested: global_show_args]
     Returns a string displaying args, which can be any iteration
     supporting collection including dictionary like objects (ones
     that implement an items() method.)
@@ -144,19 +145,29 @@ def show_args(args, name = 'Arguments'):
     return '\n'.join(ret)
 
 def none2float(n):
-    """ Solves the need to interpret a non-entry as zero.
-    [Not subjected to unittest.]"""   
+    """                   Tested: none2float.
+    Solves the need to interpret a non-entry as zero."""
     if not n: return 0
-    else: return float(n)
+    else: 
+        try:
+            return float(n)
+        except ValueError:
+            logging.critical(
+    "Attempting to create a float out of an incompatible data type.")
+            raise
 
 def divider(dollar_amount, split):
-    """Attempts to divide 'dollar_amount' into 'split' equal parts.
+    """                        Test: divider
+    Attempts to divide 'dollar_amount' into 'split' equal parts.
     Returns a 'split' list of floats.  Expects 'dollar_amount' to be
     a float, 'split' to be an int.  Works to the nearest penney.
-    When equal amounts are not possible, the first numbers in
-    the list will be greater than the last by one.
+    When equal amounts are not possible, if dollar_amount is positive,
+    the first numbers in the list will be greater than the last by one;
+    if negative, it's the ending numbers that are greater.
     An assertionError is raised if the sum of the list is not equal
-    to 'dollar_amount'.   [Not subjected to unittest.]
+    to 'dollar_amount'.  This occurs if split is negative.
+    Behaves sensibly with negative dollar_ammount.  Any left over is
+    added from end rather than beginning of resulting list.
     """
     ret = []
     try:   # money as float or string => pennies/int
@@ -165,22 +176,28 @@ def divider(dollar_amount, split):
     except ValueError:
         logging.critical(
         "Unable to convert 'divide()'s first paramter into a float.")
+        raise
+    if split <=0:
+        logging.critical(
+        "Trying to split into a non positive integer number of parts.")
     quotient, rem = divmod(dividend, split)
     for split in range(1, split + 1):
         if split > rem:
           ret.append(quotient/100.0)
         else: ret.append((quotient + 1)/100.0)
-    assert (sum(ret) - float(dollars)) < EPSILON
+    assert (abs(dollars) - abs(sum(ret))) < EPSILON
     return ret
 
 def zero_out(preamble, # date, user, descr text (can be more than one
                        # line,) and zeroing entry: as a list of strings.
             format_line, # format string used for balancing entries.
             split_list): # returned by divider()
-    """Sets up text that can be read as a journal entry.
+    """
+    Sets up text that can be read as a journal entry.
     Assumes that numerically sequential accounts are being affected
     and that the sequence begins with 1 (or 01, or 001 ... depending
     on the format_line.   [Not subjected to unittest.]
+    Hoping to refactor so this function is not required.
     """
     ret = preamble
     for i in range(len(split_list)):
@@ -189,7 +206,7 @@ def zero_out(preamble, # date, user, descr text (can be more than one
     return '\n'.join(ret)
 
 def dr_or_cr(code):
-    """
+    """                          [test: global_dr_or_cr]
     Attempts to return the account type, either 'DR' or 'CR' 
     determined by the account's code/number.
     Logs and returns None if code is malformed.
@@ -209,8 +226,8 @@ def dr_or_cr(code):
                 .format(code))
 
 def create_entity(entity_name):
-    """
-    Establishes a new accounting system.
+    """                                   [tested: CreateEntity] 
+    Establishes a new accounting system. 
 
     Creates a new dirctory '<entity_name>.d' within DEFAULT_DIR
     and populates it with a set of required files including a
@@ -276,17 +293,22 @@ class LineEntry(object):
     """
     
     def __init__(self, dr, cr, entry_number):
+        """
+        dr and cr parameters must be type float.
+        """
         self.entry_number = entry_number
         self.DR = dr
         self.CR = cr
 
     def show(self):
-        if self.DR: dr = '{:>10.2f}Dr'.format(self.DR)
-        else: dr = '{:>10}'.format(' ')
-        if self.CR: cr = '{:>10.2f}Cr'.format(self.CR)
-        else: cr = '{:>10}'.format(' ')
-        return ("  je#{:0>3}  {}   {}"
+        if self.DR: dr = '{:>12.2f}Dr'.format(self.DR)
+        else: dr = '{:>14}'.format(' ')
+        if self.CR: cr = '{:>12.2f}Cr'.format(self.CR)
+        else: cr = '{:>14}'.format(' ')
+        return ("  je#{:0>3}{}{}"
                 .format(self.entry_number, dr, cr))
+
+    __str__ = show
 
 class Account(object):
     """Provides data type for values of the dict
@@ -305,12 +327,15 @@ class Account(object):
     """
 
     def __init__(self, csv):
+        """                  Tested in tests/test1 class Account.
+        Accepts a dict (delivered by the csv module)
+        as its parameter."""
         self.csv = csv
         self.code = csv['code']
         self.indent = INDENTATION_CONSTANT * int(csv['indent'])
         if csv['split']:
             self.split = int(csv['split'])
-            self.split_as_str = "(\{})".format(self.split)
+            self.split_as_str = "(/{})".format(self.split)
         else:
             self.split = 0
             self.split_as_str = ''
@@ -372,7 +397,8 @@ class Account(object):
                     )
 
     def show_account(self, verbosity = MAXIMUM_VERBOSITY):
-        """Returns a string representation of an account.
+        """                  Tested in tests/test1 class Account.
+        Returns a string representation of an account.
         May want to rename this __str__ or __repr__ in the future.
         """
         if not verbosity:    # Just show the account metadata.
@@ -390,15 +416,14 @@ class Account(object):
         ret = ['{}Acnt#{}'.format(self.indent, self.code)]
         # Assign second part of first line- depending if place_holder:
         if self.place_holder: ret.append(
-#               "{}{}  < {} place holder subtotal: {:.2f}".
-                "{}{} {} Title_Account- subtotal: {:.2f}".
-                format(self.indent,
+                "{} {} Title_Account- subtotal: {:.2f}".
+                format(
                     self.csv['full_name'].upper(),
                     self.split_as_str,
                     self.s_balance))
         else: 
-            ret.append("{}{:<15} {} Total:{:>10.2f}{}"
-                    .format(self.indent,
+            ret.append("{:<15} {} Total:{:>10.2f}{}"
+                    .format(
                             self.csv['name'],
                             self.split_as_str,
                             self.balance,
@@ -413,6 +438,9 @@ class Account(object):
 
         # Put it all together and return it:
         return '\n'.join(ret)
+
+    __str__ = show_account
+
 
     def update_balance(self):
         """
@@ -631,7 +659,7 @@ class JournalEntry(object):
     (more than one line is OK, an empty line terminates description entry)
     and a list of acnts with debits and credits. (Empty line terminates.)
         Date: """)
-        if not date_stamp:
+        if not date_stamp:  # Empty 'date' line terminates, returns None
             print()
             return
         name = input("    Name: ")
@@ -681,10 +709,10 @@ class JournalEntry(object):
         Checks that a journal entry was actually created and has
         substance.
         """
-        print('Self check on a journal entry:')
-        for key, value in self.data.items():
-            print("  {}: {}".format(key, value))
-        print("    ... end of self check")
+#       print('Self check on a journal entry:')
+#       for key, value in self.data.items():
+#           print("  {}: {}".format(key, value))
+#       print("    ... end of self check")
         return (hasattr(self, 'data')
                 and
                 self.data['line_entries'])
@@ -696,7 +724,7 @@ class JournalEntry(object):
         Note: don't confuse this line entry in the journal
         whith line entries in Chart of Accounts.
         """
-        print(line_entry)
+#       print(line_entry)
         ret = dict(acnt= '{:>8}'.format(line_entry['acnt']),)
         if line_entry['DR']:
             ret['DR'] = '{:>10,.2f}'.format(float(line_entry['DR']))
@@ -834,17 +862,16 @@ class Journal(object):
         # else returns None
 
     def load(self, text_or_file):
-        """<text_or_file> can be either text suitable for journal entry
-        or the name of a file containing such text.  The text must be in
-        a specific format described in an accompanying file: 'how2input'
-        and exemplified in the accompanying file 'input'.
-        JournalEntry instances are created and added to the (already
-        existing) Journal.
+        """                     [test: JournalClass - test_load()]
+        Adds entries to the journal from text provided as a string
+        or in a file.  The text must be in a specific format described
+        in an accompanying file: 'how2input' and exemplified in the
+        accompanying file 'input'.
         Note: No user approval mechanism for this form of journal entry.
         """
 
         def initialize():
-            print("Initializing a new journal entry.")
+#           print("Initializing a new journal entry.")
             new_entry =  dict(number= self.next_entry,
                                 date= '',
                                 user= '',
@@ -859,13 +886,13 @@ class Journal(object):
             part = line.split()
             codes = part[0].split(',')
             num = len(codes)
+            dr_cr = part[1]
+            amnt = float(part[2])
             if num > 1:     # Set up list of dicts to
                             # extend entry line list.
 #               print("..a multi-account line.")
-                dr_cr = part[1]
-                amnt = part[2]
-                print("'amnt' is (part[2]): {}"
-                        .format(amnt))
+#               print("'amnt' is (part[2]): {}"
+#                       .format(amnt))
                 amnts = divider(amnt, num)
                 ret = []
                 for i in range(num):
@@ -885,10 +912,10 @@ class Journal(object):
             elif num == 1:           # Return a dict to append to list.
 #               print("..a single-account line.")
                 acnt = codes[0]
-                if part[1].upper() == 'DR':
-                    dr = float(part[2])
-                elif part[1].upper() == 'CR':
-                    cr = float(part[2])
+                if dr_cr.upper() == 'DR':
+                    dr = amnt
+                elif dr_cr.upper() == 'CR':
+                    cr = amnt
                 else:
                     logging.error(
                         "Bad format in {}.  Dr or Cr not specified?"
@@ -915,17 +942,17 @@ class Journal(object):
             if not line:  # Blank line.
                 # Assume have collected a journal entry so ...
                 # save the description & then save the entry:
-                print(
-    "Empty line being processed: assume an entry has been collected...")
+#               print(
+#   "Empty line being processed: assume an entry has been collected...")
                 new_entry['description'] = (
                     '\n'.join(new_entry['description']))
                 new_je = JournalEntry(new_entry)
-                print("\nEntry being considered: ".format(new_je))
+#               print("\nEntry being considered: ".format(new_je))
                 if new_je.ok():
-                    print("JE passed: {}".format(new_je.show()))
+#                   print("JE passed: {}".format(new_je.show()))
                     self._add(new_je)
-                else:
-                    print("JE failed: '{}'".format(new_je.show()))
+#               else:
+#                   print("JE failed: '{}'".format(new_je.show()))
                 new_entry = initialize()
                 continue
             # Not a blank line.
@@ -972,43 +999,43 @@ class Journal(object):
 
 def adjust4assets(chart_of_accounts):
     """This is one of several 'custom' procedures specific to the
-    needs of Kazan15.
+    needs of Kazan15.  It 'auto-dates.'
     Returns a string that can be provided as a parameter to the load
     method of a Journal instance.  Such an entry adjusts the equity and
     liability accounts to reflect the fact that the 'group of 8' own the
-    fixed assets but that ownership comes as a cost to them: hence the
+    fixed assets but that ownership comes at a cost to them: hence the
     Dr entries against their equity accounts.  See file 'explanation'.
     """
-    total2split = 0
-    codes2check = [ code for code in chart_of_accounts.ordered_codes
-            if (code[:2] == '15') ]
-    for code in codes2check:
-        acnt = chart_of_accounts.accounts[code]
+    total_assets_2split = 0
+    asset_codes2check = [ code for code in chart_of_accounts.ordered_codes
+                                        if (code[:2] == '15') ]
+    asset_codes = []
+    for asset_code in asset_codes2check:
+        acnt = chart_of_accounts.accounts[asset_code]
         if (not acnt.place_holder
         and hasattr(acnt, 'split')):
             assert acnt.split == N_ASSET_OWNERS
-            total2split += acnt.signed_balance()
-    entries = divider(total2split, 8)
-    journal_input = ['August 10, 2015', 'book keeper',
+            total_assets_2split += acnt.signed_balance()
+            asset_codes.append(asset_code)
+    return "\n".join([
+                    "{:%b %d, %Y}".format(datetime.date.today()),
+                    'book keeper',
                     'Adjust equity and liability accounts to reflect',
-                    "ownership of assets by the 'group of 8'."
-                    ]
-    for i in range(N_ASSET_OWNERS):
-        journal_input.append(
-            '20{:0>2} Cr {:.2f}'.format(i + 1, entries[i]))
-        journal_input.append(
-            '30{:0>2} Dr {:.2f}'.format(i + 1, entries[i]))
-    journal_input.append('\n')
-    # Need the above CR to satisfy journal entry requirements.
-    return '\n'.join(journal_input)
+                    "ownership of assets by the 'group of 8'.",
+                    ("2001,2002,2003,2004,2005,2006,2007,2008 Cr {}"
+                    .format(total_assets_2spit)),
+                    ("3001,3002,3003,3004,3005,3006,3007,3008 Dr {}"
+                    .format(total_assets_2spit)),
+                    '\n'  # ...to satisfy journal entry requirements.
+                    ])
     
 def zero_expenses(chart_of_accounts):
     """This is one of several 'custom' procedures specific to the
     needs of Kazan15.
     It's parameter is expected to be a journal populated instance of
     the ChartOfAccounts class.
-    It returns text (representing journal entries) that can then be
-    added to the journal (using its load method.)  These additional
+    It returns text (representing journal entries) that conforms to the
+    format expected by the journal.load() method. These additional
     entries preform one of the 'custom' requirements described in the
     accompanying 'explanation' file.
     This zero_expenses method depends on the final (otherwise optional)

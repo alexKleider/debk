@@ -23,6 +23,7 @@
 First test suite for debk.src.debk.py.
 """
 import os
+import csv
 import json
 import shutil
 import unittest
@@ -123,6 +124,50 @@ class CreateEntity(unittest.TestCase):
         """
         for entity in ENTITIES:
             shutil.rmtree(entity_dirs[entity])
+
+class none2float(unittest.TestCase):
+    """test the global function none2float(n)"""
+
+    def test_none(self):
+        self.assertEqual(debk.none2float(None), 0.0)
+
+    def test_False(self):
+        self.assertEqual(debk.none2float(False), 0.0)
+
+    def test_True(self):
+        self.assertEqual(debk.none2float(True), 1.0)
+
+    def test_45(self):
+        self.assertEqual(debk.none2float(45), 45.0)
+
+    def test_number_string(self):
+        self.assertEqual(debk.none2float("45"), 45.0)
+
+    def test_non_number_string_error(self):
+        with self.assertRaises(ValueError):
+            debk.none2float("Not a number")
+
+class divider(unittest.TestCase):
+    """test the global divider() function"""
+
+    def test10by3(self):
+        self.assertEqual(debk.divider(10, 3), [3.34, 3.33, 3.33])
+
+    def test_minus10by3(self):
+        self.assertEqual(debk.divider(-10, 3), [-3.33, -3.33, -3.34])
+
+    def test_minus10by_minus3(self):
+        with self.assertRaises(AssertionError):
+            debk.divider(-10, -3)
+
+    def test10by_minus3(self):
+        with self.assertRaises(AssertionError):
+            debk.divider(10, -3)
+
+    def test_minus10by_0(self):
+        with self.assertRaises(ZeroDivisionError):
+            debk.divider(-10, 0)
+
 
 class global_show_args(unittest.TestCase):
     """test the global function show_args()"""
@@ -231,6 +276,71 @@ class CreateAccount(unittest.TestCase):
         self.acnt.dr_cr = 'CR'
         self.assertEqual(self.acnt.signed_balance(),
                         self.acnt.balance)
+
+
+class LineEntry(unittest.TestCase):
+    """Test LineEntry class"""
+
+    def test_init_and_str(self):
+        testdata = [
+            ((12.30, 0, 2),       "  je#002       12.30Dr              "),
+            ((0, 12.30, 3),       "  je#003                     12.30Cr"),
+            ((12.30, 12.30, 4),   "  je#004       12.30Dr       12.30Cr"),
+            ]
+        for params, show in testdata:
+            with self.subTest(params=params, show=show):
+                self.assertEqual(
+                    debk.LineEntry(*params).show(),show)
+
+    def test_str_error(self):
+        with self.assertRaises(ValueError):
+            debk.LineEntry("12.30", '0', 5).show()
+
+class Account_empty(unittest.TestCase):
+    """Test Account class
+    Will test further under ChartOfAccounts."""
+    
+    def setUp(self):
+        self.cofa = []
+        with open("./debk.d/testChartOfAccounts",
+                'r') as cofa_file_object:
+            reader = csv.DictReader(cofa_file_object)
+            for row in reader:  # Collects a CofAs without entries.
+                self.cofa.append(debk.Account(row))
+
+
+    def test_init_and_str(self):
+        testdata = [
+    (19, 'Acnt#3000 EQUITY  Title_Account- subtotal: 0.00'),
+    (46, '      Acnt#5501 Petrol          (/10) Total:      0.00'),
+            ]
+        for n, show in testdata:
+            with self.subTest(n=n, show=show):
+                self.assertEqual(
+                    self.cofa[n].__str__(), show)
+
+
+class Account_loaded(unittest.TestCase):
+    """Test Account class"""
+    
+    def setUp(self):
+        self.cofa = []
+        with open("./debk.d/testChartOfAccounts",
+                'r') as cofa_file_object:
+            reader = csv.DictReader(cofa_file_object)
+            for row in reader:  # Collects a CofAs without entries.
+                self.cofa.append(debk.Account(row))
+
+
+    def test_init_and_str(self):
+        testdata = [
+            (19, 'Acnt#3000 EQUITY  Title_Account- subtotal: 0.00'),
+            ]
+        for n, show in testdata:
+            with self.subTest(n=n, show=show):
+                self.assertEqual(
+                    self.cofa[n].__str__(), show)
+
 class JournalClass(unittest.TestCase):
 
     def setUp(self):
@@ -270,16 +380,16 @@ JOURNAL ENTRIES:......           Entity: 'Kazan15'
     2006:              262.56
     2007:              262.56
     2008:              262.56""")
-        print("Expected is:\n{}".format(expected))
-        print("report is:\n{}".format(report))
+#       print("Expected is:\n{}".format(expected))
+#       print("report is:\n{}".format(report))
         self.assertEqual(report, expected)
 
     def tearDown(self):
         try:
-            shutil.rmtree('/var/opt/debk/Kazan15.d')
+            shutil.rmtree('/var/opt/debk.d/Kazan15.d')
         except FileNotFoundError:
             print(
-        "'/var/opt/debk/Kazan15.d' doesn't exist; can't delete.")
+        "'/var/opt/debk.d/Kazan15.d' doesn't exist; can't delete.")
 
 
 if __name__ == '__main__':  # code block to run the application
