@@ -81,32 +81,32 @@ import config
 
 VERSION = "0.0.1"
 
-MAXIMUM_VERBOSITY = 3
-EPSILON = 0.01  # We want acuracy to the nearest $0.01.
-INDENTATION_MULTIPLIER = 3  
+MAXIMUM_VERBOSITY = config.MAXIMUM_VERBOSITY
+EPSILON = config.EPSILON
+INDENTATION_MULTIPLIER = config.INDENTATION_MULTIPLIER
 INDENTATION_CONSTANT = ' ' * INDENTATION_MULTIPLIER  
 
-N_ASSET_OWNERS = 8   # Specific to Kazan15
+N_ASSET_OWNERS = config.N_ASSET_OWNERS
                      #Must jive with 'split' values in CofAs.
-DEFAULT_DIR = '/var/opt/debk.d'
+DEFAULT_DIR = config.DEFAULT_DIR
 # Each entity will have its home directory in DEFAULT_DIR.
 
 # The following files are expected to be in the DEFAULT_DIR directory:
-DEFAULT_CofA = "defaultChartOfAccounts"     # A file name.
+DEFAULT_CofA = config.DEFAULT_CofA
 # The default chart of accounts. (For now: place holders only.)
 # A file of this name is kept in DEFAULT_DIR to serve as a template
 # during entity creation although a different file can be used, see
 # docstring for create_entity().
-DEFAULT_Metadata = "defaultMetadata.json"   # A file name.
+DEFAULT_Metadata = config.DEFAULT_Metadata
 # A template used during entity creation.
-DEFAULT_Entity = "defaultEntity"            # A file name.
+DEFAULT_Entity = config.DEFAULT_Entity
 # DEFAULT_Entity  - Keeps track of the last entity accessed.
 # Its content serves as a default if an entity is required but
 # not specified on the command line.
 
-CofA_name = 'CofA'               #| These three files will appear
-Journal_name = 'Journal.json'    #| in the home directory of
-Metadata_name = 'Metadata.json'  #| each newly created entity.
+CofA_name = config.CofA_name           #| These three files will be
+Journal_name = config.Journal_name     #| in the home directory of
+Metadata_name = config.Metadata_name   #| each newly created entity.
 
 NotesAboutAccountCodes = """
 Account codes are assumed to consist of 4 digits each,

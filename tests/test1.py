@@ -31,13 +31,15 @@ import debk
 
 VERSION = "v0.0.1"
 
-CofA = os.path.join(debk.DEFAULT_DIR, 
+DEFAULT_DIR = debk.DEFAULT_DIR
+
+CofA = os.path.join(DEFAULT_DIR, 
                     debk.DEFAULT_CofA)
 ENTITIES = ['EntityNoAccounts',
-            'Kazan15',
+            'testentity',
             ]
 entity_dirs = {entity: os.path.join(
-                    debk.DEFAULT_DIR, entity+'.d')
+                    DEFAULT_DIR, entity+'.d')
                             for entity in ENTITIES}
 
 class CreateEntity(unittest.TestCase):
@@ -63,11 +65,11 @@ class CreateEntity(unittest.TestCase):
         """
         Tests creation of a non prepopulated CofA.
         """
-        with open(os.path.join(debk.DEFAULT_DIR,
+        with open(os.path.join(DEFAULT_DIR,
                         debk.DEFAULT_CofA), 'r') as f:
             original = f.read()
         with open(os.path.join(
-                        debk.DEFAULT_DIR,
+                        DEFAULT_DIR,
                         ENTITIES[0]+'.d',
                         debk.CofA_name), 'r') as f:
             new = f.read()
@@ -77,12 +79,12 @@ class CreateEntity(unittest.TestCase):
         """
         Tests creation of a prepopulated CofA.
         """
-        with open(os.path.join(debk.DEFAULT_DIR,
-                        'Kazan15ChartOfAccounts'),
+        with open(os.path.join(DEFAULT_DIR,
+                        'testentityChartOfAccounts'),
                 'r') as f:
             original = f.read()
         with open(os.path.join(
-                        debk.DEFAULT_DIR,
+                        DEFAULT_DIR,
                         ENTITIES[1]+'.d',
                         debk.CofA_name), 'r') as f:
             new = f.read()
@@ -298,11 +300,13 @@ class LineEntry(unittest.TestCase):
 
 class Account_empty(unittest.TestCase):
     """Test Account class
+    Tests only the opening of a file and presentation
+    of a few accounts but with no journal entries.
     Will test further under ChartOfAccounts."""
     
     def setUp(self):
         self.cofa = []
-        with open("./debk.d/testChartOfAccounts",
+        with open("./debk.d/testentityChartOfAccounts",
                 'r') as cofa_file_object:
             reader = csv.DictReader(cofa_file_object)
             for row in reader:  # Collects a CofAs without entries.
@@ -322,33 +326,16 @@ class Account_empty(unittest.TestCase):
 
 class Account_loaded(unittest.TestCase):
     """Test Account class"""
-    
-    def setUp(self):
-        self.cofa = []
-        with open("./debk.d/testChartOfAccounts",
-                'r') as cofa_file_object:
-            reader = csv.DictReader(cofa_file_object)
-            for row in reader:  # Collects a CofAs without entries.
-                self.cofa.append(debk.Account(row))
-
-
-    def test_init_and_str(self):
-        testdata = [
-            (19, 'Acnt#3000 EQUITY  Title_Account- subtotal: 0.00'),
-            ]
-        for n, show in testdata:
-            with self.subTest(n=n, show=show):
-                self.assertEqual(
-                    self.cofa[n].__str__(), show)
+    pass
 
 class JournalClass(unittest.TestCase):
 
     def setUp(self):
-        debk.create_entity("Kazan15")
+        debk.create_entity("testentity")
 
     def test_load(self):
         self.maxDiff = None
-        journal = debk.Journal({"--entity": 'Kazan15'})
+        journal = debk.Journal({"--entity": 'test'})
         journal.load(
 """August 26, 2015
 book keeper
@@ -360,7 +347,7 @@ Reflect ownership of fixed assets.
         report = journal.show()
         expected = (
 """
-JOURNAL ENTRIES:......           Entity: 'Kazan15'
+JOURNAL ENTRIES:......           Entity: 'test'
 
   #001 on August 26, 2015 by book keeper.
     Reflect ownership of fixed assets.
@@ -386,10 +373,10 @@ JOURNAL ENTRIES:......           Entity: 'Kazan15'
 
     def tearDown(self):
         try:
-            shutil.rmtree('/var/opt/debk.d/Kazan15.d')
+            shutil.rmtree('/var/opt/debk.d/test.d')
         except FileNotFoundError:
             print(
-        "'/var/opt/debk.d/Kazan15.d' doesn't exist; can't delete.")
+        "'/var/opt/debk.d/test.d' doesn't exist; can't delete.")
 
 
 if __name__ == '__main__':  # code block to run the application
