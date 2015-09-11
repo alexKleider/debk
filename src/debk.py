@@ -1023,9 +1023,9 @@ def adjust4assets(chart_of_accounts):
                     'Adjust equity and liability accounts to reflect',
                     "ownership of assets by the 'group of 8'.",
                     ("2001,2002,2003,2004,2005,2006,2007,2008 Cr {}"
-                    .format(total_assets_2spit)),
+                    .format(total_assets_2split)),
                     ("3001,3002,3003,3004,3005,3006,3007,3008 Dr {}"
-                    .format(total_assets_2spit)),
+                    .format(total_assets_2split)),
                     '\n'  # ...to satisfy journal entry requirements.
                     ])
     

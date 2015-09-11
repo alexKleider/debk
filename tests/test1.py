@@ -20,7 +20,7 @@
 #   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #   Look for file named COPYING.
 """
-First test suite for debk.src.debk.py.
+First (and so far the only) test suite for debk.src.debk.py.
 """
 import os
 import csv
@@ -306,7 +306,7 @@ class Account_empty(unittest.TestCase):
     
     def setUp(self):
         self.cofa = []
-        with open("./debk.d/testentityChartOfAccounts",
+        with open("./tests/debk.d/testentityChartOfAccounts",
                 'r') as cofa_file_object:
             reader = csv.DictReader(cofa_file_object)
             for row in reader:  # Collects a CofAs without entries.
@@ -335,7 +335,7 @@ class JournalClass(unittest.TestCase):
 
     def test_load(self):
         self.maxDiff = None
-        journal = debk.Journal({"--entity": 'test'})
+        journal = debk.Journal({"--entity": 'testentity'})
         journal.load(
 """August 26, 2015
 book keeper
@@ -347,7 +347,7 @@ Reflect ownership of fixed assets.
         report = journal.show()
         expected = (
 """
-JOURNAL ENTRIES:......           Entity: 'test'
+JOURNAL ENTRIES:......           Entity: 'testentity'
 
   #001 on August 26, 2015 by book keeper.
     Reflect ownership of fixed assets.
@@ -373,10 +373,10 @@ JOURNAL ENTRIES:......           Entity: 'test'
 
     def tearDown(self):
         try:
-            shutil.rmtree('/var/opt/debk.d/test.d')
+            shutil.rmtree('./debk.d/test.d')
         except FileNotFoundError:
             print(
-        "'/var/opt/debk.d/test.d' doesn't exist; can't delete.")
+        "'./debk.d/test.d' doesn't exist; can't delete.")
 
 
 if __name__ == '__main__':  # code block to run the application
