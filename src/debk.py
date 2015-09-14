@@ -36,7 +36,7 @@ Usage:
   debk.py  [-v ...] show_journal [--entity=ENTITY]
   debk.py  [-v ...] show_accounts [--entity=ENTITY]
   debk.py  [-v ...] custom [<infiles>...] [--entity=ENTITY]
-  debk.py  [-v ...] test [--entity=ENTITY]
+  debk.py  [-v ...] print_books [<infiles>...] [--entity=ENTITY]
   debk.py check_path
 
 Options:
@@ -49,7 +49,8 @@ Commands:
   <new> creates a new set of books.
   <show_accounts> displays the chart of accounts.
   <show_journal> displays the journal entries.
-  <journal_entry> provides for user entry.
+  <journal_entry> provides for user entry unless infile(s) are specified
+  in which case, entries are take from the file(s) named.
   <check_path>  NOT for production code.
   <custom> serves the specialized needs of Kazan15:
     prompt> ./src/debk.py -vvv custom ./debk.d/kazan_journal --entity=Kazan15
@@ -228,6 +229,7 @@ def dr_or_cr(code):
 def create_entity(entity_name):
     """                                   [tested: CreateEntity] 
     Establishes a new accounting system. 
+    Indicates success by returning the entity_name.
 
     Creates a new dirctory '<entity_name>.d' within DEFAULT_DIR
     and populates it with a set of required files including a
@@ -239,7 +241,6 @@ def create_entity(entity_name):
         1. <entity_name> already exists, or
         2. not able to write to new directory.
     Also sets up an empty journal file and a metadata file.
-    Reports success if no errors are recognized.
     Leaves a record of the entity_name to serve as a default for future
     commands.
     """
@@ -326,10 +327,11 @@ class Account(object):
     the corresponding (signed) value.
     """
 
-    def __init__(self, csv):
+    def __init__(self, csv, args):
         """                  Tested in tests/test1 class Account.
         Accepts a dict (delivered by the csv module)
         as its parameter."""
+        self.verbosity = args['--verbosity']
         self.csv = csv
         self.code = csv['code']
         self.indent = INDENTATION_CONSTANT * int(csv['indent'])
@@ -343,7 +345,7 @@ class Account(object):
         self.balance = 0
         self.dr_cr = ''  # Specifies if the balance is 'DR' or 'CR'
         self.s_balance = 0  # This attribute is populated by the
-                            # set_place_holder_signed_balances method
+                            # _set_place_holder_signed_balances method
                             # of the ChartOfAccounts class and
                             # applies only to place_holder accounts.
         if csv['place_holder'] in 'Tt':
@@ -470,13 +472,12 @@ class Account(object):
 class ChartOfAccounts(object):
     """
     A class to manage an entity's chart of accounts (AKA the Ledger.)
-    Instantiation loads such a chart from a file 
-    but this includes only what's in the CSV file,
-    NOT any accounting information. When accounting
-    information is required, it is calculated on the fly by loading the
-    journal.
-    The 'show' method returns text displaying the accounts
-    in a way determined by the 'verbosity' parameter:
+    Instantiation loads such a chart from a file but this includes
+    only what's in the CSV file, NOT any accounting information.
+    When accounting information is required, the load_journal method
+    must first be called in order to populate the accounts.
+    The 'show' method returns text displaying the accounts in a way
+    determined by the 'verbosity' parameter:
         0: Listing if the accounts only.
         1: Accounts with totals.
         2: Accounts with all entries affecting each account.
@@ -491,8 +492,13 @@ class ChartOfAccounts(object):
         Loads the chart of accounts belonging to a specified entity.
         The accounts attribute is a dict keyed by account codes and
         values are instances of the Account class.
+        No accounting information comes in with instantiation.
+        Use the load_journal method after instatiation in order to
+        populate the accounting information.
         """
+        self.args = args
         self.entity = args['--entity']
+        self.verbosity = args['--verbosity']
         self.home = os.path.join(DEFAULT_DIR, self.entity  + '.d')
         self.cofa_file = os.path.join(self.home, CofA_name)
         self.csv_dict = {}  # Keyed by account number ('code'.)
@@ -514,20 +520,22 @@ class ChartOfAccounts(object):
             logging.critical('\n'.join([
                 "File not found attempting to initialize a Ledger.",
                 "Perhaps entity '{}' has not yet been created."
-                        .format(args['--entity'])]))
+                        .format(self.entity)]))
             sys.exit(1)
         self.ordered_codes = sorted([key for key in self.code_set])
 #       logging.debug(self.ordered_codes)
         self.accounts = {key:
-                Account(self.csv_dict[key]) for key in self.code_set}
+                Account(self.csv_dict[key],
+                        args) for key in self.code_set}
         self.journal_loaded = False
         # The accounts attribute is not fully populated until if and
         # when needed.  This is done using the load_journal() method.
 
-    def set_place_holder_signed_balances(self):
+    def _set_place_holder_signed_balances(self):
         """
         Iterates through the accounts setting the signed_balance
         attribute for each of the place_holder accounts.
+        A private method used only by load_journal method.
         """
         I = len(self.ordered_codes)
         for code in self.ordered_codes:
@@ -547,11 +555,15 @@ class ChartOfAccounts(object):
                         balance += sub_acnt.signed_balance()
                     i += 1
 
-    def load_journal(self, args):
+    def load_journal(self):
         """
         Posts the journal to the ledger.
+        Remember that instantiation of a Journal loads any previous
+        journal entries from storage but my use case has been to not
+        make use of persistent storage, but to keep journal entries in a
+        file and load them all at once using the Journal.load() method.
         """
-        journal = Journal(args)
+        journal = Journal(self.args)
 #       logging.debug(
 #           "Journal Contains the following......................")
 #       logging.debug(
@@ -593,22 +605,57 @@ class ChartOfAccounts(object):
             logging.warning(
                 "Balance sheet out of balance: Dr - Cr = {:,.2f}."
                         .format(imbalance))
-        self.set_place_holder_signed_balances()
+        self._set_place_holder_signed_balances()
         self.journal_loaded = True
 
-    def show_accounts(self, args):
+    def sum_accounts(self, account_codes):
+        """        unittest under development
+        Parameter can be a list of account_codes (as numbers or
+        strings) or a string with two account codes separated by a
+        colon representing a range of accounts.
+        Returns the sum of all the s_balances for the accounts who's
+        codes are listed.
+        Place holder accounts are ignored."""
+        if isinstance(account_codes, str):
+            split = account_codes.split(':')
+            codes = []
+            if len(split) == 2:
+                for code in self.ordered_codes:
+                  if int(code) >= int(split[0]):
+                      codes.append(code)
+                  if int(code) == int(split[1]):
+                      break
+            else:
+                return 0
+                logging.warning(
+        "Malformed parameter to ChartOfAccounts.sum_accounts() method.")
+        elif isinstance(account_codes, list):
+            codes = account_codes
+        else:
+            logging.warning(
+            "ChartOfAccounts.sum_accounts given a bad param.")
+        ret = 0
+        for code in codes:
+            acnt = self.accounts[str(code)]
+            if not acnt.place_holder:
+                ret += acnt.balance
+#           print("\n{:.2f}\n".format(balance))
+        return ret
+
+    def show_accounts(self):
         """Returns a string representation of the Ledger.
         Consider renaming this to __str__ or __repr__.
-        If this is done, verbosity will have to be passed in a different
+        verbosity will have to be passed in a different
         way- perhaps it can be assigned to an attribute at
         instantiation.
         """
-        if args['--verbosity'] and not self.journal_loaded:
-            self.load_journal(args)
+        if self.verbosity and not self.journal_loaded:
+#           self.load_journal(self.args)
+            self.load_journal()
         ret = ["\nLEDGER/CHART of ACCOUNTS:......  Entity: '{}'\n"
             .format(self.entity)]
         for code in self.ordered_codes:
-            ret.append(self.accounts[code].show_account(args['--verbosity']))
+            ret.append(self.accounts[code].show_account(self.verbosity))
 #           logging.debug("Signed balance Acnt {}: {:.2f}"
 #               .format(code, self.accounts[code].signed_balance()))
         return '\n'.join(ret)
@@ -639,8 +686,10 @@ class JournalEntry(object):
                                         # it's an entry number
                                         # and turn it into a dict.
             entry = JournalEntry.get_entry(entry)
-        if entry: self.data = entry
-        else: logging.error(
+        if entry:
+            self.data = entry
+        else:
+            logging.error(
                 "Unable to create a journal entry from '{}'."
                     .format(param))
 
@@ -705,17 +754,43 @@ class JournalEntry(object):
             )
 
     def ok(self):
+        """             Tested in ./tests/test2.py JournalEntryTests
+        A rigorous self check.
         """
-        Checks that a journal entry was actually created and has
-        substance.
-        """
-#       print('Self check on a journal entry:')
-#       for key, value in self.data.items():
-#           print("  {}: {}".format(key, value))
-#       print("    ... end of self check")
-        return (hasattr(self, 'data')
-                and
-                self.data['line_entries'])
+        dr_total = cr_total = 0
+        if (hasattr(self, 'data')
+        and "line_entries" in self.data
+        and isinstance(self.data["line_entries"], list)
+        and len(self.data["line_entries"]) > 1):
+            for entry in self.data['line_entries']:
+                if ('acnt' not in entry
+                or 'DR' not in entry
+                or 'CR' not in entry
+                or not (isinstance(entry['DR'], float)
+                        or isinstance(entry['CR'], float))):
+                    return False
+                dr_total += entry['DR']
+                cr_total += entry['CR']
+        else: 
+            return False
+        if ((dr_total - cr_total) < EPSILON
+        and 'number' in self.data
+        and "date" in self.data
+        and isinstance(self.data['date'], str)
+        and "user" in self.data
+        and isinstance(self.data['user'], str)
+        and "description" in self.data
+        and isinstance(self.data['description'], str)):
+            try:
+                _int = int(self.data['number'])
+            except ValueError:
+                print("failed because of number conversion")
+                return False
+            return True
+            return True
+        else:
+            print("Failed 2nd part")
+            return False
 
     def show_line_entry(line_entry):
         """
@@ -743,7 +818,7 @@ class JournalEntry(object):
         is a dictionary.
         Returns None if fails the ok method.
         """
-        if not self.ok(): return  # No data atribute or it is empty.
+#       if not self.ok(): return  # No data atribute or it is empty.
         data = self.data
         ret = []
         ret.append("  #{:0>3} on {:<12} by {}."
@@ -755,6 +830,9 @@ class JournalEntry(object):
         for line_entry in data["line_entries"]:
             ret.append(JournalEntry.show_line_entry(line_entry)) 
         return '\n'.join(ret)
+
+    def __str__(self):
+        return self.show()
 
 class Journal(object):
     """
@@ -799,7 +877,9 @@ class Journal(object):
         Also consider collecting new entries and not even loading
         those in persistent storage until user decides to save.
         """
+        self.args = args
         self.entity = args["--entity"]
+        self.infiles_loaded = False
         dir_name = os.path.join(DEFAULT_DIR, self.entity + '.d')
         self.journal_file = os.path.join(dir_name, Journal_name)
         self.metadata_file = os.path.join(dir_name, Metadata_name) 
@@ -829,8 +909,15 @@ class Journal(object):
             ret.append(entry.show())
         return '\n'.join(ret)
 
+    def __str__(self):
+        return self.show()
+
     def save(self):
-        """Saves journal to persistent storage.
+        """
+        Saves journal to persistent storage.
+        Replaces, rather than adds to, what was previously in persistent
+        storage.  What was previously stored is loaded when a Journal is
+        instantiated so data will not be lost.
         """
         self.metadata['next_journal_entry_number'] = self.next_entry
         with open(self.journal_file, 'w', newline='') as f_object:
@@ -847,7 +934,7 @@ class Journal(object):
 
     def _get_entry(self):
         """Used by the get method to add an entry to the the journal.
-        Instanciates a JournalEntry and, if it passes its ok method,
+        Instantiates a JournalEntry and, if it passes its ok method,
         saves its data atribute to the Journal (self.)
         The next_number attribute is updated each time.
         If successful, the JournalEntry instance is returned;
@@ -969,12 +1056,16 @@ class Journal(object):
                                             
 
     def get(self):
-        """Gets journal entries from the user.
-        Does this using the _get_entry method.
-        Once user input is completed, checks the next_number attribute
-        to see if entries have been made, and if so, confirms with user
-        before calling the save method to save them.
+        """Gets journal entries from the user, or from text if there
+        are entries in args['<infiles>'].  If entries are to be from
+        the user, the _get_entry method is used and once user input
+        is completed, the next_number attribute is checked to see if
+        entries have been made, and if so, confirms with user before
+        calling the save method to add the entries to the journal.
         """
+        if self.args['<infiles>'] and not self.infiles_loaded:
+            pass
+            self.infiles_loaded = True
         while True:
             entry = self._get_entry()
             if not entry:
@@ -1039,7 +1130,7 @@ def zero_expenses(chart_of_accounts):
     entries preform one of the 'custom' requirements described in the
     accompanying 'explanation' file.
     This zero_expenses method depends on the final (otherwise optional)
-    'split' field of the expence account.
+    'split' field of the expense account.
     Typical usage would be as follows:  load a ChartOfAccounts with
     all the journal entries and run this function with it as the
     parameter. Then load the returned value to the journal and populate
@@ -1112,30 +1203,36 @@ def main():
                     DEFAULT_Entity), 'r') as entity_file_object:
             args['--entity'] = entity_file_object.read()
     
-    if args['test']:
-        print(show_args(args, "Command line arguments"))
-        print("Creating a new Entity: '{}'."
-                .format(create_entity(args["--entity"])))
-        journal = Journal(args)
-        journal.load(
-        """August 26, 2015
-        book keeper
-        Reflect ownership of fixed assets.
-        3001,3002,3003,3004,3005,3006,3007,3008 Dr 2100.50
-        2001,2002,2003,2004,2005,2006,2007,2008 Cr 2100.50
+    if args['print_books']:
+        print(show_args(args))
+        ret = []
+        entity = create_entity(args['--entity'])
+        assert args["--entity"] == entity
+        journal = Journal(args)  # Loaded from persistent storage.
+        for infile in args["<infiles>"]:
+            journal.load(infile)
+        journal.save()  # Sends journal to persistent storage.
 
-        August 26, 2015
-        book keeper
-        Pay for a fixed asset: a pakboat.
-        1110 Cr 2100.50
-        1511 Dr 2100.50
+        cofa = ChartOfAccounts(args)
+        cofa.load_journal()  # Gets journal from persistent storage.
 
-        """)
-        print(journal.show())
+        ret.append(journal.show())
+
+        ret.append("\n")
+        ret.append(cofa.show_accounts())
+        ret.append('\n')
+#       ret.append(check_equity_vs_bank(cofa))
+
+        with open("Report", 'w') as report_file:
+            report_file.write('\n'.join(ret))
     
     if args['journal_entry']:
         journal = Journal(args)
-        journal.get()
+        if args['<infiles>']:
+            for infile in args["<infiles>"]:
+                journal.load(infile)
+        else:
+            journal.get()
 
     if args['show_journal']:
         journal = Journal(args)
@@ -1160,7 +1257,7 @@ def main():
         journal.save()  # Sends journal to persistent storage.
 
         cofa = ChartOfAccounts(args)
-        cofa.load_journal(args)  # Gets journal from persistent storage.
+        cofa.load_journal()  # Gets journal from persistent storage.
 
         expense_adjustment = zero_expenses(cofa)
         asset_adjustment = adjust4assets(cofa)
@@ -1173,9 +1270,9 @@ def main():
 
         ret.append(journal.show())
 
-        cofa.load_journal(args)
+        cofa.load_journal()
         ret.append("\n")
-        ret.append(cofa.show_accounts(args))
+        ret.append(cofa.show_accounts())
         ret.append('\n')
         ret.append(check_equity_vs_bank(cofa))
 

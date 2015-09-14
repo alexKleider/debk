@@ -20,7 +20,7 @@
 #   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #   Look for file named COPYING.
 """
-First (and so far the only) test suite for debk.src.debk.py.
+First test suite for debk.src.debk.py.
 """
 import os
 import csv
@@ -235,7 +235,9 @@ class CreateAccount(unittest.TestCase):
                 indent= 3,
                 split= 0,
                 place_holder= 'F',
-                ))
+                ),
+                { '--verbosity': 2, })
+
 
     def test_place_holder(self):
         self.assertFalse(self.acnt.place_holder)
@@ -310,7 +312,8 @@ class Account_empty(unittest.TestCase):
                 'r') as cofa_file_object:
             reader = csv.DictReader(cofa_file_object)
             for row in reader:  # Collects a CofAs without entries.
-                self.cofa.append(debk.Account(row))
+                self.cofa.append(debk.Account(row,
+                                        {'--verbosity': 2}))
 
 
     def test_init_and_str(self):
@@ -325,8 +328,11 @@ class Account_empty(unittest.TestCase):
 
 
 class Account_loaded(unittest.TestCase):
-    """Test Account class"""
-    pass
+    """Test Account class
+    I think this can more easily be done once we have 
+    a chart of accounts."""
+    def setUp(self):
+        pass
 
 class JournalClass(unittest.TestCase):
 
@@ -373,11 +379,46 @@ JOURNAL ENTRIES:......           Entity: 'testentity'
 
     def tearDown(self):
         try:
-            shutil.rmtree('./debk.d/test.d')
+            shutil.rmtree('./tests/debk.d/testentity.d')
         except FileNotFoundError:
             print(
-        "'./debk.d/test.d' doesn't exist; can't delete.")
+        "'./tests/debk.d/testentity.d' doesn't exist; can't delete.")
 
+class Ledger(unittest.TestCase):
+    """Test ChartOfAccounts and Account classes."""
+    def setUp(self):
+        entity_dir = './tests/debk.d/testentity.d'
+        if os.path.isdir(entity_dir):
+            shutil.rmtree(entity_dir)
+            print("Need to delete an entity dir. Should'd need to!")
+        self.test_entity = "testentity"
+        self.entity = debk.create_entity(self.test_entity)
+        self.cofa = debk.ChartOfAccounts(
+            {"--entity": self.entity,
+            "--verbosity": 2,
+            })
+        self.journal = debk.Journal(
+            {"--entity": self.entity,
+            "--verbosity": 2,
+            })
+        self.journal.load('./tests/debk.d/testentity_journal')
+        self.journal.save()
+        self.cofa.load_journal()
+
+    def test_init(self):
+        self.assertEqual(self.test_entity, self.entity)
+    def test_sum_accounts1(self):
+        total = '{:.2f}'.format(
+                self.cofa.sum_accounts([5310, 5320]))
+        self.assertEqual(total, str(2402.33))
+    def test_sum_accounts2(self):
+        total = '{:.2f}'.format(
+                self.cofa.sum_accounts("5020:5600"))
+        self.assertEqual(total, str(29393.59))
+    def tearDown(self):
+        entity_dir = './tests/debk.d/testentity.d'
+        if os.path.isdir(entity_dir):
+            shutil.rmtree(entity_dir)
 
 if __name__ == '__main__':  # code block to run the application
     unittest.main()
