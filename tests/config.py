@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # vim: set file encoding=utf-8 :
 #
-# file: '../config.py'
+# file: 'tests/config.py'
 # Part of testing suite regarding
 # 'debk.py', Double Entry Book Keeping module.
 
@@ -18,7 +18,8 @@
 #   GNU General Public License for more details.
 #
 #   You should have received a copy of the GNU General Public License
-#   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#   along with this program.  If not, see
+#   <http://www.gnu.org/licenses/>.
 #   Look for file named COPYING.
 
 """
@@ -35,6 +36,19 @@ files as well as a testentityChartOfAccounts file.
 LOGLEVEL = "WARNING"
 # LOGLEVEL = "ERROR"
 # LOGLEVEL = "CRITICAL"
+
+ACCOUNT_CLASSES = dict(
+    ASSETS= '1000',
+    LIABILITY= '2000',
+    EQUITY= '3000',
+    INCOME= '4000',
+    EXPENSES= '5000',
+    )
+
+DR_ACCOUNTS = {'ASSETS', 'EXPENSES'}
+CR_ACCOUNTS = {'LIABILITY', 'EQUITY', 'INCOME'}
+DR_FIRSTS = {ACCOUNT_CLASSES[item][:1] for item in DR_ACCOUNTS}
+CR_FIRSTS = {ACCOUNT_CLASSES[item][:1] for item in CR_ACCOUNTS}
 
 MAXIMUM_VERBOSITY = 3
 EPSILON = 0.01  # We want acuracy to the nearest $0.01.
@@ -61,3 +75,14 @@ DEFAULT_Entity = "defaultEntity"            # A file name.
 CofA_name = 'CofA'               #| These three files will appear
 Journal_name = 'Journal.json'    #| in the home directory of
 Metadata_name = 'Metadata.json'  #| each newly created entity.
+
+def test_firsts():
+    print("DR_FIRSTS are {}".format(DR_FIRSTS))
+    print("CR_FIRSTS are {}".format(CR_FIRSTS))
+
+def main():
+    test_firsts()
+
+if __name__ == '__main__':
+    main()
+

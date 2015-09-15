@@ -218,9 +218,9 @@ def dr_or_cr(code):
     have codes beginning in 1, 2, 3, 4, & 5 respectively.
     """
     first = code[:1]
-    if first in ('1', '5'):          # Assets and Expenses
+    if first in config.DR_FIRSTS:    # Assets and Expenses
         return('DR')
-    elif first in ('2',  '3', '4'):  # Liability, Equity, Income
+    elif first in config.CR_FIRSTS:  # Liability, Equity, Income
         return('CR')
     logging.critical(
     "Malformed account code: '{}'."
@@ -358,7 +358,7 @@ class Account(object):
             self.header_str = ''
         else:
             self.place_holder = None
-            logging.warning(
+            logging.critical(
                     "Problem with Acnt {}: Place holder or not??"
                             .format(self.code))
 
@@ -602,7 +602,7 @@ class ChartOfAccounts(object):
 #                       .format(code, balance))
         imbalance = dr_check - cr_check
         if abs(imbalance) > EPSILON:
-            logging.warning(
+            logging.critical(
                 "Balance sheet out of balance: Dr - Cr = {:,.2f}."
                         .format(imbalance))
         self._set_place_holder_signed_balances()
@@ -627,12 +627,12 @@ class ChartOfAccounts(object):
                       break
             else:
                 return 0
-                logging.warning(
+                logging.critical(
         "Malformed parameter to ChartOfAccounts.sum_accounts() method.")
         elif isinstance(account_codes, list):
             codes = account_codes
         else:
-            logging.warning(
+            logging.critical(
             "ChartOfAccounts.sum_accounts given a bad param.")
         ret = 0
         for code in codes:
