@@ -223,8 +223,7 @@ def dr_or_cr(code):
     elif first in config.CR_FIRSTS:  # Liability, Equity, Income
         return('CR')
     logging.critical(
-    "Malformed account code: '{}'."
-                .format(code))
+    "Malformed account code: %s.", code)
 
 def create_entity(entity_name):
     """                                   [tested: CreateEntity] 
@@ -269,12 +268,11 @@ def create_entity(entity_name):
         with open(meta_dest, 'w') as json_file:
             json.dump(metadata, json_file)
     except FileExistsError:
-        logging.error("Directory '{}' already exists"
-                            .format(new_dir))
+        logging.error("Directory %s already exists", new_dir)
         sys.exit(1)
     except OSError:
-        logging.error("Destination '{}' &/or '{}' may not be writeable."
-                            .format(new_CofA_file_name, new_Journal))
+        logging.error("Destination %s &/or %s may not be writeable.",
+                            new_CofA_file_name, new_Journal)
         sys.exit(1)
     else:
         return entity_name
@@ -359,8 +357,8 @@ class Account(object):
         else:
             self.place_holder = None
             logging.critical(
-                    "Problem with Acnt {}: Place holder or not??"
-                            .format(self.code))
+                    "Problem with Acnt %s: Place holder or not??",
+                            self.code)
 
     def signed_balance(self):
         """Checks (based on its code) if an account's balance is positive
@@ -372,14 +370,14 @@ class Account(object):
         or (self.code[:1] in '234' and self.dr_cr == 'CR')
         #  Liability, Equity and Income accounts are Credit accounts.
         ):
-#           logging.debug(
-#               "Accnt {}{} has the appropriate Dr/Cr balance: {:.2f}"
-#                   .format(self.code, self.dr_cr, self.balance))
+            logging.debug(
+                "Accnt %s%s has the appropriate Dr/Cr balance: %.2f",
+                    self.code, self.dr_cr, self.balance)
             return self.balance  # As it should be.
         else:
-#           logging.debug(
-#               "Accnt {}{} has a NEGATIVE Dr/Cr balance:      {:.2f}"
-#                   .format(self.code, self.dr_cr, self.balance))
+            logging.debug(
+                "Accnt %s%s has a NEGATIVE Dr/Cr balance:      %.2f",
+                    self.code, self.dr_cr, self.balance)
             return self.balance * -1
 
     def acnt_dict(self):
@@ -511,16 +509,16 @@ class ChartOfAccounts(object):
 #                       show_args(row, 'CofA input line values'))
                     if row['code'] in self.code_set:
                         logging.error(
-                    "Duplicate account code:{}; Fix before rerunning.."
-                                .format(row['code']))
+                    "Duplicate account code:%s; Fix before rerunning..",
+                                row['code'])
                         sys.exit()
                     self.code_set.add(row['code'])
                     self.csv_dict[row['code']] = row
         except FileNotFoundError:
-            logging.critical('\n'.join([
+            logging.critical("%s\n%s '%s' %s",
                 "File not found attempting to initialize a Ledger.",
-                "Perhaps entity '{}' has not yet been created."
-                        .format(self.entity)]))
+                "Perhaps entity", self.entity,
+                "has not yet been created.")
             sys.exit(1)
         self.ordered_codes = sorted([key for key in self.code_set])
 #       logging.debug(self.ordered_codes)
@@ -574,8 +572,7 @@ class ChartOfAccounts(object):
             for le in je["line_entries"]:
                 if le['acnt'] not in self.code_set:
                     logging.error(
-                        "AcntCode {} is not recognized."
-                            .format(le['acnt']))
+                        "AcntCode %s is not recognized.", le['acnt'])
                 line_entry = LineEntry(le['DR'],
                                         le['CR'],
                                         je['number'])
@@ -590,21 +587,21 @@ class ChartOfAccounts(object):
 
             if self.accounts[code].dr_cr == 'DR':
                 dr_check += balance
-#               logging.debug("For {} dr_cr is 'DR' {:,.2f}"
-#                   .format(code, balance))
+#               logging.debug("For %s dr_cr is 'DR' %.2f",
+#                   code, balance)
             elif self.accounts[code].dr_cr == 'CR':
                 cr_check += balance
-#               logging.debug("For {} dr_cr is 'CR' {:,.2f}"
-#                   .format(code, balance))
+#               logging.debug("For %s dr_cr is 'CR' %.2f",
+#                   code, balance)
             else:
                 pass
-#               logging.debug("For {} no dr_cr entry {:,.2f}"
-#                       .format(code, balance))
+#               logging.debug("For %s no dr_cr entry %.2f",
+#                       code, balance)
         imbalance = dr_check - cr_check
         if abs(imbalance) > EPSILON:
             logging.critical(
-                "Balance sheet out of balance: Dr - Cr = {:,.2f}."
-                        .format(imbalance))
+                "Balance sheet out of balance: Dr - Cr = %.2f.",
+                        imbalance)
         self._set_place_holder_signed_balances()
         self.journal_loaded = True
 
@@ -656,8 +653,8 @@ class ChartOfAccounts(object):
             .format(self.entity)]
         for code in self.ordered_codes:
             ret.append(self.accounts[code].show_account(self.verbosity))
-#           logging.debug("Signed balance Acnt {}: {:.2f}"
-#               .format(code, self.accounts[code].signed_balance()))
+#           logging.debug("Signed balance Acnt %s: %.2f",
+#               code, self.accounts[code].signed_balance())
         return '\n'.join(ret)
 
 
@@ -690,8 +687,8 @@ class JournalEntry(object):
             self.data = entry
         else:
             logging.error(
-                "Unable to create a journal entry from '{}'."
-                    .format(param))
+                "Unable to create a journal entry from '%s'.",
+                    param)
 
     def get_entry(entry_number):
         """
@@ -1005,15 +1002,15 @@ class Journal(object):
                     cr = amnt
                 else:
                     logging.error(
-                        "Bad format in {}.  Dr or Cr not specified?"
-                            .format(infile))
+                        "Bad format in %s.  Dr or Cr not specified?",
+                            infile)
                 return dict(acnt= acnt,  #| Returning a dict to append
                             DR= dr,      #| to entry line list.
                             CR= cr)      #|
             else:  # This is probably dead code.
                 logging.error(
-                        "Bad format in {}.  Line with no accounts?"
-                            .format(infile))
+                        "Bad format in %s.  Line with no accounts?",
+                            infile)
 
         if os.path.isfile(text_or_file):
             with open(text_or_file, 'r') as f:
@@ -1070,9 +1067,9 @@ class Journal(object):
             entry = self._get_entry()
             if not entry:
                 break
-        logging.debug('next numbers are self {} and metadata {}.'
-                .format(self.next_entry,
-                self.metadata['next_journal_entry_number']))
+        logging.debug('next numbers are self %d and metadata %d.',
+                self.next_entry,
+                self.metadata['next_journal_entry_number'])
         if self.next_entry > self.metadata[
                             'next_journal_entry_number']:
             # Entries have been made; will probably want to save.
