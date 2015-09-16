@@ -188,23 +188,6 @@ def divider(dollar_amount, split):
     assert (abs(dollars) - abs(sum(ret))) < EPSILON
     return ret
 
-def zero_out(preamble, # date, user, descr text (can be more than one
-                       # line,) and zeroing entry: as a list of strings.
-            format_line, # format string used for balancing entries.
-            split_list): # returned by divider()
-    """
-    Sets up text that can be read as a journal entry.
-    Assumes that numerically sequential accounts are being affected
-    and that the sequence begins with 1 (or 01, or 001 ... depending
-    on the format_line.   [Not subjected to unittest.]
-    Hoping to refactor so this function is not required.
-    """
-    ret = preamble
-    for i in range(len(split_list)):
-        ret.append(format_line.format(i + 1, split_list[i]))
-    ret.append('\n')  # Journal entry depends on this trailing CR
-    return '\n'.join(ret)
-
 def dr_or_cr(code):
     """                          [test: global_dr_or_cr]
     Attempts to return the account type, either 'DR' or 'CR' 
@@ -1137,6 +1120,24 @@ def zero_expenses(chart_of_accounts):
     Note: this function will NOT adapt to a change in the account code
     schema as defined in config.py.
     """
+
+    def zero_out(preamble, # date, user, descr text (can be more than
+                           # one line,) and zeroing entry: as a list
+                           # of strings.
+                format_line, # format string used for balancing entries.
+                split_list): # returned by divider()
+        """
+        Sets up text that can be read as a journal entry.
+        Assumes that numerically sequential accounts are being affected
+        and that the sequence begins with 1 (or 01, or 001 ... depending
+        on the format_line.   [Not subjected to unittest.]
+        """
+        ret = preamble
+        for i in range(len(split_list)):
+            ret.append(format_line.format(i + 1, split_list[i]))
+        ret.append('\n')  # Journal entry depends on this trailing CR
+        return '\n'.join(ret)
+
     expenses = {}      # Dict of totals keyed by 'split'
     for code in chart_of_accounts.ordered_codes:
         acnt = chart_of_accounts.accounts[code]
