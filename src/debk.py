@@ -110,19 +110,18 @@ Journal_name = config.Journal_name     #| in the home directory of
 Metadata_name = config.Metadata_name   #| each newly created entity.
 
 NotesAboutAccountCodes = """
-Account codes are assumed to consist of 4 digits each,
+During development: Account codes each consisted of 4 digits,
 with the first digit being one of the following:
 1 for Assets
 2 for Liabilities
 3 for Equity
 4 for Income, and 
 5 for Expenses.
-If you wish to adapt the code for a different scheme, corresponding
-changes will have to be made in the following:
-    The global function dr_or_cr
-    Account class methods signed_balance, show_balance
-    Global functions that are 'custom' for the Kazan15 entity:
-        adjust4assets, zero_expenses, check_equity_vs_bank.
+The config.py is now structured in such a way that this can be changed.
+If you wish to change to a different code schema, the global functions
+that are 'custom' for the Kazan15 entity (adjust4assets, zero_expenses,
+check_equity_vs_bank) will not work properly.  This is documented in
+each of these functions' docstring.
 """
 
 def show_args(args, name = 'Arguments'):
@@ -364,11 +363,12 @@ class Account(object):
         """Checks (based on its code) if an account's balance is positive
         or negative and returns the balance appropriately signed.
         """
+        #  If nothing in account, not to worry:
         if (self.balance < EPSILON or 
-        (self.code[:1] in '15' and self.dr_cr == 'DR')
-        #  Asset and Expense accounts are Debit accounts.
-        or (self.code[:1] in '234' and self.dr_cr == 'CR')
-        #  Liability, Equity and Income accounts are Credit accounts.
+        #  Asset and Expense accounts are Debit accounts:
+        (self.code[:1] in config.DR_FIRSTS and self.dr_cr == 'DR')
+        #  Liability, Equity and Income accounts are Credit accounts:
+        or (self.code[:1] in config.CR_FIRSTS and self.dr_cr == 'CR')
         ):
             logging.debug(
                 "Accnt %s%s has the appropriate Dr/Cr balance: %.2f",
@@ -1093,6 +1093,8 @@ def adjust4assets(chart_of_accounts):
     liability accounts to reflect the fact that the 'group of 8' own the
     fixed assets but that ownership comes at a cost to them: hence the
     Dr entries against their equity accounts.  See file 'explanation'.
+    Note: this function will NOT adapt to a change in the account code
+    schema as defined in config.py.
     """
     total_assets_2split = 0
     asset_codes2check = [ code for code in chart_of_accounts.ordered_codes
@@ -1132,6 +1134,8 @@ def zero_expenses(chart_of_accounts):
     all the journal entries and run this function with it as the
     parameter. Then load the returned value to the journal and populate
     another chartofaccounts with this updated journal. 
+    Note: this function will NOT adapt to a change in the account code
+    schema as defined in config.py.
     """
     expenses = {}      # Dict of totals keyed by 'split'
     for code in chart_of_accounts.ordered_codes:
@@ -1168,6 +1172,8 @@ def check_equity_vs_bank(chart_of_accounts):
     Checks that the sum of the equity accounts balances against liquid
     assets, in our case, just the bank account.
     Returns a string.
+    Note: this function will NOT adapt to a change in the account code
+    schema as defined in config.py.
     """
     assets = 0
     codes2check = [ code for code in chart_of_accounts.ordered_codes
