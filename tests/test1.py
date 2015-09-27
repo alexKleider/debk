@@ -407,6 +407,21 @@ class Ledger(unittest.TestCase):
 
     def test_init(self):
         self.assertEqual(self.test_entity, self.entity)
+
+    def test_sum_accounts0(self):
+        """This test will break if the account code schema changes."""
+        total_Dr = (
+                self.cofa.sum_accounts("1000:1999") +
+                self.cofa.sum_accounts("5000:5999")
+                )
+        total_Cr = (
+                self.cofa.sum_accounts("2000:2999") +
+                self.cofa.sum_accounts("3000:3999") +
+                self.cofa.sum_accounts("4000:4999")
+                )
+        self.assertEqual("{:.2f}".format(total_Dr - total_Cr),
+                        str(0.00))
+
     def test_sum_accounts1(self):
         total = '{:.2f}'.format(
                 self.cofa.sum_accounts([5310, 5320]))

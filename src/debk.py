@@ -271,6 +271,7 @@ class LineEntry(object):
         CR     a credit amount  }|  a JournalEntry instance.
     Do NOT confuse this class with journal line entries which
     have NOT been given their own class.
+    Only DR or CR will have a value other than 0.
     """
     
     def __init__(self, dr, cr, entry_number):
@@ -292,7 +293,8 @@ class LineEntry(object):
     __str__ = show
 
 class Account(object):
-    """Provides data type for values of the dict
+    """
+    Provides data type for values of the dict
     ChartOfAccounts.accounts which is keyed by account code.
     Attributes include: csv, code, balance,
     dr_cr (specifies if the balance is a debit or credit,)
@@ -343,7 +345,8 @@ class Account(object):
                             self.code)
 
     def signed_balance(self):
-        """Checks (based on its code) if an account's balance is positive
+        """
+        Checks (based on its code) if an account's balance is positive
         or negative and returns the balance appropriately signed.
         """
         #  If nothing in account, not to worry:
@@ -430,7 +433,9 @@ class Account(object):
         Traverses line_entries to populate the balance and dr_cr
         attributes.  Accounts (all the place holder accounts for sure)
         with no entries will continue to have their dr_cr attribute set
-        to the empty string.
+        to the empty string.  (It is only for display purposes that
+        place holders have a balance assigned, and this is done by the
+        show method of ChartOfAccounts.)
         Note: the line_entries themselves are populated by the
         ChartOfAccounts load_journal method.
         """
@@ -595,7 +600,8 @@ class ChartOfAccounts(object):
         colon representing a range of accounts.
         Returns the sum of all the s_balances for the accounts who's
         codes are listed.
-        Place holder accounts are ignored."""
+        Place holder accounts are ignored.
+        """
         if isinstance(account_codes, str):
             split = account_codes.split(':')
             codes = []
