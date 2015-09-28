@@ -11,18 +11,17 @@ account for which the accounting data is presented.  Appropriate
 indentation is used to help visually distinguish title accounts from
 other (sub) accounts.  Accounts associated with an integer, i.e. (/8),
 are those that have been balanced against the specified number of
-participants.  Accounts 5001 & 5002 provide a special service in this
-context, as described in the next paragraph.
+participants.  Accounts 4001 & 4002 and 5001 & 5002 provide a special
+service in this context, as described in the next paragraph.
 
-The totals of the expense accounts have been balanced against the equity
-accounts. This was done as follows: 
-All the (typically Dr) expense entries were added up into one of two
-sums (depending on whether the item is to be split 9 or 10 ways.) Those
-sums were entered as Cr entries in either account 5001 or 5002, which
-in turn were balanced by equal Dr entries in each of the participants'
-equity accounts.  This is essentially a variant of the standard end of
-accounting period process that zeros out temporary accounts except that
-in this case, the expence account data is preserved for inspection.
+The totals of the income and expense accounts have been balanced against
+the equity accounts. This was done as follows: 
+All the (typically Cr) income and the (typically Dr) expense entries
+were added up into one of the special accounts mentioned above and these
+in turn were balanced against each of the participants' equity accounts.
+This is essentially a variant of the standard end of accounting period
+process that zeros out temporary accounts except that in this case, the
+expence account data is preserved for inspection.
 
 The value of canoes and other "fixed assets" is reflected in the 
 liability accounts of the eight participants who 'bought' them.
@@ -32,6 +31,8 @@ amounts from equity (Dr) to liability (Cr.) Do not be alarmed by the
 word "liability."  This does not mean a liability born by you.
 It means that the "trip entity" owes you the value of those assets.
 (The liability is on the part of the trip entity; you are a creditor.)
+Nor should you get too excited by the 'windfall.'  Depreciation has not
+been applied. 
 
 After these adjustments have been made, each equity account reflects
 how much of your initial investment remains.  This presumably will be

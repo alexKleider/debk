@@ -1117,7 +1117,7 @@ def adjust4assets(chart_of_accounts):
                     '\n'  # ...to satisfy journal entry requirements.
                     ])
     
-def zero_expenses(chart_of_accounts):
+def zero_temporaries(chart_of_accounts):
     """This is one of several 'custom' procedures specific to the
     needs of Kazan15.
     It's parameter is expected to be a journal populated instance of
@@ -1133,7 +1133,9 @@ def zero_expenses(chart_of_accounts):
     parameter. Then load the returned value to the journal and populate
     another chartofaccounts with this updated journal. 
     """
+    entries = []
     expenses = {}      # Dict of totals keyed by 'split'
+    income = {}
     for code in chart_of_accounts.ordered_codes:
         acnt = chart_of_accounts.accounts[code]
         if (code[:1] == '5') and (not
@@ -1143,24 +1145,51 @@ def zero_expenses(chart_of_accounts):
                         acnt.split, 0)
             expenses[acnt.split] += acnt.signed_balance()
     # expenses[9]: Cr 5001  Dr 3001..3009
-    journal_input_ex9 = zero_out(
-            ['August 10, 2015', 'book keeper',
+        if (code[:1] == '4') and (not
+                    acnt.place_holder):
+        # if income account that isn't a place holder:
+            _value = income.setdefault(
+                        acnt.split, 0)
+            income[acnt.split] += acnt.signed_balance()
+#           print('Adding ${:.2f} (in Acnt:{}) to income totals.'
+#                       .format(acnt.signed_balance(),
+#                       code))
+    if expenses[9]:
+        entries.append(zero_out(
+            ['Sept 27, 2015', 'book keeper',
             'Distribute expenses among 9 participants.',
             '5001 Cr {:.2f}'.format(expenses[9])],
             '30{:0>2} Dr {:.2f}',
-            divider(expenses[9], 9))
+            divider(expenses[9], 9)))
     # expenses[10]: Cr 5002  Dr  3001..3010
-    journal_input_ex10 = zero_out(
-            ['August 10, 2015', 'book keeper',
+    if expenses[10]:
+        entries.append(zero_out(
+            ['Sept 27, 2015', 'book keeper',
             'Distribute expenses among 10 participants.',
             '5002 Cr {:.2f}'.format(expenses[10])],
             '30{:0>2} Dr {:.2f}',
-            divider(expenses[10], 10))
+            divider(expenses[10], 10)))
+    print("'income9' contains {:.2f}"
+                    .format(income[9]))
+    if income[9]:
+        entries.append(zero_out(
+            ['Sept 27, 2015', 'book keeper',
+            'Distribute income among 9 participants.',
+            '4001 Dr {:.2f}'.format(income[9])],
+            '30{:0>2} Cr {:.2f}',
+            divider(income[9], 9)))
+    # expenses[10]: Cr 5002  Dr  3001..3010
+    if income[10]:
+        entries.append(zero_out(
+            ['Sept 27, 2015', 'book keeper',
+            'Distribute income among 10 participants.',
+            '4002 Dr {:.2f}'.format(income[10])],
+            '30{:0>2} Cr {:.2f}',
+            divider(income[10], 10)))
     # Note: the following join method is used on the empty string rather
     # than a CR because a CR was added to each string in the list by the
-    # zero_out method (because journal reading depends on it.
-    return ''.join([journal_input_ex9,
-                    journal_input_ex10 ])
+    # zero_out method (because journal reading depends on it.)
+    return ''.join(entries)
 
 def check_equity_vs_bank(chart_of_accounts):
     """This is one of several 'custom' procedures specific to the
@@ -1256,7 +1285,7 @@ def main():
         cofa = ChartOfAccounts(args)
         cofa.load_journal()  # Gets journal from persistent storage.
 
-        expense_adjustment = zero_expenses(cofa)
+        expense_adjustment = zero_temporaries(cofa)
         asset_adjustment = adjust4assets(cofa)
 
         journal = Journal(args)  # ?unnecessary retrieval?
@@ -1265,16 +1294,16 @@ def main():
         cofa = ChartOfAccounts(args)  # A virgin ledger.
         journal.save()
 
-        ret.append(journal.show())
+        with open("Kazan15_Journal", 'w') as file_object:
+            file_object.write(journal.show())
 
         cofa.load_journal()
-        ret.append("\n")
-        ret.append(cofa.show_accounts())
-        ret.append('\n')
-        ret.append(check_equity_vs_bank(cofa))
 
-        with open("Report", 'w') as report_file:
-            report_file.write('\n'.join(ret))
+        with open("Kazan15_Ledger", 'w') as file_object:
+            file_object.write(cofa.show_accounts())
+
+        print(check_equity_vs_bank(cofa))
+
 
 if __name__ == '__main__':  # code block to run the application
     main()
