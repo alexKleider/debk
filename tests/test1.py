@@ -157,7 +157,7 @@ class divider(unittest.TestCase):
         self.assertEqual(debk.divider(10, 3), [3.34, 3.33, 3.33])
 
     def test_minus10by3(self):
-        print("Expect logging critical re -10")
+        # Handles negative dividend appropriately.
         self.assertEqual(debk.divider(-10, 3), [-3.33, -3.33, -3.34])
 
     def test_minus10by_minus3(self):

@@ -57,7 +57,8 @@ Commands:
     Then look for a file 'Report'.
     To make the above work, the following files are provided:
       ./debk.d/kazan_journal
-      /var/opt/debk.d/KazanChartOfAccounts
+      /var/opt/debk.d/Kazan15ChartOfAccounts (a copy of which is
+      provided in ./debk.d/)
 
 Comments:
   The --entity=ENTITY option is mandatory with the 'new' command.
@@ -89,6 +90,7 @@ INDENTATION_CONSTANT = ' ' * INDENTATION_MULTIPLIER
 
 N_ASSET_OWNERS = config.N_ASSET_OWNERS
                      #Must jive with 'split' values in CofAs.
+                     #Only used for custom function adjust4assets()
 DEFAULT_DIR = config.DEFAULT_DIR
 # Each entity will have its home directory in DEFAULT_DIR.
 
@@ -96,7 +98,7 @@ DEFAULT_DIR = config.DEFAULT_DIR
 DEFAULT_CofA = config.DEFAULT_CofA
 # The default chart of accounts. (For now: place holders only.)
 # A file of this name is kept in DEFAULT_DIR to serve as a template
-# during entity creation although a different file can be used, see
+# during entity creation although a different file can be used: see
 # docstring for create_entity().
 DEFAULT_Metadata = config.DEFAULT_Metadata
 # A template used during entity creation.
@@ -125,7 +127,7 @@ each of these functions' docstring.
 """
 
 def show_args(args, name = 'Arguments'):
-    """                           [tested: global_show_args]
+    """                     [../tests/test1.py: global_show_args]
     Returns a string displaying args, which can be any iteration
     supporting collection including dictionary like objects (ones
     that implement an items() method.)
@@ -145,7 +147,7 @@ def show_args(args, name = 'Arguments'):
     return '\n'.join(ret)
 
 def none2float(n):
-    """                   Tested: none2float.
+    """                     [../tests/test1.py: none2float.
     Solves the need to interpret a non-entry as zero."""
     if not n: return 0
     else: 
@@ -158,49 +160,48 @@ def none2float(n):
             raise
 
 def divider(dollar_amount, split):
-    """                        Test: divider
+    """                                [../tests/test1.py: divider
     Attempts to divide 'dollar_amount' into 'split' equal parts.
-    Returns a 'split' list of floats.  Expects 'dollar_amount' to be
-    a float, 'split' to be an int.  Works to the nearest penney.
+    Returns a 'split' long list of floats.  Expects 'dollar_amount'
+    to be a float, 'split' to be an int.  Works to the nearest penney.
     When equal amounts are not possible, if dollar_amount is positive,
     the first numbers in the list will be greater than the last by one;
     if negative, it's the ending numbers that are greater.
     An assertionError is raised if the sum of the list is not equal
     to 'dollar_amount'.  This occurs if split is negative.
-    Behaves sensibly with negative dollar_ammount.  Any left over is
-    added from end rather than beginning of resulting list.
+    Behaves sensibly with negative dollar_ammount in wich case left
+    over is added from end rather than beginning of resulting list.
     """
-    ret = []
     try:   # money as float or string => pennies/int
         dollars = float(dollar_amount)  # Might come in as a string.
-        dividend = int(dollars * 100)
     except ValueError:
-        logging.critical(
-        "Bad first param: divide({}, {})"
+        logging.critical("Bad 1st param: divide({}, {})"
             .format(dollar_amount, split))
         raise
+    dividend = int(dollars * 100)
     if split <=0:
         logging.critical(
         "Bad 2nd param: divide({}, {})"
             .format(dollar_amount, split))
     quotient, rem = divmod(dividend, split)
+    ret = []  # Prepare to create a list with 'split' entries.
     for split in range(1, split + 1):
-        if split > rem:
+        if split > rem:  # Assign quotient (remainder 'used up.)
           ret.append(quotient/100.0)
-        else: ret.append((quotient + 1)/100.0)
-    assert (abs(dollars) - abs(sum(ret))) < EPSILON
+        else:  # Still need to 'use up' remainder.
+            ret.append((quotient + 1)/100.0)
+    assert (abs(dollars) - abs(sum(ret))) < EPSILON  # Sanity check.
     return ret
 
 def dr_or_cr(code):
-    """                          [test: global_dr_or_cr]
+    """             [../tests/test1.py: global_dr_or_cr]
     Attempts to return the account type, either 'DR' or 'CR' 
     determined by the account's code/number.
     Logs and returns None if code is malformed.
     Later processing may change an Account's type to
     'place_holder'.
     Used to set the Account attribute acnt_type.
-    Assumes Asset, Liability, Equity, Income, & Expense accounts
-    have codes beginning in 1, 2, 3, 4, & 5 respectively.
+    Depends on config.py to define account types.
     """
     first = code[:1]
     if first in config.DR_FIRSTS:    # Assets and Expenses
@@ -211,7 +212,7 @@ def dr_or_cr(code):
     "Malformed account code: %s.", code)
 
 def create_entity(entity_name):
-    """                                   [tested: CreateEntity] 
+    """                        [../tests/test1.py: CreateEntity] 
     Establishes a new accounting system. 
     Indicates success by returning the entity_name.
 
@@ -231,7 +232,7 @@ def create_entity(entity_name):
     cofa_source = os.path.join(  # | Use a prepopulated chart  |
                 DEFAULT_DIR,     # | of accounts if it exists. |
                 entity_name + 'ChartOfAccounts')
-    if not os.path.isfile(cofa_source):
+    if not os.path.isfile(cofa_source):  # Fall back on default.
         cofa_source = os.path.join(DEFAULT_DIR, DEFAULT_CofA)
     new_dir = os.path.join(DEFAULT_DIR, entity_name+'.d')
     new_CofA_file_name = os.path.join(new_dir, CofA_name)
@@ -265,7 +266,7 @@ def create_entity(entity_name):
 ## Ledger related classes:  LineEntry, Account, ChartOfAccounts ##
 
 class LineEntry(object): 
-    """
+    """                        [../tests/test1.py: LineEntry] 
     Instances are used to populate the line_entries attribute of
     instances of the Account class.
     Each instance has the following attributes:
@@ -275,6 +276,9 @@ class LineEntry(object):
     Do NOT confuse this class with journal line entries which
     have NOT been given their own class.
     Only DR or CR will have a value other than 0.
+    I'd like to change this so there is only one dollar amount and a
+    separate Dr or Cr specfier to be in keeping with the way journal
+    entries are specified.
     """
     
     def __init__(self, dr, cr, entry_number):
@@ -296,7 +300,8 @@ class LineEntry(object):
     __str__ = show
 
 class Account(object):
-    """
+    """              [../tests/test1.py: CreateAccount,
+                        Account_empty, Account_loaded] 
     Provides data type for values of the dict
     ChartOfAccounts.accounts which is keyed by account code.
     Attributes include: csv, code, balance,
@@ -308,12 +313,12 @@ class Account(object):
     Place holder accounts will have the attribute s_balance
     depending on their acnt_type: Dr totals in Cr accounts
     and Cr totals in Dr accounts will be shown as negative.
-    Non place_holder accounts have the signed_balance method to return
-    the corresponding (signed) value.
+    Non place_holder accounts have the signed_balance property to
+    return the corresponding (signed) value.
     """
 
     def __init__(self, csv, args):
-        """                  Tested in tests/test1 class Account.
+        """                  [../tests/test1.py: CreateAccount]
         Accepts a dict (delivered by the csv module)
         as its parameter."""
         self.verbosity = args['--verbosity']
@@ -387,9 +392,10 @@ class Account(object):
                     )
 
     def show_account(self, verbosity = MAXIMUM_VERBOSITY):
-        """                  Tested in tests/test1 class Account.
+        """   Indirectly tested in tests/test1 class Ledger.setUp-
+                            must examine TestReport.
         Returns a string representation of an account.
-        May want to rename this __str__ or __repr__ in the future.
+        Assigned to __str__.
         """
         if not verbosity:    # Just show the account metadata.
             ret = []
