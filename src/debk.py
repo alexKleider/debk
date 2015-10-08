@@ -110,19 +110,18 @@ Journal_name = config.Journal_name     #| in the home directory of
 Metadata_name = config.Metadata_name   #| each newly created entity.
 
 NotesAboutAccountCodes = """
-Account codes are assumed to consist of 4 digits each,
+During development: Account codes each consisted of 4 digits,
 with the first digit being one of the following:
 1 for Assets
 2 for Liabilities
 3 for Equity
 4 for Income, and 
 5 for Expenses.
-If you wish to adapt the code for a different scheme, corresponding
-changes will have to be made in the following:
-    The global function dr_or_cr
-    Account class methods signed_balance, show_balance
-    Global functions that are 'custom' for the Kazan15 entity:
-        adjust4assets, zero_expenses, check_equity_vs_bank.
+The config.py is now structured in such a way that this can be changed.
+If you wish to change to a different code schema, the global functions
+that are 'custom' for the Kazan15 entity (adjust4assets, zero_expenses,
+check_equity_vs_bank) will not work properly.  This is documented in
+each of these functions' docstring.
 """
 
 def show_args(args, name = 'Arguments'):
@@ -154,7 +153,8 @@ def none2float(n):
             return float(n)
         except ValueError:
             logging.critical(
-    "Attempting to create a float out of an incompatible data type.")
+                    "Attempting to create a float out of '{}'."
+                        .format(n))
             raise
 
 def divider(dollar_amount, split):
@@ -176,11 +176,13 @@ def divider(dollar_amount, split):
         dividend = int(dollars * 100)
     except ValueError:
         logging.critical(
-        "Unable to convert 'divide()'s first paramter into a float.")
+        "Bad first param: divide({}, {})"
+            .format(dollar_amount, split))
         raise
     if split <=0:
         logging.critical(
-        "Trying to split into a non positive integer number of parts.")
+        "Bad 2nd param: divide({}, {})"
+            .format(dollar_amount, split))
     quotient, rem = divmod(dividend, split)
     for split in range(1, split + 1):
         if split > rem:
@@ -188,23 +190,6 @@ def divider(dollar_amount, split):
         else: ret.append((quotient + 1)/100.0)
     assert (abs(dollars) - abs(sum(ret))) < EPSILON
     return ret
-
-def zero_out(preamble, # date, user, descr text (can be more than one
-                       # line,) and zeroing entry: as a list of strings.
-            format_line, # format string used for balancing entries.
-            split_list): # returned by divider()
-    """
-    Sets up text that can be read as a journal entry.
-    Assumes that numerically sequential accounts are being affected
-    and that the sequence begins with 1 (or 01, or 001 ... depending
-    on the format_line.   [Not subjected to unittest.]
-    Hoping to refactor so this function is not required.
-    """
-    ret = preamble
-    for i in range(len(split_list)):
-        ret.append(format_line.format(i + 1, split_list[i]))
-    ret.append('\n')  # Journal entry depends on this trailing CR
-    return '\n'.join(ret)
 
 def dr_or_cr(code):
     """                          [test: global_dr_or_cr]
@@ -289,6 +274,7 @@ class LineEntry(object):
         CR     a credit amount  }|  a JournalEntry instance.
     Do NOT confuse this class with journal line entries which
     have NOT been given their own class.
+    Only DR or CR will have a value other than 0.
     """
     
     def __init__(self, dr, cr, entry_number):
@@ -310,7 +296,8 @@ class LineEntry(object):
     __str__ = show
 
 class Account(object):
-    """Provides data type for values of the dict
+    """
+    Provides data type for values of the dict
     ChartOfAccounts.accounts which is keyed by account code.
     Attributes include: csv, code, balance,
     dr_cr (specifies if the balance is a debit or credit,)
@@ -360,15 +347,18 @@ class Account(object):
                     "Problem with Acnt %s: Place holder or not??",
                             self.code)
 
+    @property
     def signed_balance(self):
-        """Checks (based on its code) if an account's balance is positive
+        """
+        Checks (based on its code) if an account's balance is positive
         or negative and returns the balance appropriately signed.
         """
+        #  If nothing in account, not to worry:
         if (self.balance < EPSILON or 
-        (self.code[:1] in '15' and self.dr_cr == 'DR')
-        #  Asset and Expense accounts are Debit accounts.
-        or (self.code[:1] in '234' and self.dr_cr == 'CR')
-        #  Liability, Equity and Income accounts are Credit accounts.
+        #  Asset and Expense accounts are Debit accounts:
+        (self.code[:1] in config.DR_FIRSTS and self.dr_cr == 'DR')
+        #  Liability, Equity and Income accounts are Credit accounts:
+        or (self.code[:1] in config.CR_FIRSTS and self.dr_cr == 'CR')
         ):
             logging.debug(
                 "Accnt %s%s has the appropriate Dr/Cr balance: %.2f",
@@ -385,7 +375,7 @@ class Account(object):
         """
         return dict(code= self.code,
                     balance= self.balance,
-                    s_balance= self.s_balance,
+                    s_balance= self.s_balance,  # Place holders only!
                     _type= self.acnt_type,
                     category= self.csv['type'],
                     full_name= self.csv['full_name'],
@@ -447,7 +437,9 @@ class Account(object):
         Traverses line_entries to populate the balance and dr_cr
         attributes.  Accounts (all the place holder accounts for sure)
         with no entries will continue to have their dr_cr attribute set
-        to the empty string.
+        to the empty string.  (It is only for display purposes that
+        place holders have a balance assigned, and this is done by the
+        show method of ChartOfAccounts.)
         Note: the line_entries themselves are populated by the
         ChartOfAccounts load_journal method.
         """
@@ -535,22 +527,28 @@ class ChartOfAccounts(object):
         attribute for each of the place_holder accounts.
         A private method used only by load_journal method.
         """
-        I = len(self.ordered_codes)
+#       print("Running _set_place_holder_signed_balances...")
+        I = len(self.ordered_codes)  # Don't index here or beyond.
         for code in self.ordered_codes:
             acnt = self.accounts[code]
             if acnt.place_holder:
+#               print("..Considering account code: {}"
+#                       .format(code))
                 indent = acnt.indent
-                balance = 0
+                acnt.s_balance = 0
                 i = self.ordered_codes.index(code) + 1
                 while True:
                     if (i >= I
                     or (self.accounts[self.ordered_codes[i]].indent
                                                     <= indent)):
-                        self.accounts[code].s_balance = balance
-                        break
+                        break  # out of while loop.
                     sub_acnt = self.accounts[self.ordered_codes[i]]
+#                   print("....Checking #{}"
+#                           .format(self.ordered_codes[i]))
                     if not sub_acnt.place_holder:
-                        balance += sub_acnt.signed_balance()
+#                       print("......it is a place holder so adding {}"
+#                               .format(sub_acnt.signed_balance))
+                        acnt.s_balance += sub_acnt.signed_balance
                     i += 1
 
     def load_journal(self):
@@ -572,16 +570,17 @@ class ChartOfAccounts(object):
             for le in je["line_entries"]:
                 if le['acnt'] not in self.code_set:
                     logging.error(
-                        "AcntCode %s is not recognized.", le['acnt'])
-                line_entry = LineEntry(le['DR'],
-                                        le['CR'],
-                                        je['number'])
-                self.accounts[le['acnt']].line_entries.append(
-                                                line_entry)
+                    "Journal entry #%s: unrecognized AcntCode '%s'.",
+                        je['number'], le['acnt'])
+                else:
+                    self.accounts[le['acnt']].line_entries.append(
+                                            LineEntry(le['DR'],
+                                                    le['CR'],
+                                                    je['number']))
         dr_check = cr_check = 0  # To check totals balance.
         for code in self.ordered_codes:
-            # Populate the accounts with balances, specify Dr or Cr, and
-            # do a running total to check that all is in balance.
+            # Populate the accounts with balances, specify Dr or Cr,
+            # and do a running total to check that all is in balance.
             self.accounts[code].update_balance()
             balance = self.accounts[code].balance
 
@@ -606,37 +605,42 @@ class ChartOfAccounts(object):
         self.journal_loaded = True
 
     def sum_accounts(self, account_codes):
-        """        unittest under development
+        """        -test: see class Ledger in tests/test1.py
         Parameter can be a list of account_codes (as numbers or
         strings) or a string with two account codes separated by a
         colon representing a range of accounts.
-        Returns the sum of all the s_balances for the accounts who's
-        codes are listed.
-        Place holder accounts are ignored."""
+        Returns the sum of all the non place holder balances.
+        Cr values are considered negative if in a Debit account and
+        Dr values are considered negative if in a Credit account.
+        """
+#       print("Calling ChartOfAccounts.sum_accounts({})."
+#                   .format(account_codes))
         if isinstance(account_codes, str):
             split = account_codes.split(':')
             codes = []
-            if len(split) == 2:
-                for code in self.ordered_codes:
-                  if int(code) >= int(split[0]):
-                      codes.append(code)
-                  if int(code) == int(split[1]):
-                      break
-            else:
-                return 0
+            if len(split) != 2:
                 logging.critical(
-        "Malformed parameter to ChartOfAccounts.sum_accounts() method.")
+            "ChartOfAccounts.sum_accounts({}): bad parameter."
+                        .format(account_codes))
+                return 0
+            first = int(split[0])
+            last = int(split[1])
+            for code in self.ordered_codes:
+              if int(code) >= first and int(code) <= last:
+                  codes.append(code)
         elif isinstance(account_codes, list):
             codes = account_codes
         else:
             logging.critical(
-            "ChartOfAccounts.sum_accounts given a bad param.")
+            "ChartOfAccounts.sum_accounts({}): bad parameter."
+                        .format(account_codes))
         ret = 0
         for code in codes:
             acnt = self.accounts[str(code)]
             if not acnt.place_holder:
-                ret += acnt.balance
-#           print("\n{:.2f}\n".format(balance))
+                ret += acnt.signed_balance
+#               print("Adding balance for acnt#{}: {:.2f}"
+#                   .format(code, acnt.signed_balance))
         return ret
 
     def show_accounts(self):
@@ -654,7 +658,7 @@ class ChartOfAccounts(object):
         for code in self.ordered_codes:
             ret.append(self.accounts[code].show_account(self.verbosity))
 #           logging.debug("Signed balance Acnt %s: %.2f",
-#               code, self.accounts[code].signed_balance())
+#               code, self.accounts[code].signed_balance)
         return '\n'.join(ret)
 
 
@@ -1093,6 +1097,8 @@ def adjust4assets(chart_of_accounts):
     liability accounts to reflect the fact that the 'group of 8' own the
     fixed assets but that ownership comes at a cost to them: hence the
     Dr entries against their equity accounts.  See file 'explanation'.
+    Note: this function will NOT adapt to a change in the account code
+    schema as defined in config.py.
     """
     total_assets_2split = 0
     asset_codes2check = [ code for code in chart_of_accounts.ordered_codes
@@ -1103,7 +1109,7 @@ def adjust4assets(chart_of_accounts):
         if (not acnt.place_holder
         and hasattr(acnt, 'split')):
             assert acnt.split == N_ASSET_OWNERS
-            total_assets_2split += acnt.signed_balance()
+            total_assets_2split += acnt.signed_balance
             asset_codes.append(asset_code)
     return "\n".join([
                     "{:%b %d, %Y}".format(datetime.date.today()),
@@ -1132,7 +1138,27 @@ def zero_temporaries(chart_of_accounts):
     all the journal entries and run this function with it as the
     parameter. Then load the returned value to the journal and populate
     another chartofaccounts with this updated journal. 
+    Note: this function will NOT adapt to a change in the account code
+    schema as defined in config.py.
     """
+
+    def zero_out(preamble, # date, user, descr text (can be more than
+                           # one line,) and zeroing entry: as a list
+                           # of strings.
+                format_line, # format string used for balancing entries.
+                split_list): # returned by divider()
+        """
+        Sets up text that can be read as a journal entry.
+        Assumes that numerically sequential accounts are being affected
+        and that the sequence begins with 1 (or 01, or 001 ... depending
+        on the format_line.   [Not subjected to unittest.]
+        """
+        ret = preamble
+        for i in range(len(split_list)):
+            ret.append(format_line.format(i + 1, split_list[i]))
+        ret.append('\n')  # Journal entry depends on this trailing CR
+        return '\n'.join(ret)
+
     entries = []
     expenses = {}      # Dict of totals keyed by 'split'
     income = {}
@@ -1143,7 +1169,7 @@ def zero_temporaries(chart_of_accounts):
         # if expense account that isn't a place holder:
             _value = expenses.setdefault(
                         acnt.split, 0)
-            expenses[acnt.split] += acnt.signed_balance()
+            expenses[acnt.split] += acnt.signed_balance
     # expenses[9]: Cr 5001  Dr 3001..3009
         if (code[:1] == '4') and (not
                     acnt.place_holder):
@@ -1197,6 +1223,8 @@ def check_equity_vs_bank(chart_of_accounts):
     Checks that the sum of the equity accounts balances against liquid
     assets, in our case, just the bank account.
     Returns a string.
+    Note: this function will NOT adapt to a change in the account code
+    schema as defined in config.py.
     """
     assets = 0
     codes2check = [ code for code in chart_of_accounts.ordered_codes
@@ -1204,13 +1232,13 @@ def check_equity_vs_bank(chart_of_accounts):
     for code in codes2check:
         acnt = chart_of_accounts.accounts[code]
         if not acnt.place_holder:
-            assets += acnt.signed_balance()
+            assets += acnt.signed_balance
     ret = ["Total assets of participants:  {:.2f}"
                 .format(assets)]
     ret.append(
         "...which balances nicely against the total liquid assets...")
     ret.append("... remaining in bank account: {:.2f}"
-        .format(chart_of_accounts.accounts['1110'].signed_balance()))
+        .format(chart_of_accounts.accounts['1110'].signed_balance))
     return '\n'.join(ret)
 ## End of Kazan15 'custom' functions.
 
@@ -1273,8 +1301,17 @@ def main():
         print(show_args(sys.path, "Contents of sys.path"))
 
     if args['custom']:
+        # For testing purposes, this is often run and each time creates
+        # a directory which must be removed if next run is to go
+        # through:
+        entity_dir = os.path.join(DEFAULT_DIR, args['--entity']+'.d')
+        if os.path.isdir(entity_dir):
+            shutil.rmtree(entity_dir)
+
+        # Check that args are sane:
         print(show_args(args))
         ret = []
+
         entity = create_entity(args['--entity'])
         assert args["--entity"] == entity
         journal = Journal(args)  # Loaded from persistent storage.

@@ -146,6 +146,7 @@ class none2float(unittest.TestCase):
         self.assertEqual(debk.none2float("45"), 45.0)
 
     def test_non_number_string_error(self):
+        print("Expect logging critical re Not a number.")
         with self.assertRaises(ValueError):
             debk.none2float("Not a number")
 
@@ -156,17 +157,21 @@ class divider(unittest.TestCase):
         self.assertEqual(debk.divider(10, 3), [3.34, 3.33, 3.33])
 
     def test_minus10by3(self):
+        print("Expect logging critical re -10")
         self.assertEqual(debk.divider(-10, 3), [-3.33, -3.33, -3.34])
 
     def test_minus10by_minus3(self):
+        print("Expect logging critical re -10 and -3")
         with self.assertRaises(AssertionError):
             debk.divider(-10, -3)
 
     def test10by_minus3(self):
+        print("Expect logging critical re -3")
         with self.assertRaises(AssertionError):
             debk.divider(10, -3)
 
     def test_minus10by_0(self):
+        print("Expect logging critical re -10 and div by 0")
         with self.assertRaises(ZeroDivisionError):
             debk.divider(-10, 0)
 
@@ -221,6 +226,7 @@ class global_dr_or_cr(unittest.TestCase):
             ("0123", None),
             ("", None),
             ]
+        print("Expect logging critical re 3 malformed codes.")
         for code, dr_cr in testdata:
             with self.subTest(code=code, dr_cr=dr_cr):
                 self.assertEqual(debk.dr_or_cr(code), dr_cr)
@@ -245,40 +251,40 @@ class CreateAccount(unittest.TestCase):
     def test_s_balance_dr_cr(self):
         self.acnt.balance = 4.40
         self.acnt.dr_cr = 'CR'
-        self.assertEqual(self.acnt.signed_balance(),
+        self.assertEqual(self.acnt.signed_balance,
                         -self.acnt.balance)
 
     def test_s_balance_dr_cr_0(self):
         self.acnt.balance = 0
         self.acnt.dr_cr = 'CR'
-        self.assertEqual(self.acnt.signed_balance(),
+        self.assertEqual(self.acnt.signed_balance,
                         self.acnt.balance)
 
     def test_s_balance_dr_dr_neg(self):
         self.acnt.balance = -4.40
         self.acnt.dr_cr = 'DR'
-        self.assertEqual(self.acnt.signed_balance(),
+        self.assertEqual(self.acnt.signed_balance,
                         self.acnt.balance)
 
     def test_s_balance_cr_dr(self):
         self.acnt.code = '2050'
         self.acnt.balance = 4.40
         self.acnt.dr_cr = 'DR'
-        self.assertEqual(self.acnt.signed_balance(),
+        self.assertEqual(self.acnt.signed_balance,
                         -self.acnt.balance)
 
     def test_s_balance_cr_dr_0(self):
         self.acnt.code = '2050'
         self.acnt.balance = 0
         self.acnt.dr_cr = 'DR'
-        self.assertEqual(self.acnt.signed_balance(),
+        self.assertEqual(self.acnt.signed_balance,
                         self.acnt.balance)
 
     def test_s_balance_cr_cr_neg(self):
         self.acnt.code = '2050'
         self.acnt.balance = -4.40
         self.acnt.dr_cr = 'CR'
-        self.assertEqual(self.acnt.signed_balance(),
+        self.assertEqual(self.acnt.signed_balance,
                         self.acnt.balance)
 
 
@@ -404,13 +410,41 @@ class Ledger(unittest.TestCase):
         self.journal.load('./tests/debk.d/testentity_journal')
         self.journal.save()
         self.cofa.load_journal()
+        with open('TestReport', 'w') as file_object:
+            file_object.write(self.cofa.show_accounts())
 
     def test_init(self):
         self.assertEqual(self.test_entity, self.entity)
+
+    def test_sum_accounts0(self):
+        """This test will break if the account code schema changes."""
+        testdata = [
+            (self.cofa.sum_accounts("1000:1999"), 17926.60), 
+            (self.cofa.sum_accounts("2000:2999"), 0),  # 0
+            (self.cofa.sum_accounts("3000:3999"), 47320.19), # 
+            (self.cofa.sum_accounts("4000:4999"), 0.0),  
+            (self.cofa.sum_accounts("5000:5999"), 29393.59),  #
+                    ]
+        for acnt_sum, amount in testdata:
+            with self.subTest(acnt_sum=acnt_sum, amount=amount):
+                self.assertEqual("{:.2f}".format(acnt_sum),
+                                "{:.2f}".format(amount))
+#       total_Dr = (
+#               self.cofa.sum_accounts("1000:1999") +
+#               self.cofa.sum_accounts("5000:5999")
+#               )
+#       total_Cr = (
+#               self.cofa.sum_accounts("2000:2999") +
+#               self.cofa.sum_accounts("3000:3999") +
+#               self.cofa.sum_accounts("4000:4999")
+#               )
+#       self.assertEqual("{:.2f}".format(total_Dr - total_Cr),
+#                       "{:.2f}".format(0))
+
     def test_sum_accounts1(self):
-        total = '{:.2f}'.format(
-                self.cofa.sum_accounts([5310, 5320]))
-        self.assertEqual(total, str(2402.33))
+        self.assertEqual('{:.2f}'.format(
+                            self.cofa.sum_accounts([5310, 5320])),
+                        '{:.2f}'.format(2402.33))
     def test_sum_accounts2(self):
         total = '{:.2f}'.format(
                 self.cofa.sum_accounts("5020:5600"))
