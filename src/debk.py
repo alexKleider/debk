@@ -1176,9 +1176,9 @@ def zero_temporaries(chart_of_accounts):
         # if income account that isn't a place holder:
             _value = income.setdefault(
                         acnt.split, 0)
-            income[acnt.split] += acnt.signed_balance()
+            income[acnt.split] += acnt.signed_balance
 #           print('Adding ${:.2f} (in Acnt:{}) to income totals.'
-#                       .format(acnt.signed_balance(),
+#                       .format(acnt.signed_balance,
 #                       code))
     if expenses[9]:
         entries.append(zero_out(
@@ -1195,8 +1195,8 @@ def zero_temporaries(chart_of_accounts):
             '5002 Cr {:.2f}'.format(expenses[10])],
             '30{:0>2} Dr {:.2f}',
             divider(expenses[10], 10)))
-    print("'income9' contains {:.2f}"
-                    .format(income[9]))
+#   print("'income9' contains {:.2f}"
+#                   .format(income[9]))
     if income[9]:
         entries.append(zero_out(
             ['Sept 27, 2015', 'book keeper',
