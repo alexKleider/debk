@@ -27,6 +27,7 @@ If editing this file, beaware that the testing suite uses its own
 version of config.py which differs only in the home directory specified.
 REMEMBER TO INCLUDE ANY CHANGES MADE TO THE OTHER VERSION.
 """
+VERSION = "0.0.1"
 
 # LOGLEVEL = "DEBUG"
 # LOGLEVEL = "INFO"
@@ -34,7 +35,7 @@ LOGLEVEL = "WARNING"
 # LOGLEVEL = "ERROR"
 # LOGLEVEL = "CRITICAL"
 
-ACCOUNT_CLASSES = dict(
+ACCOUNT_CATEGORIES = dict(
     ASSETS= '1000',
     LIABILITY= '2000',
     EQUITY= '3000',
@@ -42,12 +43,23 @@ ACCOUNT_CLASSES = dict(
     EXPENSES= '5000',
     )
 
-ACCOUNT_CODE_LENGTH = len(ACCOUNT_CLASSES['ASSETS'])
+def account_category(code):
+    for category in ACCOUNT_CATEGORIES:
+        if ACCOUNT_CATEGORIES[category][:1]  == code[:1]:
+            return category
+
+ACCOUNT_CODE_LENGTH = len(ACCOUNT_CATEGORIES['ASSETS'])
 
 DR_ACCOUNTS = {'ASSETS', 'EXPENSES'}
 CR_ACCOUNTS = {'LIABILITY', 'EQUITY', 'INCOME'}
-DR_FIRSTS = {ACCOUNT_CLASSES[item][:1] for item in DR_ACCOUNTS}
-CR_FIRSTS = {ACCOUNT_CLASSES[item][:1] for item in CR_ACCOUNTS}
+DR_FIRSTS = {ACCOUNT_CATEGORIES[item][:1] for item in DR_ACCOUNTS}
+CR_FIRSTS = {ACCOUNT_CATEGORIES[item][:1] for item in CR_ACCOUNTS}
+
+def valid_account_code(account_code):
+    if (account_code
+    and type(account_code) == str
+    and len(account_code) == ACCOUNT_CODE_LENGTH):
+        return True
 
 MAXIMUM_VERBOSITY = 3
 EPSILON = 0.01  # We want acuracy to the nearest $0.01.
@@ -55,9 +67,15 @@ INDENTATION_MULTIPLIER = 3
 
 N_ASSET_OWNERS = 8   # Specific to Kazan15
                      #Must jive with 'split' values in CofAs.
-DEFAULT_DIR = '/var/opt/debk.d'
-# Each entity will have its home directory in DEFAULT_DIR.
 
+# Each entity will have its home directory in DEFAULT_DIR.
+DEFAULT_DIR = '/var/opt/debk.d'  # for production
+# Rather than importing from debk which imports from config,
+# the testing module assigns its own
+# DEFAULT_DIR = './tests/debk.d'  # for testing
+
+# Will need to have a setup routine to put the following into the
+# DEFAULT_DIR directory-----
 # The following files are expected to be in the DEFAULT_DIR directory:
 DEFAULT_CofA = "defaultChartOfAccounts"     # A file name.
 # The default chart of accounts. (For now: place holders only.)
@@ -74,6 +92,24 @@ DEFAULT_Entity = "defaultEntity"            # A file name.
 CofA_name = 'CofA'               #| These three files will appear
 Journal_name = 'Journal.json'    #| in the home directory of
 Metadata_name = 'Metadata.json'  #| each newly created entity.
+
+LineEntry_input_order = dict(account_code= 0, #| Determines order in
+                            _type= 1,      #| which LineItem textual
+                            amount= 2)     #| input will be accepted.
+# The above must match the following prompt:
+LineEntry_input_format = "{}Enter AccntNum cr/dr Amount: "
+LineEntry_input_prompt = (
+"an account number, a D(ebit) or or C(redit) specifier, an amount")
+                            
+def valid_account_code_length(account_code):
+    """
+    Checks the validity of an account code:
+    i.e. checks that has the correct number of digits.
+    Note: it does NOT check that such an account exists.
+    """
+    if (len(account_code) == ACCOUNT_CODE_LENGTH 
+    and account_code.isdigit()):
+        return True
 
 def test_firsts():
     print("DR_FIRSTS are {}".format(DR_FIRSTS))

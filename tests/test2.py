@@ -27,7 +27,7 @@ import csv
 import json
 import shutil
 import unittest
-import debk
+import CSV.debk.src.debk as debk
 
 VERSION = "v0.0.1"
 
