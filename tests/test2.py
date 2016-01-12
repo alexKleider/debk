@@ -31,29 +31,29 @@ import CSV.debk.src.debk as debk
 
 VERSION = "v0.0.1"
 
-DEFAULT_DIR = debk.DEFAULT_DIR
+DEFAULT_DIR = './tests/debk.d'  # for testing
 
 CofA = os.path.join(DEFAULT_DIR, 
                     debk.DEFAULT_CofA)
 
 class JournalEntryTests(unittest.TestCase):
     def setUp(self):
-        debk.create_entity('testentity')
+        debk.create_entity('testentity', DEFAULT_DIR)
 
     def test_ok(self):
-        j = debk.JournalEntry(
+        j = debk.JournalEntry.from_dict(
           dict(
-            number= "{:0>3}".format(3),
-            date= 'Sept 3, 2015',
+            entry_number= 3,
+            date_stamp= 'Sept 3, 2015',
             user= 'book keeper',
             description= 'dummy journal entry',
-            line_entries= [
-                dict(acnt = '1234',
-                    DR= 12.50,
-                    CR= 0),
-                dict(acnt = '2345',
-                    DR= 0,
-                    CR= 12.50),
+            line_items= [
+                dict(account_code = '1234',
+                    amount= 12.50,
+                    type_= 'C'),
+                dict(account_code = '2345',
+                    type_= 'D',
+                    amount= 12.50),
             ]))
         self.assertTrue(j.ok())
  

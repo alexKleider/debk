@@ -77,8 +77,8 @@ Comments:
 # acnt_type  Account    Dr, Cr, or place_holder qualifies the account.
 # category   Account    ASSETS, LIABILITIES, EQUITY, INCOME, EXPENSES.
 # type_      Account    | D, C  | qualifies the balance attribute.
-#            LineItems  |       | qualifies the amount attribute.
-#            LineEntry  |
+#            LineEntry  |       | qualifies the amount attribute.
+#            LineItem   |       | ditto for JournalEntry LineItems.
 
 import os
 import sys
@@ -109,6 +109,9 @@ N_ASSET_OWNERS = config.N_ASSET_OWNERS
                      #Only used for custom function adjust4assets()
 DEFAULT_DIR = config.DEFAULT_DIR
 # Each entity will have its home directory in DEFAULT_DIR.
+# create_entity, Journal.__init__ and ChartOfAccounts.__init__ all
+# have a named default.dir=DEFAULT_DIR paramter as a useful override
+# when testing.  (See contents of tests/ directory.)
 
 # The following files are expected to be in the DEFAULT_DIR directory:
 DEFAULT_CofA = config.DEFAULT_CofA
@@ -867,6 +870,7 @@ class LineItem(object):
 class JournalEntry(object):
     """
     JournalEntry objects have the following attributes:
+            entry_number: int but displayed as a formatted string.
             date_stamp: date_stamp,  # string- any format
             user: name,  # person making the journal entry
             description: explanation, # string with imbedded CRs
@@ -888,7 +892,7 @@ class JournalEntry(object):
                         ):
         """
         """
-        self.entry_number = entry_number
+        self.entry_number = int(entry_number)
         self.date_stamp = date_stamp
         self.user = user
         self.description = description
@@ -904,12 +908,15 @@ class JournalEntry(object):
                         item._dict for item in self.line_items],
                     )
 
-    def from_dict(_dict):
+    @classmethod
+    def from_dict(cls, _dict):
         """
         Takes the dict version and returns an instance.
         Need this because list of LineItem objects must
         also be converted from corresponding dicts.
         """
+#       print("Caling JournalEntry.from_dict on: {}"
+#               .format(_dict))
         dict_copy = copy.deepcopy(_dict)
         # Make a copy to prevent side effect.
         dict_copy["line_items"] = [
@@ -1066,6 +1073,7 @@ class JournalEntry(object):
         """             Tested in ./tests/test2.py JournalEntryTests
         A rigorous self check.
         """
+#       print(show_args(self._dict, 'JournalEntry.ok()'))
         if (isinstance(self.entry_number, int)
         and isinstance(self.date_stamp, str)
         and self.date_stamp
