@@ -1468,7 +1468,7 @@ def entity_listing():
 def show_entity_menu(default_entity=''):
     if default_entity:
         default_entity = ("\n\t_: Default is '{}', just hit enter."
-                            .format(default_entity))
+                            .format(get_default_entity()))
     return ('\n'.join(["\t{}: {}".format(n, entity)
                 for (n, entity) in enumerate(entities_available(), 1)])
             + default_entity)
@@ -1487,7 +1487,7 @@ def get_existing_entity():
 """Choose one of the following:
 {}
 \t0: to exit.
-Pick an entity: """.format(show_entity_menu(get_default_entity())))
+Pick an entity: """.format(show_entity_menu(get_default_entity)))
         if choice == '':
             return get_default_entity()
         try:
