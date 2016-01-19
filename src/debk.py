@@ -1430,6 +1430,7 @@ def check_equity_vs_bank(chart_of_accounts):
 ## End of Kazan15 'custom' functions.
 ######################################################################
 
+<<<<<<< HEAD
 def get_default_entity(default_dir = DEFAULT_DIR,
                         default_file = DEFAULT_Entity):
     default_entity = ''
@@ -1449,20 +1450,59 @@ def clear_default_entity(default_dir = DEFAULT_DIR,
                                 default_file), 'w') as f_object:
             f_object.write('')
     except OSError("Unable to write an empty default entity file."):
+=======
+#### The following make up the menu framework aka user interface.
+####       Selecting (creating, deleting) an entity.
+
+def get_default_entity(default_dir = DEFAULT_DIR,
+                        default_file = DEFAULT_Entity):
+    path = os.path.join(default_dir, default_file)
+    try:
+        with open(path, 'r') as f_object:
+            default_entity = f_object.read()
+    except FileNotFoundError:
+        print("Unable to find the DEFAULT_Entity file: {}."
+                .format(path))
+        default_entity = None
+    return default_entity
+
+def clear_default_entity(default_dir = DEFAULT_DIR,
+                        default_file = DEFAULT_Entity):
+    path = os.path.join(default_dir, default_file)
+    try:
+        with open(path, 'w') as f_object:
+            f_object.write('')
+    except OSError:
+        print("Unable to clear the DEFAULT_Entity file: {}."
+                .format(path))
+>>>>>>> develop
         return
 
 def entities_available():
     return [file_name[:-2]
+<<<<<<< HEAD
                 for file_name in os.listdir(DEFAULT_DIR)
                 if file_name.endswith(".d")]
+=======
+            for file_name in os.listdir(DEFAULT_DIR)
+            if file_name.endswith(".d")]
+>>>>>>> develop
 
 def entity_listing():
     return ''.join([ "\n\t    {}".format(entity)
                     for entity in entities_available()])
+<<<<<<< HEAD
 def show_entity_menu(default_entity=''):
     if default_entity:
         default_entity = ("\n\t_: Default is '{}', just hit enter."
                             .format(get_default_entity()))
+=======
+
+def show_entity_menu(default_entity=''):
+    if default_entity:
+        default_entity = ("\n\t_: Default is '{}', just hit enter."
+                            .format(default_entity))
+>>>>>>> develop
     return ('\n'.join(["\t{}: {}".format(n, entity)
                 for (n, entity) in enumerate(entities_available(), 1)])
             + default_entity)
@@ -1481,7 +1521,11 @@ def get_existing_entity():
 """Choose one of the following:
 {}
 \t0: to exit.
+<<<<<<< HEAD
 Pick an entity: """.format(show_entity_menu(get_default_entity)))
+=======
+Pick an entity: """.format(show_entity_menu(get_default_entity())))
+>>>>>>> develop
         if choice == '':
             return get_default_entity()
         try:
