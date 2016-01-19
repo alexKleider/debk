@@ -1,3 +1,4 @@
+#!../venv/bin/python
 # -*- coding: utf-8 -*-
 # vim: set file encoding=utf-8
 #
@@ -30,19 +31,13 @@ other needs as well.
 
 Usage:
   debk.py -h | --version
-  debk.py  new --entity=ENTITY
-  debk.py journal_entry [<infiles>...] [--entity=ENTITY]
-  debk.py  [-v ...] show_journal [--entity=ENTITY]
-  debk.py  [-v ...] show_accounts [--entity=ENTITY]
-  debk.py  [-v ...] custom [<infiles>...] [--entity=ENTITY]
-  debk.py  [-v ...] print_books [<infiles>...] [--entity=ENTITY]
-  debk.py check_path
+  debk.py menu
 
 Options:
   -h --help  Print usage statement.
   --version  Print version.
   -v --verbosity  How much info to show (>2 = 2)
-  --entity=ENTITY  Specify entity.
+  --entity=ENTITY  Specify entity.  default: ''
 
 Commands:
   <new> creates a new set of books.
@@ -69,6 +64,15 @@ Comments:
 
 [1] canoetripping.info:5380
 """
+troublesome_part_of__doc__ = """
+  debk.py check_path
+  debk.py  new --entity=ENTITY
+  debk.py journal_entry [<infiles>...] [--entity=ENTITY]
+  debk.py  [-v ...] show_journal [--entity=ENTITY]
+  debk.py  [-v ...] show_accounts [--entity=ENTITY]
+  debk.py  [-v ...] custom [<infiles>...] [--entity=ENTITY]
+  debk.py  [-v ...] print_books [<infiles>...] [--entity=ENTITY]
+  """
 
 # Clarification of some issues that might otherwise cause confusion:
 
@@ -113,7 +117,8 @@ DEFAULT_DIR = config.DEFAULT_DIR
 # have a named default.dir=DEFAULT_DIR paramter as a useful override
 # when testing.  (See contents of tests/ directory.)
 
-# The following files are expected to be in the DEFAULT_DIR directory:
+# The following are names of files which are
+# expected to be in the DEFAULT_DIR directory:
 DEFAULT_CofA = config.DEFAULT_CofA
 # The default chart of accounts. (For now: place holders only.)
 # A file of this name is kept in DEFAULT_DIR to serve as a template
@@ -122,9 +127,10 @@ DEFAULT_CofA = config.DEFAULT_CofA
 DEFAULT_Metadata = config.DEFAULT_Metadata
 # A template used during entity creation.
 DEFAULT_Entity = config.DEFAULT_Entity
-# DEFAULT_Entity  - Keeps track of the last entity accessed.
+# DEFAULT_Entity  - contains the name of the last entity accessed.
 # Its content serves as a default if an entity is required but
 # not specified on the command line.
+# It begins life as an empty file.
 
 CofA_name = config.CofA_name           #| These three files will be
 Journal_name = config.Journal_name     #| in the home directory of
@@ -259,6 +265,10 @@ def acnt_type_from_code(account_code):
         return('Cr')
     logging.critical(
     "Malformed account code: %s.", account_code)
+
+def get_default_entity(default_dir=DEFAULT_DIR):
+    with open(os.path.join(default_dir, DEFAULT_Entity), 'r') as fo:
+        return fo.read()
 
 #####  END OF HELPER FUNCTIONS  #####
 
@@ -1420,12 +1430,103 @@ def check_equity_vs_bank(chart_of_accounts):
 ## End of Kazan15 'custom' functions.
 ######################################################################
 
+#### The following make up the menu framework aka user interface.
+####       Selecting (creating, deleting) an entity.
+
+def get_default_entity(default_dir = DEFAULT_DIR,
+                        default_file = DEFAULT_Entity):
+    path = os.path.join(default_dir, default_file)
+    try:
+        with open(path, 'r') as f_object:
+            default_entity = f_object.read()
+    except FileNotFoundError:
+        print("Unable to find the DEFAULT_Entity file: {}."
+                .format(path))
+        default_entity = None
+    return default_entity
+
+def clear_default_entity(default_dir = DEFAULT_DIR,
+                        default_file = DEFAULT_Entity):
+    path = os.path.join(default_dir, default_file)
+    try:
+        with open(path, 'w') as f_object:
+            f_object.write('')
+    except OSError:
+        print("Unable to clear the DEFAULT_Entity file: {}."
+                .format(path))
+        return
+
+def entities_available():
+    return [file_name[:-2]
+            for file_name in os.listdir(DEFAULT_DIR)
+            if file_name.endswith(".d")]
+
+def entity_listing():
+    return ''.join([ "\n\t    {}".format(entity)
+                    for entity in entities_available()])
+
+def show_entity_menu(default_entity=''):
+    if default_entity:
+        default_entity = ("\n\t_: Default is '{}', just hit enter."
+                            .format(default_entity))
+    return ('\n'.join(["\t{}: {}".format(n, entity)
+                for (n, entity) in enumerate(entities_available(), 1)])
+            + default_entity)
+
+def create_new(entity):
+    print("Picked '{}. Create a new entity.'".format(entity))
+
+def get_existing_entity():
+    """
+    Prompts user to choose an existing entity which is returned.
+    Returns None if user aborts.
+    """
+    default_entity = get_default_entity()
+    while True:
+        choice = input(
+"""Choose one of the following:
+{}
+\t0: to exit.
+Pick an entity: """.format(show_entity_menu(get_default_entity())))
+        if choice == '':
+            return get_default_entity()
+        try:
+            choice = int(choice)
+        except ValueError:
+            print("Invalid entry! (It must be an integer.)")
+            continue
+        if choice in range(1, len(entities_available()) + 1):
+            return entities_available()[choice - 1]
+        elif choice == 0:
+            return None
+        else:
+            print("Invalid entry- try again ('0' to quit.)")
+
+def choose_existing(option, entity_menu):
+    print("Picked '{}'. Choose an entity."
+            .format(option))
+    return get_existing_entity()
+
+def delete_entity(entity):
+    if entity == get_default_entity():
+        clear_default_entity()
+    shutil.rmtree(os.path.join(DEFAULT_DIR, entity+'.d'))
+
+def delete_option(option):
+    print("Picked '{}. Delete an existing entity.'".format(option))
+    while True:
+        entity = get_existing_entity()
+        if entity is None: return
+        y_n = input("About to delete entity '{}', ARE YOU SURE? "
+                .format(entity))
+        if y_n and y_n[0] in 'Yy':
+            print("Deleting entity '{}'.".format(entity))
+#           delete_entity(entity)
+        else:
+            print("No deletion being done.")
+        break
 
 def main():
-    print('Running src/debk.py')
-    logging.basicConfig(level = config.LOGLEVEL)
-    args = docopt.docopt(__doc__, version=VERSION)
-    logging.debug(show_args(args, "Command line arguments"))
     if args['new']:
         if args['--entity'] == create_entity(args['--entity']):
             print(
@@ -1522,7 +1623,51 @@ def main():
 
         print(check_equity_vs_bank(cofa))
 
+def work_with(entity):
+    pass
+
+def menu(args):
+    """
+    Returns the name of an entity which which to work.
+    or exits the program.
+    """
+    while True:
+        default_entity = get_default_entity()
+        choice = input("""
+Choices are:
+    1. Create a new entity.
+    2. Choose an existing entity.
+        (Currently existing entities are: {})
+    9. Delete an entity.
+    0. Exit
+Choice must be "0", "1", "2", or "9": """.format(entity_listing()))
+        if choice == '0':
+            sys.exit()
+        elif choice == '1':
+            entity = create_new(choice)
+        elif choice == '2':
+            entity = choose_existing(choice,
+                        show_entity_menu(get_default_entity()))
+        elif choice == '9':
+            delete_option(choice)
+            entity = ''
+        else:
+            print("BAD CHOICE- try again....")
+            entity = None
+        if entity:
+            break
+
+    _ = input("Ready to work with entity: {}".format(entity))
+    work_with(entity)
+    
 
 if __name__ == '__main__':  # code block to run the application
-    main()
+    print('Running src/debk.py')
+    logging.basicConfig(level = config.LOGLEVEL)
+    args = docopt.docopt(__doc__, version=VERSION)
+    logging.debug(show_args(args, "Command line arguments"))
+    if args['menu']:
+        menu(args)
+    else:
+        main()
 
