@@ -1451,7 +1451,10 @@ def clear_default_entity(default_dir = DEFAULT_DIR,
         with open(os.path.join(default_dir,
                                 default_file), 'w') as f_object:
             f_object.write('')
-    except OSError("Unable to write an empty default entity file."):
+    except OSError:
+        print("Unable to clear the DEFAULT_Entity file: {}."
+                .format(path))
+        return
 
 def get_default_entity(default_dir = DEFAULT_DIR,
                         default_file = DEFAULT_Entity):
