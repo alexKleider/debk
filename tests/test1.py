@@ -33,17 +33,16 @@ import CSV.debk.src.debk as debk
 
 VERSION = "v0.0.1"
 
-DEFAULT_DIR = './tests/debk.d'  # for testing
-# DEFAULT_DIR = debk.DEFAULT_DIR
-# debk.DEFAULT_DIR gets its value from debk.config.DEFAULT_DIR
+D = debk.D
+D['home'] = './tests/debk.d'  # for testing
 
-CofA = os.path.join(DEFAULT_DIR, 
-                    debk.DEFAULT_CofA)
+CofA = os.path.join(D['home'], 
+                    D['cofa_template'])
 ENTITIES = ['EntityNoAccounts',
             'testentity',
             ]
 entity_dirs = {entity: os.path.join(
-                    DEFAULT_DIR, entity+'.d')
+                    D['home'], entity+'.d')
                             for entity in ENTITIES}
 
 def testing_wrapper(collect, source=None):
@@ -195,7 +194,7 @@ class CreateEntity(unittest.TestCase):
             if os.path.isdir(entity_dir):  # tearDown not executed
                 shutil.rmtree(entity_dir)  # if previous run failed.
         for entity in ENTITIES:
-            debk.create_entity(entity, DEFAULT_DIR)
+            debk.create_entity(entity, D['home'])
 
     def test_dir_creation(self):
         """
@@ -208,13 +207,13 @@ class CreateEntity(unittest.TestCase):
         """
         Tests creation of a non prepopulated CofA.
         """
-        with open(os.path.join(DEFAULT_DIR,
-                        debk.DEFAULT_CofA), 'r') as f:
+        with open(os.path.join(D['home'],
+                        D['cofa_template']), 'r') as f:
             original = f.read()
         with open(os.path.join(
-                        DEFAULT_DIR,
+                        D['home'],
                         ENTITIES[0]+'.d',
-                        debk.CofA_name), 'r') as f:
+                        D['cofa_name']), 'r') as f:
             new = f.read()
         self.assertEqual(original, new)
 
@@ -222,14 +221,14 @@ class CreateEntity(unittest.TestCase):
         """
         Tests creation of a prepopulated CofA.
         """
-        with open(os.path.join(DEFAULT_DIR,
+        with open(os.path.join(D['home'],
                         'testentityChartOfAccounts'),
                 'r') as f:
             original = f.read()
         with open(os.path.join(
-                        DEFAULT_DIR,
+                        D['home'],
                         ENTITIES[1]+'.d',
-                        debk.CofA_name), 'r') as f:
+                        D['cofa_name']), 'r') as f:
             new = f.read()
 #       print()
 #       print(original)
@@ -372,6 +371,10 @@ class Account_empty(unittest.TestCase):
                     self.cofa[n].__str__(), show)
 
 class Account_signed_balance(unittest.TestCase):
+    """
+    Creates (debk.Account())  and then
+    populates some values into instances of Account.
+    """
     def test_signed_balance_Dr_accounts(self):
         acnt_dict = dict(code= '1110', indent= 0,
                 full_name= 'Full Name', name= 'Account Name',
@@ -440,12 +443,12 @@ class JournalClass(unittest.TestCase):
             print("Deleting '{}'- shouldn't exist."
                 .format('./tests/debk.d/testentity.d'))
             shutil.rmtree('./tests/debk.d/testentity.d')
-        debk.create_entity("testentity", DEFAULT_DIR)
+        debk.create_entity("testentity", D['home'])
 
     def test_load(self):
         self.maxDiff = None
         journal = debk.Journal({"--entity": 'testentity'},
-                                DEFAULT_DIR)
+                                D['home'])
         journal.extend(debk.JournalEntry.load(
 """July 3, 2015
 Alex Kleider
@@ -508,15 +511,15 @@ class Ledger(unittest.TestCase):
 "Shouldn't need to delete entity dir '{}'".format(entity_dir))
         self.test_entity = "testentity"
         self.entity = debk.create_entity(self.test_entity,
-                                        DEFAULT_DIR)
+                                        D['home'])
         self.cofa = debk.ChartOfAccounts(
             {"--entity": self.entity,
             "--verbosity": 2,
-            }, DEFAULT_DIR)
+            }, D['home'])
         self.journal = debk.Journal(
             {"--entity": self.entity,
             "--verbosity": 2,
-            }, DEFAULT_DIR)
+            }, D['home'])
         self.journal.load('./tests/debk.d/testentity_journal')
         self.journal.save()
         self.cofa.load_journal_entries(self.journal.journal)

@@ -27,18 +27,20 @@ import csv
 import json
 import shutil
 import unittest
-import CSV.debk.src.debk as debk
+from unittest import mock
+from CSV.debk.src import debk
 
 VERSION = "v0.0.1"
 
-DEFAULT_DIR = './tests/debk.d'  # for testing
+D = debk.D
+D['home'] = './tests/debk.d'  # for testing
 
-CofA = os.path.join(DEFAULT_DIR, 
-                    debk.DEFAULT_CofA)
+CofA = os.path.join(D['home'], 
+                    debk.D['cofa_template'])
 
 class JournalEntryTests(unittest.TestCase):
     def setUp(self):
-        debk.create_entity('testentity', DEFAULT_DIR)
+        debk.create_entity('testentity', D['home'])
 
     def test_ok(self):
         j = debk.JournalEntry.from_dict(
@@ -61,6 +63,7 @@ class JournalEntryTests(unittest.TestCase):
         entity_dir = './tests/debk.d/testentity.d'
         if os.path.isdir(entity_dir):
             shutil.rmtree(entity_dir)
+
 if __name__ == '__main__':  # code block to run the application
     unittest.main()
 

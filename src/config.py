@@ -1,4 +1,4 @@
-#!../venv/bin/python3
+#!../venv/bin/python
 # -*- coding: utf-8 -*-
 # vim: set file encoding=utf-8 :
 #
@@ -68,38 +68,38 @@ INDENTATION_MULTIPLIER = 3
 N_ASSET_OWNERS = 8   # Specific to Kazan15
                      #Must jive with 'split' values in CofAs.
 
-# Each entity will have its home directory in DEFAULT_DIR.
-DEFAULT_DIR = '/var/opt/debk.d'  # for production
-# Rather than importing from debk which imports from config,
-# the testing module assigns its own
-# DEFAULT_DIR = './tests/debk.d'  # for testing
+DEFAULTS = dict(
+home = '/var/opt/debk.d',  # for production
+# home = "/home/alex/Py/CSV/debk/tutor/debk.d",  # for testing
 
-# Will need to have a setup routine to put the following into the
-# DEFAULT_DIR directory-----
-# The following files are expected to be in the DEFAULT_DIR directory:
-DEFAULT_CofA = "defaultChartOfAccounts"     # A file name.
-# The default chart of accounts. (For now: place holders only.)
-# A file of this name is kept in DEFAULT_DIR to serve as a template
-# during entity creation although a different file can be used, see
-# docstring for create_entity().
-DEFAULT_Metadata = "defaultMetadata.json"   # A file name.
+# Files expected to be in the home directory:
+cofa_template = "defaultChartOfAccounts",     # A file name.
+# A default chart of accounts.  Used if a 'suffixed file' is absent.
+cofa_suffix = 'ChartOfAccounts',  # Suffix used if another prepopulated
+#           chart of accounts file is to be used for a specific entity.
+metadata_template = "defaultMetadata.json",   # A file name.
 # A template used during entity creation.
-DEFAULT_Entity = "defaultEntity"            # A file name.
-# DEFAULT_Entity  - Keeps track of the last entity accessed.
-# Its content serves as a default if an entity is required but
-# not specified on the command line.
+entity = "defaultEntity",            # A file name.
+# Keeps track of the last entity accessed (the default.)
 
-CofA_name = 'CofA'               #| These three files will appear
-Journal_name = 'Journal.json'    #| in the home directory of
-Metadata_name = 'Metadata.json'  #| each newly created entity.
+cofa_name = 'CofA',              #| These three files will appear in
+journal_name = 'Journal.json',   #| the .d directory of each entity
+metadata_name = 'Metadata.json', #| copied at time of creation from
+                                 #| templates in the home directory.
+#     | Not so for the journal_name file- it is created, not copied.
+)  # End of DEFAULTS dictionary.
 
+
+
+# The following is no longer necessary: code is written to accept
+# these items in any order.
 LineEntry_input_order = dict(account_code= 0, #| Determines order in
                             _type= 1,      #| which LineItem textual
                             amount= 2)     #| input will be accepted.
-# The above must match the following prompt:
+# The above no longer need match the following prompt:
 LineEntry_input_format = "{}Enter AccntNum cr/dr Amount: "
 LineEntry_input_prompt = (
-"an account number, a D(ebit) or or C(redit) specifier, an amount")
+"an account number, D(ebit or or C(redit specifier, and n.n amount")
                             
 def valid_account_code_length(account_code):
     """
