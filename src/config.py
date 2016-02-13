@@ -87,6 +87,8 @@ journal_name = 'Journal.json',   #| the .d directory of each entity
 metadata_name = 'Metadata.json', #| copied at time of creation from
                                  #| templates in the home directory.
 #     | Not so for the journal_name file- it is created, not copied.
+verbosity = 3,
+indent = '',
 )  # End of DEFAULTS dictionary.
 
 

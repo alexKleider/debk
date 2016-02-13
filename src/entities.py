@@ -8,33 +8,33 @@ part of the double entry book keeping system.
 """
 
 import os
+import sys
 import shutil
 import csv
 import json
 import logging
-from CSV.debk.src.config import DEFAULTS as D
-from CSV.debk.src import config
-
-D['home'] = "/home/alex/Py/CSV/debk/tests/debk.d"
 
 ### Functions to deal with the file system. ###
 
 def get_file_info(defaults):
     """
     Returns a tuple containing 
-    1. the names of all entities existing in the d['home']
-    file system (as a list,) 
-    2. a default entity (which may be the empty string.)
-    Depends on defaults: typically config.DEFAULTS.
+    1. a list of the names of all entities existing in
+    the d['home'] file system (as a list,) 
+    2. a string: the default entity (which may be the empty string.)
+    Depends on defaults: typically config.DEFAULTS
+    but for testing purposes, defaults['home'] can be changed.
     """
     home = defaults['home']
     default_file = os.path.join(home, defaults['entity'])
+#   print("home dir: {}, entity file: {}"
+#                   .format(home, default_file))
     try:
         assert (os.path.isdir(home)
             and os.path.isfile(default_file))
     except AssertionError:
         logging.critical(
-        "Needed files ('%s' & '%s') don't exist." %s (
+        "Needed files ('%s' & '%s') don't exist." % (
             home, default_file))
         print("Unable to continue: missing vital files.")
         sys.exit(1)
@@ -55,7 +55,7 @@ def get_file_info(defaults):
         default = ''
     return (lst, default)
 
-def create_entity(entity_name, set_default=True, defaults=None):
+def create_entity(entity_name, defaults, set_default=True):
     """
     Establishes a new accounting system. 
     Indicates success by returning the entity_name.
@@ -207,8 +207,8 @@ class Entities(object):
             print("Aborting new entry creation- blank name.")
             return new_entity
         if (self.check_new_entity(new_entity)
-        and create_entity(new_entity,
-                            set_default, self.D) == new_entity):
+        and create_entity(new_entity, self.D,
+                            set_default) == new_entity):
             self.lst.append(new_entity)
             if set_default:
                 self.default = new_entity

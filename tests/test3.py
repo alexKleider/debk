@@ -13,7 +13,7 @@ from CSV.debk.src import entities as E
 from CSV.debk.src import menu
 from CSV.debk.src.config import DEFAULTS as D
 
-D['home'] = "/home/alex/Py/CSV/debk/tutor/debk.d"
+D['home'] = "./tests/debk.d"
 
 class EntitiesAddDefaultTests(unittest.TestCase):
 
@@ -123,7 +123,8 @@ class EntitiesAddDefaultTests(unittest.TestCase):
 
     def test_menu_create_newEntity(self):
         with mock.patch("builtins.input",
-                        side_effect=["1", self.new_entity, '', "0"]):
+                        side_effect=["1", self.new_entity, '',
+                        '', '']):
             menu.menu(D)
             self.entities = E.Entities(  # Must reassign because
                             # menu.menu sets up its own 'entities'.

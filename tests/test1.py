@@ -29,11 +29,11 @@ import json
 import shutil
 import unittest
 import CSV.debk.src.debk as debk
-#import debk
+import CSV.debk.src.entities as E
+from CSV.debk.src.config import DEFAULTS as D
 
 VERSION = "v0.0.1"
 
-D = debk.D
 D['home'] = './tests/debk.d'  # for testing
 
 CofA = os.path.join(D['home'], 
@@ -194,7 +194,7 @@ class CreateEntity(unittest.TestCase):
             if os.path.isdir(entity_dir):  # tearDown not executed
                 shutil.rmtree(entity_dir)  # if previous run failed.
         for entity in ENTITIES:
-            debk.create_entity(entity, D['home'])
+            E.create_entity(entity, D)
 
     def test_dir_creation(self):
         """
@@ -443,7 +443,7 @@ class JournalClass(unittest.TestCase):
             print("Deleting '{}'- shouldn't exist."
                 .format('./tests/debk.d/testentity.d'))
             shutil.rmtree('./tests/debk.d/testentity.d')
-        debk.create_entity("testentity", D['home'])
+        E.create_entity("testentity", D)
 
     def test_load(self):
         self.maxDiff = None
@@ -510,8 +510,8 @@ class Ledger(unittest.TestCase):
             print(
 "Shouldn't need to delete entity dir '{}'".format(entity_dir))
         self.test_entity = "testentity"
-        self.entity = debk.create_entity(self.test_entity,
-                                        D['home'])
+        self.entity = E.create_entity(self.test_entity,
+                                        D)
         self.cofa = debk.ChartOfAccounts(
             {"--entity": self.entity,
             "--verbosity": 2,

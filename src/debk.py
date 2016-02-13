@@ -31,47 +31,10 @@ other needs as well.
 
 Usage:
   debk.py -h | --version
-  debk.py menu
 
 Options:
   -h --help  Print usage statement.
   --version  Print version.
-  -v --verbosity  How much info to show (>2 = 2)
-  --entity=ENTITY  Specify entity.  default: ''
-
-Commands:
-  <new> creates a new set of books.
-  <show_accounts> displays the chart of accounts.
-  <show_journal> displays the journal entries.
-  <journal_entry> provides for user entry...
-                        unless infile(s) are specified
-  in which case, entries are take from the file(s) named.
-  <check_path>  NOT for production code.
-  <custom> serves the specialized needs of Kazan15:
-    prompt> ./src/debk.py -vvv custom ./debk.d/kazan_journal
-                                                --entity=Kazan15
-    Then look for a file 'Report'.
-    To make the above work, the following files are provided:
-      ./debk.d/kazan_journal
-      /var/opt/debk.d/Kazan15ChartOfAccounts (a copy of which is
-      provided in ./debk.d/)
-
-Comments:
-  The --entity=ENTITY option is mandatory with the 'new' command.
-  In the case of other commands: when not provided, it defaults to
-  the last entity referenced.
-  Loglevel is set in config.py.
-
-[1] canoetripping.info:5380
-"""
-troublesome_part_of__doc__ = """
-  debk.py check_path
-  debk.py  new --entity=ENTITY
-  debk.py journal_entry [<infiles>...] [--entity=ENTITY]
-  debk.py  [-v ...] show_journal [--entity=ENTITY]
-  debk.py  [-v ...] show_accounts [--entity=ENTITY]
-  debk.py  [-v ...] custom [<infiles>...] [--entity=ENTITY]
-  debk.py  [-v ...] print_books [<infiles>...] [--entity=ENTITY]
   """
 
 # Clarification of some issues that might otherwise cause confusion:
@@ -95,6 +58,7 @@ import datetime
 
 import docopt
 import CSV.debk.src.config as config
+from CSV.debk.src.config import DEFAULTS as D
 
 import re
 # Dollar entries require a decimal ('.') but must not have a '$' sign.
@@ -111,7 +75,7 @@ INDENTATION_CONSTANT = ' ' * INDENTATION_MULTIPLIER
 N_ASSET_OWNERS = config.N_ASSET_OWNERS
                      #Must jive with 'split' values in CofAs.
                      #Only used for custom function adjust4assets()
-D = config.DEFAULTS
+# D = config.DEFAULTS
 # Each entity will have its home directory in D['home'].
 # create_entity, Journal.__init__ and ChartOfAccounts.__init__ all
 # have a named default.dir=D['home'] paramter as a useful override
@@ -268,58 +232,6 @@ def acnt_type_from_code(account_code):
 
 #####  END OF HELPER FUNCTIONS  #####
 
-
-def create_entity(entity_name, default_dir=D['home']):
-    """                        [../tests/test1.py: CreateEntity] 
-    Establishes a new accounting system. 
-    Indicates success by returning the entity_name.
-
-    Creates a new dirctory '<entity_name>.d' within default_dir
-    and populates it with a set of required files including a
-    default start up chart of accounts.
-    An attempt will be made to find a file name that is the 
-    concatenation of the entity name and 'ChartOfAccounts'.
-    If not found, the file specified by D['cofa_template'] will be used.
-    Reports error if:
-        1. <entity_name> already exists, or
-        2. not able to write to new directory.
-    Also sets up an empty journal file and a metadata file.
-    Leaves a record of the entity_name to serve as a default for
-    future commands.
-    """
-    cofa_source = os.path.join(  # | Use a prepopulated chart  |
-                default_dir,     # | of accounts if it exists. |
-                entity_name + 'ChartOfAccounts')
-    if not os.path.isfile(cofa_source):  # Fall back on default.
-        cofa_source = os.path.join(default_dir, D['cofa_template'])
-    new_dir = os.path.join(default_dir, entity_name+'.d')
-    new_CofA_file_name = os.path.join(new_dir, D['cofa_name'])
-    new_Journal = os.path.join(new_dir, D['journal_name'])
-    meta_source = os.path.join(default_dir, D['metadata_template'])
-    meta_dest = os.path.join(new_dir, D['metadata_name'])
-    with open(meta_source, 'r') as meta_file:
-        metadata = json.load(meta_file)
-    metadata['entity_name'] = entity_name
-    entity_file_path = os.path.join(default_dir, D['entity'])
-    try:
-        # The following keeps track of the last entity referenced.
-        with open(entity_file_path, 'w') as entity_file_object:
-            entity_file_object.write(entity_name)
-        os.mkdir(new_dir)
-        shutil.copy(cofa_source, new_CofA_file_name)
-        with open(new_Journal, 'w') as journal_file_object:
-            journal_file_object.write('{"Journal": []}')
-        with open(meta_dest, 'w') as json_file:
-            json.dump(metadata, json_file)
-    except FileExistsError:
-        logging.error("Directory %s already exists", new_dir)
-        sys.exit(1)
-    except OSError:
-        logging.error("Destination %s &/or %s may not be writeable.",
-                            new_CofA_file_name, new_Journal)
-        sys.exit(1)
-    else:
-        return entity_name
 
 ## Ledger related classes:  LineEntry, Account, ChartOfAccounts ##
 
@@ -577,7 +489,7 @@ class ChartOfAccounts(object):
 #                                        ^
 #                  ^ Journal entry number
 
-    def __init__(self, args, default_dir=D['home']):
+    def __init__(self, defaults=D):
         """
         Loads the chart of accounts belonging to a specified entity.
         The accounts attribute is a dict keyed by account codes and
@@ -586,9 +498,9 @@ class ChartOfAccounts(object):
         Use the load_journal_entries method after instatiation in
         order to populate the accounting information.
         """
-        self.args = args
-        self.entity = args['--entity']
-        self.verbosity = args['--verbosity']
+        self.defaults = defaults
+        self.entity = defaults['entity']
+        self.verbosity = defaults['verbosity']
         self.home = os.path.join(default_dir, self.entity  + '.d')
         self.cofa_file = os.path.join(self.home, D['cofa_name'])
         self.csv_dict = {}  # Keyed by account number ('code'.)
@@ -1095,7 +1007,7 @@ class JournalEntry(object):
         else:
             return False
 
-class Journal(object):
+class Journal(object, defaults=D):
     """
     Deals with the whole journal, providing methods for retrieving it
     from persistent storage (__init__,) adding to it either
@@ -1128,7 +1040,7 @@ class Journal(object):
     JournalEntry methods get_entry and show.
     """
 
-    def __init__(self, args, default_dir=D['home']):
+    def __init__(self, defaults=D):
         """
         Loads (from persistent storage) an entity's metadata
         and all journal entries to date in preparation for
@@ -1139,12 +1051,14 @@ class Journal(object):
         Also consider collecting new entries and not even loading
         those in persistent storage until user decides to save.
         """
-        self.args = args
-        self.entity = args["--entity"]
+        self.defaults = defaults
+        self.entity = defaults["entity"]
         self.infiles_loaded = False
         dir_name = os.path.join(default_dir, self.entity + '.d')
-        self.metadata_file = os.path.join(dir_name, D['metadata_name'])
-        self.journal_file = os.path.join(dir_name, D['journal_name'])
+        self.metadata_file = os.path.join(dir_name,
+                                        defaults['metadata_name'])
+        self.journal_file = os.path.join(dir_name,
+                                        defaults['journal_name'])
         # The json file consists of a dict with only one entry
         # keyed by "journal" and its value is a list of dicts,
         # each corresponding to a JournalEntry instance.
@@ -1430,291 +1344,9 @@ def check_equity_vs_bank(chart_of_accounts):
 ## End of Kazan15 'custom' functions.
 ######################################################################
 
-def main():
-    """
-    Will probably replace this with the menu function.
-    """
-    if args['new']:
-        if args['--entity'] == create_entity(args['--entity']):
-            print(
-        "An accounting system for '{}' has been successfully created."
-                        .format(args['--entity']))
-    if not args['--entity']:
-        with open(os.path.join(D['home'],
-                    D['entity']), 'r') as entity_file_object:
-            args['--entity'] = entity_file_object.read()
-    
-    if args['print_books']:
-        print(show_args(args))
-        ret = []
-        entity = create_entity(args['--entity'])
-        assert args["--entity"] == entity
-        journal = Journal(args)  # Loaded from persistent storage.
-        for infile in args["<infiles>"]:
-            journal.load(infile)
-        journal.save()  # Sends journal to persistent storage.
-
-        cofa = ChartOfAccounts(args)
-        cofa.load_journal_entries(journal.journal)
-
-        ret.append(journal.show())
-
-        ret.append("\n")
-        ret.append(cofa.show_accounts())
-        ret.append('\n')
-#       ret.append(check_equity_vs_bank(cofa))
-
-        with open("Report", 'w') as report_file:
-            report_file.write('\n'.join(ret))
-    
-    if args['journal_entry']:
-        journal = Journal(args)
-        if args['<infiles>']:
-            for infile in args["<infiles>"]:
-                journal.load(infile)
-        else:
-            journal.get()
-
-    if args['show_journal']:
-        journal = Journal(args)
-        print(journal.show())
-
-    if args['show_accounts']:
-        journal = Journal(args)
-        cofa = ChartOfAccounts(args)
-        cofa.load_journal_entries(journal.journal)
-        print(cofa.show_accounts(args))
-
-    if args['check_path']:
-        print(show_args(sys.path, "Contents of sys.path"))
-
-    if args['custom']:
-        # For testing purposes, this is often run and each time
-        # creates a directory which must be removed if next run
-        # is to go through:
-        entity_dir = os.path.join(D['home'], args['--entity']+'.d')
-        if os.path.isdir(entity_dir):
-            shutil.rmtree(entity_dir)
-
-        # Check that args are sane:
-        print(show_args(args))
-        ret = []
-
-        entity = create_entity(args['--entity'])
-        assert args["--entity"] == entity
-        journal = Journal(args)  # Loaded from persistent storage.
-        for infile in args["<infiles>"]:
-            journal.extend(JournalEntry.load(infile))
-        journal.save()  # Sends journal to persistent storage.
-
-        cofa = ChartOfAccounts(args)
-        # Get journal from persistent storage....
-        cofa.load_journal_entries(journal.journal)
-
-        expense_adjustment = zero_temporaries(cofa)
-        asset_adjustment = adjust4assets(cofa)
-
-        journal = Journal(args)  # ?unnecessary retrieval?
-        journal.extend(JournalEntry.load(expense_adjustment))
-        journal.extend(JournalEntry.load(asset_adjustment))
-        cofa = ChartOfAccounts(args)  # A virgin ledger.
-        journal.save()
-
-        with open("Kazan15_Journal", 'w') as file_object:
-            file_object.write(journal.show())
-
-        cofa.load_journal_entries(journal.journal)
-
-        with open("Kazan15_Ledger", 'w') as file_object:
-            file_object.write(cofa.show_accounts())
-
-        print(check_equity_vs_bank(cofa))
-
-#### The following make up the menu framework aka user interface.
-####       Selecting (creating, deleting) an entity.
-
-def get_default_entity(default_dir = D['home'],
-                        default_file = D['entity']):
-    """
-    Retrieves textual content of the D['entity'] file.
-    Returns None (and a warning) if file can't be found,
-    empty string if a default entity is not set.
-    """
-    path = os.path.join(default_dir, default_file)
-    try:
-        with open(path, 'r') as f_object:
-            default_entity = f_object.read()
-    except FileNotFoundError:
-        print("Unable to find the D['entity'] file: {}."
-                .format(path))
-        default_entity = None
-    return default_entity
-
-def clear_default_entity(default_dir = D['home'],
-                        default_file = D['entity']):
-    """
-    Effectively does a touch on the D['entity'] file.
-    Reports a warning if an OSError is encountered.
-    """
-    path = os.path.join(default_dir, default_file)
-    try:
-        with open(path, 'w') as f_object:
-            f_object.write('')
-    except OSError:
-        print("Unable to clear the DEFAULT_Entity file: {}."
-                .format(path))
-        return
-
-def entities_available(default_dir = D['home']):
-    """
-    Returns a list of entities that exist in the data base.
-    No error checking is provided.
-    """
-    return [file_name[:-2]
-            for file_name in os.listdir(default_dir)
-            if file_name.endswith(".d")]
-
-def entity_listing():
-    """
-    Returns a string listing the available entities.
-    """
-    return ''.join([ "\n\t    {}".format(entity)
-                    for entity in entities_available()])
-
-def show_entity_menu(default_entity=''):
-    """
-    Returns a string: an enumerated list of available entities.
-    Includes (if it exists) a duplicate of the default entity
-    enumerated by '_'.
-    """
-    if default_entity:
-        default_entity = ("\n\t_: Default is '{}', just hit enter."
-                            .format(get_default_entity()))
-    return ('\n'.join(["\t{}: {}".format(n, entity)
-                for (n, entity) in enumerate(entities_available(), 1)])
-            + default_entity)
-
-def create_new(option):
-    """
-    A main menu response function.
-    Needs to be flushed out- should set up to go to work on specified
-    entity???
-    """
-    print("Picked '{}. Create a new entity.'".format(option))
-
-def get_existing_entity():
-    """
-    Prompts user to choose an existing entity which is returned.
-    Returns None if user aborts.
-    """
-    default_entity = get_default_entity()
-    while True:
-        choice = input(
-"""Choose one of the following:
-{}
-\t0: to exit.
-Pick an entity: """.format(show_entity_menu(get_default_entity)))
-        if choice == '':
-            return get_default_entity()
-        try:
-            choice = int(choice)
-        except ValueError:
-            print("Invalid entry! (It must be an integer.)")
-            continue
-        if choice in range(1, len(entities_available()) + 1):
-            return entities_available()[choice - 1]
-        elif choice == 0:
-            return None
-        else:
-            print("Invalid entry- try again ('0' to quit.)")
-
-def choose_existing(option):
-    """
-    A main menu response function.
-    Calls get_existing_entity.
-    Needs to be flushed out- should set up to go to work on specified
-    entity???
-    """
-    print("Picked '{}'. Choose an entity."
-            .format(option))
-    return get_existing_entity()
-
-def delete_entity(entity):
-    """
-    Deletes the specified entity (including any reference to it that
-    might be in the D['entity'] file.)
-    User confirmation is NOT done here.
-    """
-    if entity == get_default_entity():
-        clear_default_entity()
-    shutil.rmtree(os.path.join(D['home'], entity+'.d'))
-
-def delete_option(option):
-    """
-    A main menu response function.
-    """
-    print("Picked '{}. Delete an existing entity.'".format(option))
-    while True:
-        entity = get_existing_entity()
-        if entity is None: return
-        y_n = input("About to delete entity '{}', ARE YOU SURE? "
-                .format(entity))
-        if y_n and y_n[0] in 'Yy':
-            print("Deleting entity '{}'.".format(entity))
-#           delete_entity(entity)
-        else:
-            print("No deletion being done.")
-        break
-
-def work_with(entity):
-    """
-    Provides interface once an entity has been selected.
-    """
-    pass
-
-def menu():
-    """
-    Returns the name of an entity which which to work.
-    or exits the program.
-    Also provides the option to delete an entity.
-    """
-    while True:
-        default_entity = get_default_entity()
-        choice = input("""
-Choices are:
-    1. Create a new entity.
-    2. Choose an existing entity.
-        (Currently existing entities are: {})
-    9. Delete an entity.
-    0. Exit
-Choice must be "0", "1", "2", or "9": """.format(entity_listing()))
-        if choice == '0':
-            sys.exit()
-        elif choice == '1':
-            entity = create_new(choice)
-        elif choice == '2':
-            entity = choose_existing(choice,
-                        show_entity_menu(get_default_entity()))
-        elif choice == '9':
-            delete_option(choice)
-            entity = ''
-        else:
-            print("BAD CHOICE '{}'- try again....".format(choice))
-            entity = None
-        if entity:
-            break
-
-    _ = input("Ready to work with entity: {}".format(entity))
-    work_with(entity)
-    
+#### The menu framework is in menu.py and work_with.py
 
 if __name__ == '__main__':  # code block to run the application
     print('Running src/debk.py')
     logging.basicConfig(level = config.LOGLEVEL)
-    args = docopt.docopt(__doc__, version=VERSION)
-    logging.debug(show_args(args, "Command line arguments"))
-    if args['menu']:
-        menu()
-    else:
-        main()
 

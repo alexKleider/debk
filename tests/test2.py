@@ -29,10 +29,11 @@ import shutil
 import unittest
 from unittest import mock
 from CSV.debk.src import debk
+from CSV.debk.src import entities as E
+from CSV.debk.src.config import DEFAULTS as D
 
 VERSION = "v0.0.1"
 
-D = debk.D
 D['home'] = './tests/debk.d'  # for testing
 
 CofA = os.path.join(D['home'], 
@@ -40,7 +41,7 @@ CofA = os.path.join(D['home'],
 
 class JournalEntryTests(unittest.TestCase):
     def setUp(self):
-        debk.create_entity('testentity', D['home'])
+        E.create_entity('testentity', D)
 
     def test_ok(self):
         j = debk.JournalEntry.from_dict(

@@ -3,10 +3,12 @@
 # vim: set file encoding=utf-8
 #   File: /home/alex/Py/CSV/debk/src/menu.py
 """
-A simple menu model to be used as a front end for the doble entry book
-keeping project.
+A simple menu model to be used as a front end for the
+double entry book keeping project.
 """
 
+import sys
+from CSV.debk.src.work_with import work_with
 from CSV.debk.src import entities as E
 
 def choose_entity(entities, indent=0):
@@ -73,8 +75,7 @@ def create_new(option, entities):
             "Entity '{}' successfully created (and set as default.)"
                 .format(entity))
 #           print("Entity listing is now: {}".format(entities.lst))
-            work_with(entity)
-            return
+            return entity
         elif not entity:
             print("Aborting entity creation.")
             return
@@ -100,16 +101,20 @@ def delete_option(option, entities):
             print("No deletion being done.")
         break
 
-def work_with(entity):
+def change_args_option(args):
     """
-    Provides an interface stub for once an entity has been selected.
+    Moving away from debk.py command line arguments so verbosity
+    (and prossibly indentation) might have to be modifiable here.
     """
-    _ = input("Stub of code to work with '{}' entity goes here."
-                    .format(entity))
+    pass
 
 def menu(defaults):
     """
     Provides the top level user interface.
+    Prompts for what to do and then calls the appropriate
+    function or method.
+    Creating a new entity or choosing an existing one, if successful,
+    begins the accounting process with that entity.
     """
     entities = E.Entities(*E.get_file_info(defaults),
                             defaults=defaults)
@@ -118,23 +123,25 @@ def menu(defaults):
 #   print("\t", entities.lst)
 #   print("\t", entities.default)
     while True:
-        listing = entities.show_entities(indent=4)
+        listing = entities.show_entities(indent=8)
         if listing:
             listing = (
-"""\n(Currently existing entities are:\n{}          )"""
+"""\n    (Currently existing entities are:\n{}          )"""
                     .format(listing))
-        else: listing = "(No entities currently exist.)"
+        else: listing = "\n    (No entities currently exist.)"
+#       print("listing is '{}'.".format(listing))
         option = input("""
-Main Menu:{}
+Main Menu:
+    [Working dir: {}]{}
     1. Create a new entity.
     2. Choose an existing entity.
-    9. Delete an entity.
+    3. Delete an entity.
+    9. Change arguments.
     0. Exit
-Choice: """
-                        .format(listing))
-        print("Main Menu choice: {}".format(option))
+Choice: """.format(defaults['home'], listing))
+        print("You chose '{}'.".format(option))
         if option in ('', '_', '0'):
-            return
+            break
         try:
             option = int(option)
         except ValueError:
@@ -146,9 +153,11 @@ Choice: """
             entity = create_new(option, entities)
         elif option == 2:
             entity = choose_existing(option, entities)
-        elif option == 9:
+        elif option == 3:
             delete_option(option, entities)
             entity = ''
+        elif option == 9:
+            change_args_option(option, args)
         else:
             print("BAD CHOICE '{}'- try again....".format(option))
             entity = None
@@ -157,5 +166,5 @@ Choice: """
 
 if __name__ == "__main__":
     from CSV.debk.src.config import DEFAULTS as D
-    D['home'] = "/home/alex/Py/CSV/debk/tutor/debk.d"
+    D['home'] = "/home/alex/Py/CSV/debk/tests/debk.d"
     menu(D)
