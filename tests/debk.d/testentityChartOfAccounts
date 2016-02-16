@@ -1,4 +1,4 @@
-code,indent,type,full_name,name,notes,hidden,place_holder,split
+code,indent,type,full_name,name,hidden,place_holder,split
 1000,0,ASSET,ASSETS,ASSETS,ASSETS,F,T
 1100,1,ASSET,ASSETS:LIQUID,LIQUID,LIQUID ASSETS,F,T
 1110,2,ASSET,Assets:Liquid:Bank,Bank,BankAccount,F,F

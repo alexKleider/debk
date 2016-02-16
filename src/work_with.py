@@ -7,40 +7,69 @@ A second level menu model to work with a specific entity.
 Part of the double entry book keeping project.
 """
 
-from CSV.debk.src import entities as E
+from CSV.debk.src import debk
 
-def work_with(entity):
+def setup_entity(defaults):
+    cofa = debk.ChartOfAccounts(defaults)
+    journal = debk.Journal(defaults)
+    cofa.load_journal_entries(journal.journal)
+    return journal, cofa
+
+
+def work_with(defaults):
     """
     Provides an interface stub for once an entity has been selected.
     Loads the entity's relevant files:
 
     """
     _ = input("Stub of code to work with '{}' entity goes here."
-                    .format(entity))
-    menu(entity)
+                    .format(defaults["entity"]))
+    journal, cofa = setup_entity(defaults)
+    menu(defaults, cofa, journal)
 
-def journal_entry(option):
+def save_work(journal):
+    journal.save()
+
+def deal_w_new_entries(new_entries, cofa, journal):
+    if new_entries:
+        journal.extend(new_entries)
+        cofa.load_journal_entries(new_entries)
+
+
+def journal_entry(cofa, journal):
     _ = input("Beginning journal entry.")
-    pass
+    new_entries = []
+    while True:
+        entry = debk.JournalEntry.get_JournalEntry()
+        if entry:
+            new_entries.append(entry)
+        else:
+            break
+    if new_entries:
+        deal_w_new_entries(new_entries, cofa, journal)
 
-def add2journal(option):
+def load2journal(cofa, journal):
     file_name = input(
         "Specify name of file from which to read journal entries")
     _ = input("Reading journal entries from file '{}'."
             .format(file_name))
+    if not sys.path.isfile(file_name):
+        return "Unable to find file '{}'".format(file_name)
+    new_entries = journal.load(file_name)
+    if new_entries:
+        deal_w_new_entries(new_entries, cofa, journal)
+
+def show_accounts(cofa):
     pass
 
-def show_accounts(option):
-    pass
-
-def add_account(option):
+def add_account(defaults, cofa):
     _ = input("Adding accounts not yet implemented- edit directly.")
 
-def change_verbosity(option):
+def change_verbosity(defaults):
     _ = input("Verbosity not yet implemented")
 
 
-def menu(entity):
+def menu(defaults, cofa, journal):
     """
     Provides the 'work_with' user interface.
     """
@@ -54,10 +83,15 @@ Working with {}:
     5. Add Another Account.
     9. Change Verbosity.
     0. Exit
-Choice: """.format(entity))
+Choice: """.format(defaults["entity"]))
         print("Main Menu choice: {}".format(option))
         if option in ('', '_', '0'):
-            return
+            ret = save_work(journal)
+            if ret:
+                print(ret)
+            else: 
+                print("Successfully saved work.")
+                return
         try:
             option = int(option)
         except ValueError:
@@ -66,17 +100,17 @@ Choice: """.format(entity))
                         .format(option))
             continue
         if option == 1:
-            ret = journal_entry(option)
+            ret = journal_entry(option, cofa, journal)
         elif option == 2:
-            ret = add2journal(option)
+            ret = load2journal(option, cofa, journal)
         elif option == 3:
-            ret = show_journal(option)
+            ret = show_journal(option, cofa, journal)
         elif option == 4:
-            ret = show_accounts(option)
+            ret = show_accounts(option, cofa, journal)
         elif option == 5:
-            ret = add_account(option)
+            ret = add_account(option, cofa, journal)
         elif option == 9:
-            ret = change_verbosity(option)
+            ret = change_verbosity(option, defaults)
         else:
             print("BAD CHOICE '{}'- try again....".format(option))
 

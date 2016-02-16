@@ -26,7 +26,7 @@ def get_file_info(defaults):
     but for testing purposes, defaults['home'] can be changed.
     """
     home = defaults['home']
-    default_file = os.path.join(home, defaults['entity'])
+    default_file = os.path.join(home, defaults['last_entity'])
 #   print("home dir: {}, entity file: {}"
 #                   .format(home, default_file))
     try:
@@ -74,6 +74,7 @@ def create_entity(entity_name, defaults, set_default=True):
     Also sets up an empty journal file and a metadata file.
     """
 #   print("Begin create_entity('{}')...".format(entity_name))
+    defaults['entity'] = entity_name
     home = defaults['home']
     cofa_source = os.path.join(  # | Use a prepopulated chart  |
                 home,            # | of accounts if it exists. |
@@ -89,7 +90,7 @@ def create_entity(entity_name, defaults, set_default=True):
     with open(meta_source, 'r') as meta_file:
         metadata = json.load(meta_file)
     metadata['entity_name'] = entity_name
-    entity_file_path = os.path.join(home, defaults['entity'])
+    entity_file_path = os.path.join(home, defaults['last_entity'])
     try:
         os.mkdir(new_dir)
         shutil.copy(cofa_source, new_CofA_file_name)

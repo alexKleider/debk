@@ -22,12 +22,7 @@
 #   <http://www.gnu.org/licenses/>.
 #   Look for file named COPYING.
 
-"""
-If editing this file, beaware that the testing suite uses its own
-version of config.py which differs only in the home directory specified.
-REMEMBER TO INCLUDE ANY CHANGES MADE TO THE OTHER VERSION.
-"""
-VERSION = "0.0.1"
+VERSION = "0.0.2"
 
 # LOGLEVEL = "DEBUG"
 # LOGLEVEL = "INFO"
@@ -36,21 +31,26 @@ LOGLEVEL = "WARNING"
 # LOGLEVEL = "CRITICAL"
 
 ACCOUNT_CATEGORIES = dict(
-    ASSETS= '1000',
+    ASSET= '1000',
     LIABILITY= '2000',
     EQUITY= '3000',
     INCOME= '4000',
-    EXPENSES= '5000',
+    EXPENSE= '5000',
     )
 
 def account_category(code):
+    """
+    Depending on code provided, returns one of the following
+    ASSETS, LIABILITY, EQUITY, INCOME, EXPENSE
+    ACCOUNT_CATEGORIES.
+    """
     for category in ACCOUNT_CATEGORIES:
         if ACCOUNT_CATEGORIES[category][:1]  == code[:1]:
             return category
 
-ACCOUNT_CODE_LENGTH = len(ACCOUNT_CATEGORIES['ASSETS'])
+ACCOUNT_CODE_LENGTH = len(ACCOUNT_CATEGORIES['ASSET'])
 
-DR_ACCOUNTS = {'ASSETS', 'EXPENSES'}
+DR_ACCOUNTS = {'ASSET', 'EXPENSE'}
 CR_ACCOUNTS = {'LIABILITY', 'EQUITY', 'INCOME'}
 DR_FIRSTS = {ACCOUNT_CATEGORIES[item][:1] for item in DR_ACCOUNTS}
 CR_FIRSTS = {ACCOUNT_CATEGORIES[item][:1] for item in CR_ACCOUNTS}
@@ -62,7 +62,7 @@ def valid_account_code(account_code):
         return True
 
 MAXIMUM_VERBOSITY = 3
-EPSILON = 0.01  # We want acuracy to the nearest $0.01.
+EPSILON = 0.001  # We want acuracy to the nearest $0.001.
 INDENTATION_MULTIPLIER = 3  
 
 N_ASSET_OWNERS = 8   # Specific to Kazan15
@@ -79,7 +79,7 @@ cofa_suffix = 'ChartOfAccounts',  # Suffix used if another prepopulated
 #           chart of accounts file is to be used for a specific entity.
 metadata_template = "defaultMetadata.json",   # A file name.
 # A template used during entity creation.
-entity = "defaultEntity",            # A file name.
+last_entity = "defaultEntity",            # A file name.
 # Keeps track of the last entity accessed (the default.)
 
 cofa_name = 'CofA',              #| These three files will appear in
@@ -88,7 +88,7 @@ metadata_name = 'Metadata.json', #| copied at time of creation from
                                  #| templates in the home directory.
 #     | Not so for the journal_name file- it is created, not copied.
 verbosity = 3,
-indent = '',
+# indent = '',
 )  # End of DEFAULTS dictionary.
 
 
@@ -114,8 +114,8 @@ def valid_account_code_length(account_code):
         return True
 
 def test_firsts():
-    print("DR_FIRSTS are {}".format(DR_FIRSTS))
-    print("CR_FIRSTS are {}".format(CR_FIRSTS))
+    print("DR_FIRSTS are {}".format(sorted(list(DR_FIRSTS))))
+    print("CR_FIRSTS are {}".format(sorted(list(CR_FIRSTS))))
 
 def main():
     test_firsts()

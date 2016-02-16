@@ -1,13 +1,13 @@
-code,type,full_name,name,notes,hidden,place_holder
-1000,ASSET,Assets,Assets,Assets,F,T
-1100,ASSET,Assets:Liquid,Liquid,LiquidAssets,F,T
-1500,ASSET,Assets:Fixed,Fixed,FixedAssets,F,T
+code,indent,type,full_name,name,notes,hidden,place_holder
+1000,0,ASSET,Assets,Assets,Assets,F,T
+1100,0,ASSET,Assets:Liquid,Liquid,LiquidAssets,F,T
+1500,0,ASSET,Assets:Fixed,Fixed,FixedAssets,F,T
 
-3000,EQUITY,Equity,Equity,Equity,F,T
+3000,0,EQUITY,Equity,Equity,Equity,F,T
 
-2000,LIABILITY,Liabilities,Liabilities,Liabilities,F, T
+2000,0,LIABILITY,Liabilities,Liabilities,Liabilities,F,T
 
-4000,INCOME,Income,Income,Income,F,T
+4000,0,INCOME,Income,Income,Income,F,T
 
-5000,EXPENSE,Expenses,Expenses,Expenses,F,T
+5000,0,EXPENSE,Expenses,Expenses,Expenses,F,T
 

@@ -12,27 +12,37 @@ depending on the account type is assumed.
 
 _prompt>_ **python3 debk.py -h**
 
+A menu driven user interface is provided in the menu.py module.  The
+next level down menu driven interface is provided by work_with.py.
+There is also a config.py dependency.  These are all found under the
+src directory.  A test suite is found under the tests directory.
+
 ## Persistent Storage
 
-**debk.py** depends on the existence of a /var/opt/debk.d directory
-with appropriate content which at a minimum must include: 
+The system depends on the existence of a debk.d directory found under
+a 'home' directory specified by config.DEFAULTS['home'] by default set
+to /var/opt. It must be populated with appropriate content which at a
+minimum must include: 
     defaultChartOfAccounts
     defaultMetadata.json
 
-## Entity Creation
+## Entities
 
-Before creating a new entity, _TestEntity_ for example, you might like
-to first create a TestEntityChartOfAccounts (a concatenation of the name
+The system allows management of more than one set of books, each
+representing a named entity.  Entity creation, selection and deletion
+are handled through the menu interface which relies on entities.py.
+
+Before creating a new entity, _testentity_ for example, you might like
+to first create a testentityChartOfAccounts (a concatenation of the name
 of the entity and 'ChartOfAccounts') and edit it to suit.
-'Kazan15ChartOfAccounts' serves as an example.
-**./debk.py new --entity=TestEntity**
-will create a sub-directory **TestEntity.d** and populate it with the
-following files:
+'debk/tests/debk.d/ChartOfAccounts' serves as an example.
+New entity creation wil result in a new sub-directory **testentity.d**
+and populate it with the following files:
     CofA
     Journal.json
     Metadata.json
-Any user of **debk.py** must of course have read/write privileges.
-A **debk.d** directory is provided for use as a template.
+Any user must of course have read/write privileges.
+A **debk.d** directory is provided for use as a template under tests.
 
 ## Journal Entry
 

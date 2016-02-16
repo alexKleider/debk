@@ -436,6 +436,17 @@ class Account_loaded(unittest.TestCase):
     def setUp(self):
         pass
 
+problem = """
+ERROR: test_sum_accounts2 (__main__.Ledger)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./tests/test1.py", line 523, in setUp
+    self.cofa = debk.ChartOfAccounts(D)
+  File "/home/alex/Py/CSV/debk/src/debk.py", line 502, in __init__
+    self.entity = defaults['entity']
+KeyError: 'entity'
+"""
+
 class JournalClass(unittest.TestCase):
 
     def setUp(self):
@@ -447,8 +458,7 @@ class JournalClass(unittest.TestCase):
 
     def test_load(self):
         self.maxDiff = None
-        journal = debk.Journal({"--entity": 'testentity'},
-                                D['home'])
+        journal = debk.Journal(D)
         journal.extend(debk.JournalEntry.load(
 """July 3, 2015
 Alex Kleider
@@ -510,17 +520,10 @@ class Ledger(unittest.TestCase):
             print(
 "Shouldn't need to delete entity dir '{}'".format(entity_dir))
         self.test_entity = "testentity"
-        self.entity = E.create_entity(self.test_entity,
-                                        D)
-        self.cofa = debk.ChartOfAccounts(
-            {"--entity": self.entity,
-            "--verbosity": 2,
-            }, D['home'])
-        self.journal = debk.Journal(
-            {"--entity": self.entity,
-            "--verbosity": 2,
-            }, D['home'])
-        self.journal.load('./tests/debk.d/testentity_journal')
+        self.entity = E.create_entity(self.test_entity, D)
+        self.cofa = debk.ChartOfAccounts(D)
+        self.journal = debk.Journal(D)
+        self.journal.load('./tests/debk.d/testentityJournal_input0')
         self.journal.save()
         self.cofa.load_journal_entries(self.journal.journal)
         with open('TestReport', 'w') as file_object:
@@ -562,6 +565,7 @@ class Ledger(unittest.TestCase):
         total = '{:.2f}'.format(
                 self.cofa.sum_accounts("5020:5600"))
         self.assertEqual(total, str(29393.59))
+
     def tearDown(self):
         entity_dir = './tests/debk.d/testentity.d'
         if os.path.isdir(entity_dir):

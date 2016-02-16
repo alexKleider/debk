@@ -162,7 +162,8 @@ Choice: """.format(defaults['home'], listing))
             print("BAD CHOICE '{}'- try again....".format(option))
             entity = None
         if entity:
-            work_with(entity)
+            defaults["entity"] = entity
+            work_with(defaults)
 
 if __name__ == "__main__":
     from CSV.debk.src.config import DEFAULTS as D

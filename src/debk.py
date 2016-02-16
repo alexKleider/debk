@@ -59,6 +59,7 @@ import datetime
 import docopt
 import CSV.debk.src.config as config
 from CSV.debk.src.config import DEFAULTS as D
+logging.basicConfig(level = config.LOGLEVEL)
 
 import re
 # Dollar entries require a decimal ('.') but must not have a '$' sign.
@@ -67,10 +68,7 @@ money_pattern = re.compile(regex_dollar_as_float_expression)
 
 VERSION = config.VERSION
 
-MAXIMUM_VERBOSITY = config.MAXIMUM_VERBOSITY
-EPSILON = config.EPSILON
-INDENTATION_MULTIPLIER = config.INDENTATION_MULTIPLIER
-INDENTATION_CONSTANT = ' ' * INDENTATION_MULTIPLIER  
+INDENTATION_CONSTANT = ' ' * config.INDENTATION_MULTIPLIER  
 
 N_ASSET_OWNERS = config.N_ASSET_OWNERS
                      #Must jive with 'split' values in CofAs.
@@ -102,11 +100,11 @@ N_ASSET_OWNERS = config.N_ASSET_OWNERS
 NotesAboutAccountCodes = """
 During development: Account codes each consisted of 4 digits,
 with the first digit being one of the following:
-1 for Assets
-2 for Liabilities
+1 for Asset
+2 for Liability
 3 for Equity
 4 for Income, and 
-5 for Expenses.
+5 for Expense accounts respectively.
 The config.py is now structured in such a way that this can be
 changed.  If you wish to change to a different code schema, the
 global functions that are 'custom' for the Kazan15 entity
@@ -189,9 +187,11 @@ def divider(dollar_amount, split):
           ret.append(quotient/100.0)
         else:  # Still need to 'use up' remainder.
             ret.append((quotient + 1)/100.0)
-    assert (abs(dollars) - abs(sum(ret))) < EPSILON  # Sanity check.
+    assert (abs(dollars)-abs(sum(ret)))<config.EPSILON  # Sanity chk.
     return ret
 
+# The following two functions are being kept here (rather than in
+# config.py) because they use the logging module.
 def valid_account_type(type_):
     """     tested in tests/test1 class ValidAccountType
     Checks validity of an account type:
@@ -267,8 +267,8 @@ class LineEntry(object):
 
     def show(self):
         """
-        Returns a one line representation.
-        Indents can be handled by client code.
+        Returns a _one_line_ representation.
+        Any required indention can be handled by the client code.
         """
         if self.type_ == 'D': dr = '{:>12.2f}Dr'.format(self.amount)
         else: dr = '{:>14}'.format(' ')
@@ -296,7 +296,7 @@ class Account(object):
         acnt_type: 'Dr' if debits are positive,
                    'Cr' if credits are positive,
                 or 'place_holder'.
-    Place holder accounts will have the attribute s_balance
+    Place holder accounts will have the attribute s_balance (summed)
     depending on their acnt_type: 'D' totals in 'Cr' accounts
     and 'C' totals in 'Dr' accounts will be shown as negative.
     Non place_holder accounts have the signed_balance property to
@@ -308,6 +308,8 @@ class Account(object):
         Accepts dict delivered by csv module as its parameter.
         """
         self.code = dict_from_csv['code']
+#       print("dict_from_csv => {}"
+#                   .format(dict_from_csv))
         self.category = config.account_category(self.code)
         self.indent = INDENTATION_CONSTANT * int(
                                     dict_from_csv['indent'])
@@ -354,7 +356,7 @@ class Account(object):
         REFACTOR TO USE category INSTEAD OF code ATTRIBUTE.
         """
         #  If nothing in account, not to worry:
-        if (self.balance < EPSILON or 
+        if (self.balance < config.EPSILON or 
         #  Asset and Expense accounts are Debit accounts:
         (self.code[:1] in config.DR_FIRSTS and self.type_ == 'D')
         #  Liability, Equity and Income accounts are Credit accounts:
@@ -394,7 +396,7 @@ class Account(object):
                     split_as_string = self.split_as_str,
                     )
 
-    def show_account(self, verbosity = MAXIMUM_VERBOSITY):
+    def show_account(self, verbosity = config.MAXIMUM_VERBOSITY):
         """   Indirectly tested in tests/test1 class Ledger.setUp-
                             must examine TestReport.
         Returns a string representation of an account.
@@ -501,7 +503,7 @@ class ChartOfAccounts(object):
         self.defaults = defaults
         self.entity = defaults['entity']
         self.verbosity = defaults['verbosity']
-        self.home = os.path.join(default_dir, self.entity  + '.d')
+        self.home = os.path.join(D['home'], self.entity  + '.d')
         self.cofa_file = os.path.join(self.home, D['cofa_name'])
         self.csv_dict = {}  # Keyed by account number ('code'.)
         self.code_set = set()
@@ -738,7 +740,7 @@ class LineItem(object):
             ret.append(LineItem(code_part, type_part, amnt_part))
         return ret
 
-    @property
+    @property       # LineItem
     def _dict(self):
         """
         Returns the dictionary version of a LineItem.
@@ -774,7 +776,7 @@ class LineItem(object):
             config.LineEntry_input_format
                     .format(" " * indent)))
 
-    @classmethod
+    @classmethod       # LineItem
     def balanced_LineItem_list(src, list_of_LineItems):
         """
         Returns True if list_of_LineItems is balanced.
@@ -818,7 +820,27 @@ class JournalEntry(object):
         self.description = description
         self.line_items = line_items
 
-    @property
+    def show(self):
+        """
+        Presents a printable version of a journal entry.
+        """
+        _dict = self._dict
+        ret = []
+        ret.append(
+            "  #{entry_number:0>3} on {date_stamp:<12} by {user}."
+            .format(**_dict))
+
+        description_lines = _dict["description"].split('\n')
+        for line in description_lines:
+            ret.append("    {}".format(line))
+        for line_item in _dict["line_items"]:
+            ret.append(LineItem(**line_item).show())
+        return '\n'.join(ret)
+
+    def __str__(self):
+        return self.show()
+
+    @property       # JournalEntry
     def _dict(self):
         return dict(entry_number= self.entry_number,
                     date_stamp= self.date_stamp,
@@ -828,7 +850,7 @@ class JournalEntry(object):
                         item._dict for item in self.line_items],
                     )
 
-    @classmethod
+    @classmethod       # JournalEntry
     def from_dict(cls, _dict):
         """      a classmethod
         Takes the dict version and returns an instance.
@@ -843,9 +865,10 @@ class JournalEntry(object):
                 LineItem(**item) for item in _dict["line_items"]]
         return JournalEntry(**dict_copy)
 
-    def get_JournalEntry():
+    @classmethod       # JournalEntry
+    def get_JournalEntry(cls):
         """
-        An interactive cass method: prompts the user for and returns
+        An interactive class method: prompts the user for and returns
         a JournalEntry instance (with entry_number set to 0.)
         Returns None if unsuccessful.
         Usage:
@@ -892,36 +915,19 @@ class JournalEntry(object):
                             line_items= line_items))
             if blanks >= 2:
                 return
-
-    def show(self):
-        """
-        Presents a printable version of a journal entry.
-        """
-        _dict = self._dict
-        ret = []
-        ret.append(
-            "  #{entry_number:0>3} on {date_stamp:<12} by {user}."
-            .format(**_dict))
-
-        description_lines = _dict["description"].split('\n')
-        for line in description_lines:
-            ret.append("    {}".format(line))
-        for line_item in _dict["line_items"]:
-            ret.append(LineItem(**line_item).show())
-        return '\n'.join(ret)
-
-    def __str__(self):
-        return self.show()
  
     @classmethod    # JournalEntry
-    def load(src, text_or_file):
+    def load(cls, text_or_filename):
         """     
-        Returns a list of JournalEntry instances all with their
-        'entry_number's set to zero.  'entry_number's will be reset
-        when list is appended to the Journal instance.
-        Input is text provided as a string or in a file.
-        The text must be in a specific format described in 'how2input'
-        and exemplified in 'input'.
+        Accepts properly formatted text or the name of a file
+        containing such text.
+        IF SUCCESSFUL: Returns a list of JournalEntry instances
+        all with their 'entry_number's set to zero.
+        ('entry_number's will be reset when the list is appended
+        to the Journal instance.)
+        The text must be in a specific format described in
+        'how2input' and exemplified in 
+        'debk/tests/debk.d/testEntityJournal_input0'.
         NB: No user approval mechanism for this form of journal entry.
         """
 
@@ -934,11 +940,11 @@ class JournalEntry(object):
                         line_items= [],
                         )
 
-        if os.path.isfile(text_or_file):
-            with open(text_or_file, 'r') as f:
+        if os.path.isfile(text_or_filename):
+            with open(text_or_filename, 'r') as f:
                 raw_data = f.read()
         else:
-            raw_data = text_or_file
+            raw_data = text_or_filename
         data = raw_data.split('\n')
         journal_entries = []   # What's to be returned.
         # Initialize what will potentially be the first entry...
@@ -1007,7 +1013,7 @@ class JournalEntry(object):
         else:
             return False
 
-class Journal(object, defaults=D):
+class Journal(object):
     """
     Deals with the whole journal, providing methods for retrieving it
     from persistent storage (__init__,) adding to it either
@@ -1051,10 +1057,11 @@ class Journal(object, defaults=D):
         Also consider collecting new entries and not even loading
         those in persistent storage until user decides to save.
         """
+        self.changed = False
         self.defaults = defaults
         self.entity = defaults["entity"]
         self.infiles_loaded = False
-        dir_name = os.path.join(default_dir, self.entity + '.d')
+        dir_name = os.path.join(D['home'], self.entity + '.d')
         self.metadata_file = os.path.join(dir_name,
                                         defaults['metadata_name'])
         self.journal_file = os.path.join(dir_name,
@@ -1079,10 +1086,12 @@ class Journal(object, defaults=D):
         journal_entry.entry_number = self.next_entry
         self.next_entry += 1
         self.journal.append(journal_entry)
+        self.changed = True
 
     def extend(self, journal_entries):
         for journal_entry in journal_entries:
             self.append(journal_entry)
+        self.changed = True
 
     def show(self):
         """
@@ -1107,14 +1116,21 @@ class Journal(object, defaults=D):
         Replaces, rather than adds to, what was previously in
         persistent storage.  What was previously stored is loaded
         when a Journal is instantiated so data will not be lost.
+        Returns an error string if unsuccessfull.
         """
+        if not self.changed:
+            return "No entries to save."
         persistent_dict = {"Journal":
                                 [je._dict for je in self.journal]}
-        with open(self.journal_file, 'w', newline='') as f_object:
-            json.dump(persistent_dict, f_object)
         self.metadata['next_journal_entry_number'] = self.next_entry
-        with open(self.metadata_file, 'w') as f_object:
-            json.dump(self.metadata, f_object)
+        try:
+            with open(self.journal_file,
+                            'w', newline='') as f_object:
+                json.dump(persistent_dict, f_object)
+            with open(self.metadata_file, 'w') as f_object:
+                json.dump(self.metadata, f_object)
+        except IOError:
+            return "Encountered an IOError; journal NOT saved."
 
 #   def _get_entry(self):
 #       """Used by the get method to add an entry to the the journal.
@@ -1161,13 +1177,14 @@ class Journal(object, defaults=D):
             else:
                 break
 
-    def load(self, text_or_file):
+    def load(self, text_or_filename):
         """
-        Accepts properly formatted text (string or file) and adds
-        JournalEntries to those already existing.
+        Accepts properly formatted text or the name of a file
+        containing such text and adds the JournalEntries specified
+        in that text to those already existing.
         See docstring for JournalEntry.load.
         """
-        for journal_entry in JournalEntry.load(text_or_file): 
+        for journal_entry in JournalEntry.load(text_or_filename): 
             self.append(journal_entry)
 
 
@@ -1348,5 +1365,5 @@ def check_equity_vs_bank(chart_of_accounts):
 
 if __name__ == '__main__':  # code block to run the application
     print('Running src/debk.py')
-    logging.basicConfig(level = config.LOGLEVEL)
+    # Need docopt to deal with --help and --version cl options.
 
