@@ -306,16 +306,17 @@ class Account(object):
     def __init__(self, dict_from_csv):
         """                  [../tests/test1.py: CreateAccount]
         Accepts dict delivered by csv module as its parameter.
+        code,indent,type,full_name,name,hidden,place_holder,split
         """
         self.code = dict_from_csv['code']
-#       print("dict_from_csv => {}"
+#       print("dict_from_csv => {}"  # debugging print
 #                   .format(dict_from_csv))
         self.category = config.account_category(self.code)
         self.indent = INDENTATION_CONSTANT * int(
                                     dict_from_csv['indent'])
         self.full_name = dict_from_csv['full_name']
         self.name = dict_from_csv['name']
-        self.notes = dict_from_csv['notes']
+#       self.notes = dict_from_csv['notes']  # removed from csv
         self.hidden = dict_from_csv['hidden']
         if dict_from_csv['place_holder'] in 'Tt':
             self.place_holder = True 
@@ -514,6 +515,9 @@ class ChartOfAccounts(object):
 #                   logging.debug(
 #                       show_args(row, 'CofA input line values'))
                     if row['code'] in self.code_set:
+#                       print(   # debugging print
+#               "Duplicate account code:{}; Fix before rerunning.."
+#                               .format(row['code']))
                         logging.error(
                 "Duplicate account code:%s; Fix before rerunning..",
                                 row['code'])
@@ -857,8 +861,8 @@ class JournalEntry(object):
         Need this because list of LineItem objects must
         also be converted from corresponding dicts.
         """
-#       print("Caling JournalEntry.from_dict on: {}"
-#               .format(_dict))
+        print("Calling JournalEntry.from_dict(_dict) on:\n{}"
+                .format(_dict))
         dict_copy = copy.deepcopy(_dict)
         # Make a copy to prevent side effect.
         dict_copy["line_items"] = [
@@ -1072,6 +1076,8 @@ class Journal(object):
         with open(self.journal_file, 'r') as f_object:
             persistent_dict = json.load(f_object)
 #           logging.debug(persistent_dict)
+#           print("persistent journal_dict: {}"
+#                       .format(persistent_dict))
             self.journal = [JournalEntry.from_dict(_dict) for
                             _dict in persistent_dict["Journal"]]
         with open(self.metadata_file, 'r') as f_object:

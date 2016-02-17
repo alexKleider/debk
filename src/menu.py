@@ -52,21 +52,22 @@ def choose_entity(entities, indent=0):
         else:
             print("Invalid entry- try again ('0' to quit.)")
 
-def choose_existing(option, entities):
+def choose_existing(defaults, entities):
     """
     A main menu response function.
     A wrapper for choose_entity().
     """
-    print("Picked '{}. Choose an existing entity.'".format(option))
+    print("Picked 'Choose an existing entity.'")
     chosen_entity = choose_entity(entities, 4)
     if chosen_entity:
-        work_with(chosen_entity)
+        defaults['entity'] = chosen_entity
+        work_with(defaults)
 
-def create_new(option, entities):
+def create_new(entities):
     """
     A main menu response function.
     """
-    print("Picked '{}. Create a new entity.'".format(option))
+    print("Picked 'Create a new entity.'")
     while True:
         entity = input("Pick name for new entity: ")
         if (entities.check_new_entity(entity)
@@ -82,7 +83,7 @@ def create_new(option, entities):
         else:
             print("Invalid entity name, try again or Enter to exit.")
 
-def delete_option(option, entities):
+def delete_option(defaults, entities):
     """
     A main menu response function.
     """
@@ -97,16 +98,19 @@ def delete_option(option, entities):
         if y_n and y_n[0] in 'Yy':
             print("Deleting entity '{}'.".format(entity))
             entities.remove(entity)
+            defaults['entity'] = ''
         else:
             print("No deletion being done.")
         break
 
-def change_args_option(args):
+def change_args_option(defaults):
     """
     Moving away from debk.py command line arguments so verbosity
-    (and prossibly indentation) might have to be modifiable here.
+    defaults['verbosity']
+    (and prossibly indentation) defaults['indentation']
+    might have to be modifiable here.
     """
-    pass
+    _ = input("Changing options has not yet been implemented.")
 
 def menu(defaults):
     """
@@ -150,14 +154,14 @@ Choice: """.format(defaults['home'], listing))
                         .format(option))
             continue
         if option == 1:
-            entity = create_new(option, entities)
+            entity = create_new(entities)
         elif option == 2:
-            entity = choose_existing(option, entities)
+            entity = choose_existing(defaults, entities)
         elif option == 3:
-            delete_option(option, entities)
+            delete_option(defaults, entities)
             entity = ''
         elif option == 9:
-            change_args_option(option, args)
+            change_args_option(defaults)
         else:
             print("BAD CHOICE '{}'- try again....".format(option))
             entity = None
@@ -167,5 +171,5 @@ Choice: """.format(defaults['home'], listing))
 
 if __name__ == "__main__":
     from CSV.debk.src.config import DEFAULTS as D
-    D['home'] = "/home/alex/Py/CSV/debk/tests/debk.d"
+#   D['home'] = "/home/alex/Py/CSV/debk/tests/debk.d"
     menu(D)

@@ -297,7 +297,6 @@ class CreateAccount(unittest.TestCase):
         self.acnt = debk.Account(
             dict(code= '1020', indent= 3,
                 full_name= 'Full Name', name= 'Account Name',
-                notes= 'Some notes about the account.',
                 hidden= 'F', place_holder= 'F', split= 0)
                 )
 

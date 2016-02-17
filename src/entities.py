@@ -134,7 +134,7 @@ def write_default(default, defaults):
     Returns the default if successful, else logs and returns None.
     """
     try:
-        with open(defaults['entity'], 'w') as f_object:
+        with open(defaults['last_entity'], 'w') as f_object:
             f_object.write(default)
     except OSError:
         logging.error("Unable to set default to '{}'.",default)
