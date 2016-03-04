@@ -356,12 +356,13 @@ class Account_empty(unittest.TestCase):
             reader = csv.DictReader(cofa_file_object)
             for row in reader:  # Collects a CofAs without entries.
                 self.cofa.append(debk.Account(row))
+#               print(debk.Account(row))  #debugging print
 
 
     def test_init_and_str(self):
         testdata = [
     (19, 'Acnt#3000 EQUITY  Title_Account- subtotal: 0.00'),
-    (46, '      Acnt#5501 Petrol          (/10) Total:      0.00'),
+    (50, '      Acnt#5501 Petrol          (/10) Total:      0.00'),
             ]
         for n, show in testdata:
             with self.subTest(n=n, show=show):
@@ -522,10 +523,12 @@ class Ledger(unittest.TestCase):
         self.entity = E.create_entity(self.test_entity, D)
         self.cofa = debk.ChartOfAccounts(D)
         self.journal = debk.Journal(D)
-        self.journal.load('./tests/debk.d/testentityJournal_input0')
+        self.journal.load('./tests/debk.d/testentity_input0')
+#       print("\ntest1-Ledger setUP:\n".       # debugging print
+#               format(self.journal.show()))
         self.journal.save()
         self.cofa.load_journal_entries(self.journal.journal)
-        with open('TestReport', 'w') as file_object:
+        with open('TestReport', 'w') as file_object:  # debugging pr
             file_object.write(self.cofa.show_accounts())
 
     def test_init(self):
@@ -566,6 +569,7 @@ class Ledger(unittest.TestCase):
         self.assertEqual(total, str(29393.59))
 
     def tearDown(self):
+        return
         entity_dir = './tests/debk.d/testentity.d'
         if os.path.isdir(entity_dir):
             shutil.rmtree(entity_dir)

@@ -87,7 +87,7 @@ def delete_option(defaults, entities):
     """
     A main menu response function.
     """
-    print("Picked '{}. Delete an existing entity.'".format(option))
+    print("Picked 'Delete an existing entity.'")
     while True:
         entity = choose_entity(entities, 4)
         if not entity: 
@@ -143,7 +143,7 @@ Main Menu:
     9. Change arguments.
     0. Exit
 Choice: """.format(defaults['home'], listing))
-        print("You chose '{}'.".format(option))
+        print("You've chosen: '{}'.".format(option))
         if option in ('', '_', '0'):
             break
         try:

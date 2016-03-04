@@ -424,12 +424,16 @@ class Account(object):
                     self.split_as_str,
                     self.s_balance))
         else: 
+            if self.balance:
+                type_ = self.type_ + 'r'
+            else:
+                type_ = ''
             ret.append("{:<15} {} Total:{:>10.2f}{}"
                     .format(
                             self.name,
                             self.split_as_str,
                             self.balance,
-                            self.type_))
+                            type_))
         # Join the two parts to complete the first (header) line:
         ret = [' '.join(ret)]
 
@@ -861,8 +865,8 @@ class JournalEntry(object):
         Need this because list of LineItem objects must
         also be converted from corresponding dicts.
         """
-        print("Calling JournalEntry.from_dict(_dict) on:\n{}"
-                .format(_dict))
+#       print("Calling JournalEntry.from_dict(_dict) on:\n{}"
+#               .format(_dict))
         dict_copy = copy.deepcopy(_dict)
         # Make a copy to prevent side effect.
         dict_copy["line_items"] = [
@@ -997,6 +1001,12 @@ class JournalEntry(object):
                         pass
 #                       print(
 #               "Expect to fail after last line_item is collected.")
+#       if not journal_entries:   # next 6 lines debugging print
+#           print("\nJournalEntry.load on '{}' => {} (nothing!)"
+#                   .format(text_or_filename, journal_entries))
+#       else:
+#           for journal_entry in journal_entries:
+#               print("\n{}".format(journal_entry.show()))
         return journal_entries
 
     def ok(self):
