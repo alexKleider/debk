@@ -1,0 +1,50 @@
+July 27, 1971
+book keeper
+Put personal cash into the business.
+1111 Dr 15000.00
+3100 Cr 15000.00
+
+July 30, 1971
+book keeper
+Purchase a delivery truck
+1111 Cr 5000.00
+1511 Dr 5000.00
+
+August 6, 1971
+book keeper
+Obtain a loan
+1111 Dr 5000.00
+2111 Cr 5000.00
+
+Sept 6, 1971
+book keeper
+Purchase inventory
+1111 Cr 6000.0
+1311 Dr 6000.00
+
+Sept 8, 1971
+book keeper
+Cash Sale
+1111 Dr 600.00
+1311 Cr 500.00
+4101 Cr 100.00
+
+Sept 10, 1971
+book keeper
+Purchase inventory- payable in 60 days
+1311 Dr 2000.00
+2211 Cr 2000.00
+
+Sept 12, 1971
+book keeper
+Sale- receivable in 30 days
+1210 Dr 800.00
+1311 Cr 600.00
+4101 Cr 200.00
+
+Sept 15, 1971
+book keeper
+Cash Sale
+1111 Dr 1000.00
+1311 Cr 700.00
+4101 Cr 300.00

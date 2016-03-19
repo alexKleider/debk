@@ -17,7 +17,7 @@ def setup_entity(defaults):
     cofa = debk.ChartOfAccounts(defaults)
     journal = debk.Journal(defaults)
     cofa.load_journal_entries(journal.journal)
-    return journal, cofa
+    return cofa, journal
 
 
 def work_with(defaults):
@@ -27,8 +27,7 @@ def work_with(defaults):
     """
     _ = input("Stub of code to work with '{}' entity goes here."
                     .format(defaults["entity"]))
-    journal, cofa = setup_entity(defaults)
-    menu(defaults, cofa, journal)
+    menu(defaults, *setup_entity(defaults))
 
 def save_work(journal):
     error_string = journal.save()
@@ -155,4 +154,4 @@ Choice: """.format(defaults["entity"]))
 if __name__ == "__main__":
     from CSV.debk.src.config import DEFAULTS as D
     D['home'] = "/home/alex/Py/CSV/debk/tests/debk.d"
-    menu(D)
+    menu(D, *setup_entity(D))

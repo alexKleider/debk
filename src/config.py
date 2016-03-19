@@ -68,7 +68,7 @@ INDENTATION_MULTIPLIER = 3
 N_ASSET_OWNERS = 8   # Specific to Kazan15
                      #Must jive with 'split' values in CofAs.
 
-DEFAULTS = dict(
+DEFAULTS = dict(                # DEFAULTS defined here.       ####
 home = '/var/opt/debk.d',  # for production
 # home = "/home/alex/Py/CSV/debk/tutor/debk.d",  # for testing
 
@@ -87,9 +87,12 @@ journal_name = 'Journal.json',   #| the .d directory of each entity
 metadata_name = 'Metadata.json', #| copied at time of creation from
                                  #| templates in the home directory.
 #     | Not so for the journal_name file- it is created, not copied.
-verbosity = 3,
 # indent = '',
-)  # End of DEFAULTS dictionary.
+verbosity = 3,
+# Plan to make verbosity a bit map:
+#   Names only
+#   Totals only  (i.e. no journal entries)
+)                               # End of DEFAULTS dictionary.  ####
 
 
 

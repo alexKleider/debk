@@ -514,18 +514,20 @@ JOURNAL ENTRIES:......           Entity: 'testentity'
 class Ledger(unittest.TestCase):
     """Test ChartOfAccounts and Account classes."""
     def setUp(self):
-        entity_dir = './tests/debk.d/testentity.d'
+        entity_dir = './tests/debk.d/Manero.d'
         if os.path.isdir(entity_dir):
             shutil.rmtree(entity_dir)
             print(
 "Shouldn't need to delete entity dir '{}'".format(entity_dir))
-        self.test_entity = "testentity"
+        self.test_entity = "Manero"
+        self.test_journal_input = (
+            '/home/alex/Py/CSV/debk/tests/debk.d/Manero_input0')
         self.entity = E.create_entity(self.test_entity, D)
         self.cofa = debk.ChartOfAccounts(D)
         self.journal = debk.Journal(D)
-        self.journal.load('./tests/debk.d/testentity_input0')
-#       print("\ntest1-Ledger setUP:\n".       # debugging print
-#               format(self.journal.show()))
+        self.journal.load(self.test_journal_input)
+        print("\ntest1-Ledger setUP:\n".       # debugging print
+                format(self.journal.show()))
         self.journal.save()
         self.cofa.load_journal_entries(self.journal.journal)
         with open('TestReport', 'w') as file_object:  # debugging pr
@@ -537,11 +539,11 @@ class Ledger(unittest.TestCase):
     def test_sum_accounts0(self):
         """This test will break if the account code schema changes."""
         testdata = [
-            (self.cofa.sum_accounts("1000:1999"), 17926.60), 
-            (self.cofa.sum_accounts("2000:2999"), 0),  # 0
-            (self.cofa.sum_accounts("3000:3999"), 47320.19), # 
-            (self.cofa.sum_accounts("4000:4999"), 0.0),  
-            (self.cofa.sum_accounts("5000:5999"), 29393.59),  #
+            (self.cofa.sum_accounts("1000:1999"), 22600.00), 
+            (self.cofa.sum_accounts("2000:2999"), 7000.00),  # 0
+            (self.cofa.sum_accounts("3000:3999"), 15000.00), # 
+            (self.cofa.sum_accounts("4000:4999"), 600.00),  
+            (self.cofa.sum_accounts("5000:5999"), 00.00),  #
                     ]
         for acnt_sum, amount in testdata:
             with self.subTest(acnt_sum=acnt_sum, amount=amount):
@@ -561,12 +563,12 @@ class Ledger(unittest.TestCase):
 
     def test_sum_accounts1(self):
         self.assertEqual('{:.2f}'.format(
-                            self.cofa.sum_accounts([5310, 5320])),
-                        '{:.2f}'.format(2402.33))
+                            self.cofa.sum_accounts([1210, 1311])),
+                        '{:.2f}'.format(7000))
     def test_sum_accounts2(self):
         total = '{:.2f}'.format(
-                self.cofa.sum_accounts("5020:5600"))
-        self.assertEqual(total, str(29393.59))
+                self.cofa.sum_accounts("2000:3999"))
+        self.assertEqual(total, '{:.2f}'.format(22000))
 
     def tearDown(self):
         return

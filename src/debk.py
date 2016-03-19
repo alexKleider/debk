@@ -653,8 +653,9 @@ class ChartOfAccounts(object):
         ret = ["\nLEDGER/CHART of ACCOUNTS:......  Entity: '{}'\n"
             .format(self.entity)]
         for code in self.ordered_codes:
-            ret.append(
+            text2show = (
                     self.accounts[code].show_account(self.verbosity))
+            if text2show: ret.append(text2show)
 #           logging.debug("Signed balance Acnt %s: %.2f",
 #               code, self.accounts[code].signed_balance)
         return '\n'.join(ret)
@@ -940,7 +941,8 @@ class JournalEntry(object):
         """
 
         def initialize():
-#           print("Initializing a new journal_entry dict.")
+#           print(  # debugging print
+#               "Initializing a new journal_entry dict.")
             return  dict(entry_number= 0,
                         date_stamp= '',
                         user= '',
@@ -962,44 +964,46 @@ class JournalEntry(object):
             if not line:  # Blank line.
                 # Assume have collected a journal entry so ...
                 # save the description & then save the entry:
-#               print(
+#               print(  # debugging print
 # "Empty line being processed: assume an entry has been collected...")
                 new_dict['description'] = (
                     '\n'.join(new_dict['description']))
                 new_je = JournalEntry(**new_dict)
-#               print("\nEntry being considered: ".format(new_je))
+#               print(  # debugging print
+#                   "\nEntry being considered: ".format(new_je))
                 if new_je.ok():
-#                   print("JE passed: {}".format(new_je.show()))
+#                   print(  # debugging print
+#                       "JE passed: {}".format(new_je.show()))
                     journal_entries.append(new_je)
                 else:
                     pass
-#                   print(
+#                   print(  # debugging print
 #                   "Expect to fail after last JE is collected.")
                 new_dict = initialize()
                 continue
             # Not a blank line.
             if not new_dict['date_stamp']:
-#               print("setting date_stamp to '{}'"
-#                                   .format(line))
+#               print(  # debugging print
+#                  "setting date_stamp to '{}'".format(line))
                 new_dict['date_stamp'] = line
             elif not new_dict['user']:
-#               print("setting user to '{}'"
-#                                   .format(line))
+#               print(   # debugging print
+#                  "setting user to '{}'".format(line))
                 new_dict['user'] = line
             elif (not 'Dr' in line) and (not 'Cr' in line):
-#               print("Appending description: '{}'"
-#                                   .format(line))
+#               print(  # debugging print
+#                  "Appending description: '{}'".format(line))
                 new_dict['description'].append(line)
             else:  # Parse LineItem
                 # Note: might be of the form 1010,1011,1012 Cr 4.50
                 for line_item in LineItem.list_from_text(line):
                     if isinstance(line_item, LineItem):
-#                       print("Got a LineItem: '{}'"
-#                           .format(line_item))
+#                       print( # debugging pr
+#                           "Got a LineItem: '{}'".format(line_item))
                         new_dict['line_items'].append(line_item)
                     else:
                         pass
-#                       print(
+#                       print(   # debugging print
 #               "Expect to fail after last line_item is collected.")
 #       if not journal_entries:   # next 6 lines debugging print
 #           print("\nJournalEntry.load on '{}' => {} (nothing!)"
@@ -1025,6 +1029,10 @@ class JournalEntry(object):
         and LineItem.balanced_LineItem_list(self.line_items)):
             return True
         else:
+            print("""Rejecting journal entry:
+{}
+^^^^^^^^^^ Some rejections are OK (i.e. blank entries.) ^^^^^^^^^^"""
+                .format(self.show()))
             return False
 
 class Journal(object):
