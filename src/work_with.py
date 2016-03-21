@@ -150,6 +150,8 @@ Choice: """.format(defaults["entity"]))
             ret = change_verbosity(defaults)
         else:
             print("BAD CHOICE '{}'- try again....".format(option))
+        if ret:
+            _input = input(ret)
 
 if __name__ == "__main__":
     from CSV.debk.src.config import DEFAULTS as D

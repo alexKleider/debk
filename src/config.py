@@ -63,36 +63,41 @@ def valid_account_code(account_code):
 
 MAXIMUM_VERBOSITY = 3
 EPSILON = 0.001  # We want acuracy to the nearest $0.001.
-INDENTATION_MULTIPLIER = 3  
+INDENTATION_MULTIPLIER = 3   # Might want to move this into DEFAULTS.
 
 N_ASSET_OWNERS = 8   # Specific to Kazan15
-                     #Must jive with 'split' values in CofAs.
+                     # Must jive with 'split' values in CofAs.
+                     # Will try to move this out of here and into a
+                     # special use module.
 
 DEFAULTS = dict(                # DEFAULTS defined here.       ####
-home = '/var/opt/debk.d',  # for production
-# home = "/home/alex/Py/CSV/debk/tutor/debk.d",  # for testing
+    home = '/var/opt/debk.d',  # Must have permissions set!!
+    # reset to './tests/debk.d' in the testing modules. 
 
-# Files expected to be in the home directory:
-cofa_template = "defaultChartOfAccounts",     # A file name.
-# A default chart of accounts.  Used if a 'suffixed file' is absent.
-cofa_suffix = 'ChartOfAccounts',  # Suffix used if another prepopulated
-#           chart of accounts file is to be used for a specific entity.
-metadata_template = "defaultMetadata.json",   # A file name.
-# A template used during entity creation.
-last_entity = "defaultEntity",            # A file name.
-# Keeps track of the last entity accessed (the default.)
+    # Files expected to be in the "home" directory:
+    cofa_template = "defaultChartOfAccounts",     # A file name.
+    # A default chart of accounts used if there is no 'suffixed file'.
+    cofa_suffix = 'ChartOfAccounts',  # Suffix used to indicate which
+    # file to use rather than falling back on the default.
+    metadata_template = "defaultMetadata.json",   # A file name.
+    # A template used during entity creation.
+    last_entity = "defaultEntity",            # A file name.
+    # Keeps track of the last entity accessed (the default.)
+    # An empty file if there is no default set.
 
-cofa_name = 'CofA',              #| These three files will appear in
-journal_name = 'Journal.json',   #| the .d directory of each entity
-metadata_name = 'Metadata.json', #| copied at time of creation from
-                                 #| templates in the home directory.
-#     | Not so for the journal_name file- it is created, not copied.
-# indent = '',
-verbosity = 3,
-# Plan to make verbosity a bit map:
-#   Names only
-#   Totals only  (i.e. no journal entries)
-)                               # End of DEFAULTS dictionary.  ####
+    cofa_name = 'CofA',              #| These three files will appear
+    metadata_name = 'Metadata.json', #| in the .d directory of each
+    journal_name = 'Journal.json',   #| entity. The first two are
+        # copied at the time of entity creation from templates in the
+        # home directory; the journal_name file is created.
+    verbosity = 3,
+    # Plan to make verbosity a bit map:
+    #   Names only
+    #   Totals only  (i.e. no journal entries)
+#   indentation = '',
+#   indentation_multiplier = 3,
+
+)   #### End of DEFAULTS dictionary.  ####
 
 
 

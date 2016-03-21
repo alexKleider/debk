@@ -704,6 +704,7 @@ class LineItem(object):
         They can appear in any order.
         Returns a list of LineItem instances (or None.)
         """
+        if not line: return
         ret = []
         match_object = money_pattern.search(line)
         if match_object is None:
@@ -794,6 +795,9 @@ class LineItem(object):
         totals = dict(D= 0,
                       C= 0)
         for line_item in list_of_LineItems:
+#           print(             # debugging print
+#               "line_item is type '{}': '{}'"
+#               .format(type(line_item), line_item))
             totals[line_item.type_] += line_item.amount
         return (totals['D'] - totals['C']) < config.EPSILON
 
@@ -908,11 +912,11 @@ class JournalEntry(object):
         line_items = []
         blanks = 0   # Keep track of blank entries.
         while True:  # Allow multiple account entries, all balanced.
-            line_item = LineItem.get_LineItem(indent=8)
-            if line_item is None:
+            line_item_s = LineItem.get_LineItems(indent=8)
+            if line_item_s is None:
                 blanks += 1
             else:
-                line_items.append(line_item)
+                line_items.extend(line_item_s)
                 blanks = 0
             if (blanks >= 1 
             and LineItem.balanced_LineItem_list(line_items)):

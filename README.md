@@ -10,7 +10,10 @@ files in text format (csv or json) to allow direct editing.  It is
 ment by debit and credit entries and how the significance differs
 depending on the account type is assumed.
 
-_prompt>_ **python3 debk.py -h**
+The following is no longer implemented:
+_prompt>_ **./src/python3 debk.py -h**
+Instead use
+ prompt> **./src/menu.py**
 
 A menu driven user interface is provided in the menu.py module.  The
 next level down menu driven interface is provided by work_with.py.
@@ -35,7 +38,7 @@ are handled through the menu interface which relies on entities.py.
 Before creating a new entity, _testentity_ for example, you might like
 to first create a testentityChartOfAccounts (a concatenation of the name
 of the entity and 'ChartOfAccounts') and edit it to suit.
-'debk/tests/debk.d/ChartOfAccounts' serves as an example.
+'debk/tests/debk.d/ManeroChartOfAccounts' serves as an example.
 New entity creation wil result in a new sub-directory **testentity.d**
 and populate it with the following files:
     CofA
