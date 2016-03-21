@@ -1,0 +1,5 @@
+tests/debk.d/defaultEntity
+TestReport
+*.pyc
+__pycache__
+

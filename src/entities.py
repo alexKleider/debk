@@ -1,4 +1,4 @@
-#!../../venv/bin/python
+#!./venv/bin/python
 # -*- coding: utf-8 -*-
 # vim: set file encoding=utf-8
 #   File: /home/alex/Py/CSV/debk/src/entities.py
@@ -256,7 +256,7 @@ class Entities(object):
                         for entity in list_of_entities ])
 
 def main():
-    pass
+    print("Running entities.py which does nothing but print this.")
 
 if __name__ == "__main__":
     main()

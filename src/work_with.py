@@ -5,6 +5,10 @@
 """
 A second level menu model to work with a specific entity.
 Part of the double entry book keeping project.
+
+If called rather than imported, it attempts to 'work_with' a
+defaultentity which probably doesn't exist and so will print a warning
+and exit.
 """
 
 import os
@@ -155,5 +159,17 @@ Choice: """.format(defaults["entity"]))
 
 if __name__ == "__main__":
     from CSV.debk.src.config import DEFAULTS as D
-    D['home'] = "/home/alex/Py/CSV/debk/tests/debk.d"
+    D['home'] = "tests/debk.d"
+    _ = D.setdefault('entity', 'defaultentity')
     menu(D, *setup_entity(D))
+    error = """
+(venv)alex@x301:~/Py/CSV/debk$ ./src/work_with.py 
+Traceback (most recent call last):
+  File "./src/work_with.py", line 159, in <module>
+    menu(D, *setup_entity(D))
+  File "./src/work_with.py", line 17, in setup_entity
+    cofa = debk.ChartOfAccounts(defaults)
+  File "/home/alex/Py/CSV/debk/src/debk.py", line 509, in __init__
+    self.entity = defaults['entity']
+KeyError: 'entity'
+"""

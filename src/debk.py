@@ -1,4 +1,4 @@
-#!../venv/bin/python
+#!./venv/bin/python
 # -*- coding: utf-8 -*-
 # vim: set file encoding=utf-8
 #
@@ -56,7 +56,7 @@ import shutil
 import logging
 import datetime
 
-import docopt
+# import docopt
 import CSV.debk.src.config as config
 from CSV.debk.src.config import DEFAULTS as D
 logging.basicConfig(level = config.LOGLEVEL)
@@ -1392,6 +1392,6 @@ def check_equity_vs_bank(chart_of_accounts):
 #### The menu framework is in menu.py and work_with.py
 
 if __name__ == '__main__':  # code block to run the application
-    print('Running src/debk.py')
+    print('Running src/debk.py which does nothing but print this.')
     # Need docopt to deal with --help and --version cl options.
 
