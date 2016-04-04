@@ -195,7 +195,8 @@ def divider(dollar_amount, split):
 def valid_account_type(type_):
     """     tested in tests/test1 class ValidAccountType
     Checks validity of an account type:
-    i.e. checks that it is interpretable as either Debit or Credit.
+    i.e. checks that it is a string beginning with either of the two
+    letters 'd' or 'c': interpretable as either Debit or Credit.
     Note: attribute type_ refers to an associated amount or balance.
     while the attribute acnt_type refers to the account itself and can
     refer to Debit, Credit or place_holder (while category refers to
@@ -308,6 +309,7 @@ class Account(object):
         Accepts dict delivered by csv module as its parameter.
         code,indent,type,full_name,name,hidden,place_holder,split
         """
+        dict_from_csv['code'] = dict_from_csv['code'].strip()
         self.code = dict_from_csv['code']
 #       print("dict_from_csv => {}"  # debugging print
 #                   .format(dict_from_csv))
@@ -518,6 +520,7 @@ class ChartOfAccounts(object):
                 for row in reader:
 #                   logging.debug(
 #                       show_args(row, 'CofA input line values'))
+                    row['code'] = row['code'].strip()
                     if row['code'] in self.code_set:
 #                       print(   # debugging print
 #               "Duplicate account code:{}; Fix before rerunning.."
@@ -740,7 +743,7 @@ class LineItem(object):
 #-----------------------------------------------------------
         else:
             logging.warning(
-    """Malformed LineItem entry line- bad type (now Dr or CR.)
+    """Malformed LineItem entry line- bad type (not Dr or CR.)
 ...line was: {}""".format(line))
             return
 
