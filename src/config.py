@@ -30,6 +30,10 @@ LOGLEVEL = "WARNING"
 # LOGLEVEL = "ERROR"
 # LOGLEVEL = "CRITICAL"
 
+CofA_HEADERS = ['code', 'indent', 'full_name', 'name',
+                    'hidden', 'place_holder', 'split']
+N_COMPONENTS = len(CofA_HEADERS) -1
+
 ACCOUNT_CATEGORIES = dict(
     ASSET= '1000',
     LIABILITY= '2000',

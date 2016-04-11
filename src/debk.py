@@ -57,8 +57,8 @@ import logging
 import datetime
 
 # import docopt
-import CSV.debk.src.config as config
-from CSV.debk.src.config import DEFAULTS as D
+import debk.src.config as config
+from debk.src.config import DEFAULTS as D
 logging.basicConfig(level = config.LOGLEVEL)
 
 import re

@@ -1,3 +1,5 @@
+accounting
+defaultEntity
 tests/debk.d/defaultEntity
 TestReport
 *.pyc
