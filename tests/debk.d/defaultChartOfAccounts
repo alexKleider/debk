@@ -8,9 +8,9 @@ code,indent,full_name,name,hidden,place_holder,split
     1610,1,Assets:Prepaid Insurance,Prepaid Insurance,F,F
     1700,1,Assets:Land,Land,F,F
     1750,1,Assets:Buildings,Buildings,F,F
-    1780,1,Assets:Accumulated Depreciation-Buildings,Accumulated Depreciation- Buildings
+    1780,1,Assets:Accumulated Depreciation-Buildings,Accumulated Depreciation- Buildings,F,F
     1800,1,Assets:Equipment,Equipment,F,F
-    1880,1,Assets:Accumulated Depreciation-Equipment,Accumulated Depreciation- Equipment
+    1880,1,Assets:Accumulated Depreciation-Equipment,Accumulated Depreciation- Equipment,F,F
 
 2000,0,LIABILITIES,Liabilities,F,T
     2100,1,Liabilities:Notes Payable,Notes Payable,F,F
@@ -42,7 +42,5 @@ code,indent,full_name,name,hidden,place_holder,split
     5600,1,Expenses:Advertising,Advertising,F,F
     5700,1,Expenses:Depreciation,Depreciation,F,F
     5910,1,Non-Operating Expense:Loss on Sale of Assets,Loss on Sale of Assets,F,F
-
-
 
 

@@ -42,7 +42,10 @@ def check_line(line):
     """
     Given a line, checks its validity. If valid, does nothing.
     If invalid, a report (in the form of a string) is returned.
+    Blank lines are considered valid.
     """
+    stripped_line = line.strip()
+    if not stripped_line: return
     report_list = []
     m_object = p_object.match(line)
     if m_object == None:
@@ -54,8 +57,7 @@ def check_line(line):
         if indent%4: report_list.append("Indent%4!=0")
         indent = indent//4
 #       print("Indent is {}.".format(indent))
-    line = line.strip()
-    parts = line.split(',')
+    parts = stripped_line.split(',')
     if len(parts) < config.N_COMPONENTS:
         report_list.append("Too few, no point continuing.")
     else:
