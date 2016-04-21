@@ -12,7 +12,7 @@ and exit.
 """
 
 import os
-from CSV.debk.src import debk
+from src import debk
 
 def setup_entity(defaults):
     """

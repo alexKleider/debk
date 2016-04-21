@@ -28,9 +28,9 @@ import csv
 import json
 import shutil
 import unittest
-import debk.src.entities as E
-from debk.src.config import DEFAULTS as D
-import debk.src.debk as debk
+import src.entities as E
+from src.config import DEFAULTS as D
+import src.debk as debk
 
 VERSION = "v0.0.1"
 
@@ -513,12 +513,12 @@ JOURNAL ENTRIES:......           Entity: 'testentity'
 
 class Ledger(unittest.TestCase):
     """Test ChartOfAccounts and Account classes."""
+    entity_dir = './tests/debk.d/Manero.d'
     def setUp(self):
-        entity_dir = './tests/debk.d/Manero.d'
-        if os.path.isdir(entity_dir):
-            shutil.rmtree(entity_dir)
+        if os.path.isdir(self.entity_dir):
+            shutil.rmtree(self.entity_dir)
             print(
-"Shouldn't need to delete entity dir '{}'".format(entity_dir))
+"Shouldn't need to delete entity dir '{}'".format(self.entity_dir))
         self.test_entity = "Manero"
         self.test_journal_input = (
             '/home/alex/Py/CSV/debk/tests/debk.d/Manero_input0')
@@ -572,9 +572,8 @@ class Ledger(unittest.TestCase):
 
     def tearDown(self):
         return
-        entity_dir = './tests/debk.d/testentity.d'
-        if os.path.isdir(entity_dir):
-            shutil.rmtree(entity_dir)
+        if os.path.isdir(self.entity_dir):
+            shutil.rmtree(self.entity_dir)
 
 if __name__ == '__main__':  # code block to run the application
     unittest.main()

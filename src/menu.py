@@ -8,8 +8,8 @@ double entry book keeping project.
 """
 
 import sys
-from CSV.debk.src.work_with import work_with
-from CSV.debk.src import entities as E
+from src.work_with import work_with
+from src import entities as E
 
 def choose_entity(entities, indent=0):
     """

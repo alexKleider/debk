@@ -9,9 +9,9 @@ import os
 import shutil
 import unittest
 from unittest import mock
-from CSV.debk.src import entities as E
-from CSV.debk.src import menu
-from CSV.debk.src.config import DEFAULTS as D
+from src import entities as E
+from src import menu
+from src.config import DEFAULTS as D
 
 D['home'] = "./tests/debk.d"
 

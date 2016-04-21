@@ -1,7 +1,7 @@
 accounting
 defaultEntity
-tests/debk.d/defaultEntity
 TestReport
+tests/debk.d/defaultEntity
 *.pyc
 __pycache__
 

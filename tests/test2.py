@@ -28,9 +28,9 @@ import json
 import shutil
 import unittest
 from unittest import mock
-from CSV.debk.src import debk
-from CSV.debk.src import entities as E
-from CSV.debk.src.config import DEFAULTS as D
+from src import debk
+from src import entities as E
+from src.config import DEFAULTS as D
 
 VERSION = "v0.0.1"
 

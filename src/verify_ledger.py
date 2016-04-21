@@ -33,7 +33,7 @@ Usage:
 import os
 import sys
 import re
-import CSV.debk.src.config as config
+import src.config as config
 
 leading_white_space = r'^\s+'
 p_object = re.compile(leading_white_space)
