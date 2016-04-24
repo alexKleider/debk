@@ -83,21 +83,24 @@ DEFAULTS = dict(                # DEFAULTS defined here.       ####
     # A default chart of accounts used if there is no 'suffixed file'.
     cofa_suffix = 'ChartOfAccounts',  # Suffix used to indicate which
     # file to use rather than falling back on the default.
-    metadata_template = "defaultMetadata.json",   # A file name.
+#   metadata_template = "defaultMetadata.json",   # A file name.
     # A template used during entity creation.
+    # No longer use- eventually delete DEFAULTS['metadata_tmeplate']
     last_entity = "defaultEntity",            # A file name.
     # Keeps track of the last entity accessed (the default.)
     # An empty file if there is no default set.
 
     cofa_name = 'CofA',              #| These three files will appear
     metadata_name = 'Metadata.json', #| in the .d directory of each
-    journal_name = 'Journal.json',   #| entity. The first two are
-        # copied at the time of entity creation from templates in the
-        # home directory; the journal_name file is created.
+    journal_name = 'Journal.json',   #| entity at the time of its
+        # creation . The first one is copied from a template in the
+        # home directory; the other two are created.
     verbosity = 3,
     # Plan to make verbosity a bit map:
     #   Names only
-    #   Totals only  (i.e. no journal entries)
+    #   Names and totals only
+    #   Names, journal entries (brief), and totals.
+    #   Names, journal entries with descriptions, and totals.
 #   indentation = '',
 #   indentation_multiplier = 3,
 

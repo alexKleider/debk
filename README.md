@@ -1,33 +1,60 @@
 # Double Entry Book Keeping
 
 **debk.py** is a simple collection of utilities to facilitate double
-entry book keeping.  It was inspired by Glen Jarvis who is is working
-on a much more sophisticated version.
+entry book keeping.  It was inspired by Glen Jarvis who is working
+on a (I suspect much more sophisticated) version of his own.
 
 A major design decision (championed by Glen) is to keep all the data
-files in text format (csv or json) to allow direct editing.  It is
-**not** suitable for the naive user.  A clear understanding of what is
-ment by debit and credit entries and how the significance differs
-depending on the account type is assumed.
+files in text format (csv or json) to allow direct editing.
+Large business entities (with so much data that it could not all be
+held in memory at once) could not be accommodated.
+Also note that it is **not** suitable for the naive user: assumed
+is an understanding of what is meant by debit and credit and how
+the significance differs depending on the account type.
+
+## Installation
+
+The following is a suggested way of getting up and running.
+
+Choose (1.) a directory within which you want the project directory to
+reside and (2.) a directory for the data files.  They can both be the
+same directory; the latter can be within the former; they can be in
+disparate locations of your choosing.
+
+Let's assume you choose _/home/user/python_ to be the parent of your
+project directory.  Make it your working directory and then execute
+the following command:
+_prompt>_ **git pull https://github.com/alexKleider/debk.git**
+which will create a _debk_ directory tree containing the source
+files.  Check that all the _.py_ files have the execution bits set.
+
+The directory in which the data files are kept is specified in 
+the _debk/src/config.py_ file. If you wish to change the default
+value (_/var/opt/debk.d_) you'll have to edit _debk/src/config.py_
+and change the value of DEFAULTS['home'].  Be sure to set ownership
+and permissions appropriately.  You will need to use root privileges
+to create and change ownership if you use the default.
+
 
 The following is no longer implemented:
 _prompt>_ **./src/python3 debk.py -h**
 Instead use
- prompt> **./src/menu.py**
+_prompt>_ **./src/menu.py**
 
-A menu driven user interface is provided in the menu.py module.  The
-next level down menu driven interface is provided by work_with.py.
-There is also a config.py dependency.  These are all found under the
-src directory.  A test suite is found under the tests directory.
+Most of the functionality is found in _src/debk.py_ although entity
+creation is handled by _src/entities.py_.  A menu driven user
+interface is provided in _src/menu.py_ module.  The next level down
+menu driven interface is provided by _src/workwith.py_.  There is
+also a _src/config.py_ dependency.  A test suite is found under the
+_tests_ directory.  _debk.d/defaultChartOfAccounts_ provides a 
 
 ## Persistent Storage
 
 The system depends on the existence of a debk.d directory found under
 a 'home' directory specified by config.DEFAULTS['home'] by default set
 to /var/opt. It must be populated with appropriate content which at a
-minimum must include: 
-    defaultChartOfAccounts
-    defaultMetadata.json
+minimum must include a _defaultChartOfAccounts_ file, an example of
+which can be copied from _debk/debk.d/_.
 
 ## Entities
 
@@ -38,7 +65,8 @@ are handled through the menu interface which relies on entities.py.
 Before creating a new entity, _testentity_ for example, you might like
 to first create a testentityChartOfAccounts (a concatenation of the name
 of the entity and 'ChartOfAccounts') and edit it to suit.
-'debk/tests/debk.d/ManeroChartOfAccounts' serves as an example.
+_debk/tests/debk.d/ManeroChartOfAccounts_ and
+_debk/debk.d/defaultChartOfAccounts_ serves as examples.
 New entity creation wil result in a new sub-directory **testentity.d**
 and populate it with the following files:
     CofA

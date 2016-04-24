@@ -38,16 +38,9 @@ D['home'] = './tests/debk.d'  # for testing
 
 CofA = os.path.join(D['home'], 
                     D['cofa_template'])
-ENTITIES = ['EntityNoAccounts',
-            'testentity',
-            ]
-entity_dirs = {entity: os.path.join(
-                    D['home'], entity+'.d')
-                            for entity in ENTITIES}
 
+TheFollowingIsNotBeingUsed = """
 def testing_wrapper(collect, source=None):
-    """
-    """
     if source:
         ostdin = sys.stdin
         ostdout = sys.stdout
@@ -65,6 +58,7 @@ def testing_wrapper(collect, source=None):
         sys.stdout = ostdout
     
     return ret
+"""
 
 class global_show_args(unittest.TestCase):
     """test the global function show_args()"""
@@ -187,21 +181,30 @@ class AcntTypeFromCode(unittest.TestCase):
 class CreateEntity(unittest.TestCase):
     """Test creation of an accounting entity."""
 
+    ENTITIES = ['EntityNoAccounts',
+                'testentity',
+                ]
+    entity_dirs = {entity: os.path.join(
+                        D['home'], entity+'.d')
+                                for entity in ENTITIES}
+
     def setUp(self):
         """
         """
-        for entity_dir in entity_dirs.values():
+        for entity_dir in self.entity_dirs.values():
             if os.path.isdir(entity_dir):  # tearDown not executed
                 shutil.rmtree(entity_dir)  # if previous run failed.
-        for entity in ENTITIES:
+                print(
+    "Within test1.CreateEntity.setUp: unexpected deletion needed.")
+        for entity in self.ENTITIES:
             E.create_entity(entity, D)
 
     def test_dir_creation(self):
         """
         Tests that new home directories are created for each entity.
         """
-        for entity in ENTITIES:
-            self.assertTrue(os.path.isdir(entity_dirs[entity]))
+        for entity in self.ENTITIES:
+            self.assertTrue(os.path.isdir(self.entity_dirs[entity]))
 
     def test_CofA_creation_0(self):
         """
@@ -212,7 +215,7 @@ class CreateEntity(unittest.TestCase):
             original = f.read()
         with open(os.path.join(
                         D['home'],
-                        ENTITIES[0]+'.d',
+                        self.ENTITIES[0]+'.d',
                         D['cofa_name']), 'r') as f:
             new = f.read()
         self.assertEqual(original, new)
@@ -227,7 +230,7 @@ class CreateEntity(unittest.TestCase):
             original = f.read()
         with open(os.path.join(
                         D['home'],
-                        ENTITIES[1]+'.d',
+                        self.ENTITIES[1]+'.d',
                         D['cofa_name']), 'r') as f:
             new = f.read()
 #       print()
@@ -240,7 +243,7 @@ class CreateEntity(unittest.TestCase):
         """
         Tests that an empty journal has been created.
         """
-        for entity_dir in entity_dirs.values():
+        for entity_dir in self.entity_dirs.values():
             with open(os.path.join(entity_dir, 'Journal.json'),
                     'r') as journal_file_obj:
                 self.assertTrue(
@@ -250,10 +253,10 @@ class CreateEntity(unittest.TestCase):
         """
         Tests for a correclty set up json metadata file.
         """
-        for entity in ENTITIES:
+        for entity in self.ENTITIES:
             match = {"next_journal_entry_number": 1,
                     "entity_name": entity}
-            with open(os.path.join(entity_dirs[entity],
+            with open(os.path.join(self.entity_dirs[entity],
                         'Metadata.json'), 'r') as metadata_file_obj:
                 metadata = json.load(metadata_file_obj)
 #               print()
@@ -266,8 +269,8 @@ class CreateEntity(unittest.TestCase):
     def tearDown(self):
         """
         """
-        for entity in ENTITIES:
-            shutil.rmtree(entity_dirs[entity])
+        for entity in self.ENTITIES:
+            shutil.rmtree(self.entity_dirs[entity])
 
 class LineEntry(unittest.TestCase):
     """Test LineEntry class"""
@@ -513,21 +516,21 @@ JOURNAL ENTRIES:......           Entity: 'testentity'
 
 class Ledger(unittest.TestCase):
     """Test ChartOfAccounts and Account classes."""
+    test_entity = "Manero"
     entity_dir = './tests/debk.d/Manero.d'
     def setUp(self):
         if os.path.isdir(self.entity_dir):
             shutil.rmtree(self.entity_dir)
             print(
 "Shouldn't need to delete entity dir '{}'".format(self.entity_dir))
-        self.test_entity = "Manero"
         self.test_journal_input = (
             '/home/alex/Py/CSV/debk/tests/debk.d/Manero_input0')
         self.entity = E.create_entity(self.test_entity, D)
         self.cofa = debk.ChartOfAccounts(D)
         self.journal = debk.Journal(D)
         self.journal.load(self.test_journal_input)
-        print("\ntest1-Ledger setUP:\n".       # debugging print
-                format(self.journal.show()))
+#       print("\ntest1-Ledger setUP:\n".       # debugging print
+#               format(self.journal.show()))
         self.journal.save()
         self.cofa.load_journal_entries(self.journal.journal)
         with open('TestReport', 'w') as file_object:  # debugging pr
@@ -571,9 +574,11 @@ class Ledger(unittest.TestCase):
         self.assertEqual(total, '{:.2f}'.format(22000))
 
     def tearDown(self):
-        return
         if os.path.isdir(self.entity_dir):
             shutil.rmtree(self.entity_dir)
+        else:
+            print("Should have had to rmdir {}"
+                .format(self.entity_dir))
 
 if __name__ == '__main__':  # code block to run the application
     unittest.main()

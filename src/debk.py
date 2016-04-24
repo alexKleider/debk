@@ -79,19 +79,14 @@ N_ASSET_OWNERS = config.N_ASSET_OWNERS
 # have a named default.dir=D['home'] paramter as a useful override
 # when testing.  (See contents of tests/ directory.)
 
-# The following are names of files which are
-# expected to be in the D['home'] directory:
-# D['cofa_template']
-# The default chart of accounts. (For now: place holders only.)
-# A file of this name is kept in D['home'] to serve as a template
+# A minimum of one file specified by D['cofa_template'] is
+# expected to be in the D['home'] directory to serve as a template
 # during entity creation although a different file can be used: see
 # docstring for create_entity().
-# D['metadata_template']
-# A template used during entity creation.
-# D['entity']  - contains the name of the last entity accessed.
-# Its content serves as a default if an entity is required but
-# not specified on the command line.
-# It begins life as an empty file.
+# D['entity']  - a file specified by this value may also be found in
+# the D['home'] directory.  If so and if not an empty file, it 
+# provides the name of the last entity accessed to serve as a
+# default.
 
 # D['cofa_name']         | These three files will be
 # D['journal_name']      | in the home directory of

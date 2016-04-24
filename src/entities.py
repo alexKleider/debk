@@ -61,10 +61,10 @@ def create_entity(entity_name, defaults, set_default=True):
     Indicates success by returning the entity_name.
     Returns None if unsuccessful.
     <entity_name> becomes the default unless set_default is False.
-    Depends on <defaults>: typically config.DEFAULTS.
+    Depends on <defaults>: typically config.DEFAULTS, a dict.
 
-    Creates a new dirctory '<entity_name>.d' and populates it with a
-    set of required files including a default start up chart of
+    Creates a new dirctory '<entity_name>.d' and populates it with
+    a set of required files including a default start up chart of
     accounts.  An attempt will be made to find a file name that is
     the concatenation of the entity name and 'ChartOfAccounts'.
     If not found, the file specified by defaults['cofa'] will be used.
@@ -74,7 +74,6 @@ def create_entity(entity_name, defaults, set_default=True):
     Also sets up an empty journal file and a metadata file.
     """
 #   print("Begin create_entity('{}')...".format(entity_name))
-    defaults['entity'] = entity_name
     home = defaults['home']
     cofa_source = os.path.join(  # | Use a prepopulated chart  |
                 home,            # | of accounts if it exists. |
@@ -85,11 +84,11 @@ def create_entity(entity_name, defaults, set_default=True):
     new_dir = os.path.join(home, entity_name+'.d')
     new_CofA_file_name = os.path.join(new_dir, defaults['cofa_name'])
     new_Journal = os.path.join(new_dir, defaults['journal_name'])
-    meta_source = os.path.join(home, defaults['metadata_template'])
     meta_dest = os.path.join(new_dir, defaults['metadata_name'])
-    with open(meta_source, 'r') as meta_file:
-        metadata = json.load(meta_file)
-    metadata['entity_name'] = entity_name
+
+    metadata = ("""{{\n"entity_name": "{}",
+"next_journal_entry_number": 1\n}}""".format(entity_name))
+
     entity_file_path = os.path.join(home, defaults['last_entity'])
     try:
         os.mkdir(new_dir)
@@ -97,7 +96,7 @@ def create_entity(entity_name, defaults, set_default=True):
         with open(new_Journal, 'w') as journal_file_object:
             journal_file_object.write('{"Journal": []}')
         with open(meta_dest, 'w') as json_file:
-            json.dump(metadata, json_file)
+            json_file.write(metadata)
 #       print("\tCreated and populated '{}'.".format(new_dir))
     except FileExistsError:
         logging.error("Directory %s already exists", new_dir)
@@ -107,6 +106,7 @@ def create_entity(entity_name, defaults, set_default=True):
             "Destination %s &/or %s may not be writeable.",
                             new_CofA_file_name, new_Journal)
         return
+    defaults['entity'] = entity_name
     if set_default:  # Keeps track of the last entity referenced.
         with open(entity_file_path, 'w') as entity_file_object:
             entity_file_object.write(entity_name)
