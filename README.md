@@ -35,6 +35,22 @@ and change the value of DEFAULTS['home'].  Be sure to set ownership
 and permissions appropriately.  You will need to use root privileges
 to create and change ownership if you use the default.
 
+Another requirement is to add your project directory to the
+PYTHONPATH environment variable.  Provided is _path.sh_, a shell
+script, which can be sourced, perhaps after editing to suit local
+needs:
+_prompt>_ **bash path.sh**
+This assumes that you've chosen your
+home directory into which to clone the _debk_ project.
+
+Finally, set up an environment: from within the project directory:
+_prompt>_ **virtualenv -p python3 venv
+_prompt>_ **source venv/bin/activate
+To exit the environment (when done) the command to use is simply:
+_prompt>_ **deactivate**
+
+
+Usage:
 
 The following is no longer implemented:
 _prompt>_ **./src/python3 debk.py -h**
