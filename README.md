@@ -35,6 +35,22 @@ and change the value of DEFAULTS['home'].  Be sure to set ownership
 and permissions appropriately.  You will need to use root privileges
 to create and change ownership if you use the default.
 
+A final requirement is to add your project directory to the PYTHONPATH
+environment variable.  The following code fragment illustrates how
+this can be done and can be added to the end of your ~/.profile file.
+myPyDir='Py'
+PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}${HOME}/$myPyDir"
+myPyDir='some/other/project'
+PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}${HOME}/$myPyDir"
+myPyDir='debk'
+export PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}${HOME}/$myPyDir"
+Only the last two lines are needed but the rest is provided to
+illustrate how you could set it up so several projects would be
+included in your PYTHONPATH.  This assumes that you've chosen your
+home directory into which to clone the _debk_ project.
+
+
+Usage:
 
 The following is no longer implemented:
 _prompt>_ **./src/python3 debk.py -h**
