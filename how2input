@@ -1,36 +1,14 @@
-Journal entries can be accomplished by manual entry, using
-redirection, or by specifying one or more input files.
+Journal entries can be accomplished by manual entry (the 1. Journal
+Entry secondary menu option) or by specifying a file from which the
+entries can be read (the 2. Load Journal Entries from file menu
+option.)
 
-0. Manual entry (the default):  the user is prompted for entries.
 
-1. Using redirection:
-    This is the same as the default except input is redirected to come
-    from the file specified by the name following the unix redirection
-    sign ('<') on the command line.
-    The following are the rules one must follow when building such an
-    input file.  (The file 'input' provides an example.)
-    a. There must be 2 blank lines between the last Credit line of the
-    last entry and the final 'yes'.
-    b. There must be one blank line between last Credit of one entry
-    and the date of the next entry.
-    c. Each entry consists of:
-        date
-        user
-        description lines
-        one blank line
-          (to signal that there are no more description lines to enter)
-        two or more triple lines:
-            first is account code
-            second is debit entry   { Use zero if there is
-            third is credit entry   {  no value to enter.
-        a blank line (to signal end of the entry-
-                Referrece to this line was already made above.)
-    The whole thing can be further automated using a small bash script.
-    See k15.sh for my example.  
+1. Manual entry:  the user is prompted for entries.
 
-2. Specified input files:
-    Input files can be specified as described in the docstring and must
-    be of the format exemplified by the file 'debk.d/kazan_journal'.
+2. Specified input file:
+    Such an input file must be of the format exemplified by the
+file 'tests/debk.d/Manero_input0'.
     More specifically:
      I) Each entry must be separated from another by a blank line.
     II) Each entry consists, in order, of the following lines:
@@ -39,8 +17,12 @@ redirection, or by specifying one or more input files.
     II.c) one or more lines of text explaining the entry.
     II.d) Two or more lines following the following format:
             account(s), 'Dr' or 'Cr', and an amount.
-        'account(s)' can either be a single account code or a coma
-        separated (no white space) list of account codes.
-        This last format alows one to evenly distribute one amount
-        amongst several accounts.
+        'account(s)' can either be a single account code or multiple
+        accounts can be specified in one of the following ways:
+             i) a coma separated (no white space) list of account
+             codes.
+            ii) two account codes separated by a dash ('-') specifies
+            as a range of accounts.)
+        The multiple account formats alow one to (as evenly as
+        possible) distribute one amount amongst several accounts.
 

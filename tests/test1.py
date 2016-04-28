@@ -1,4 +1,4 @@
-#!../venv/bin/python3
+#!./venv/bin/python3
 # -*- coding: utf-8 -*-
 # vim: set file encoding=utf-8 :
 #
@@ -28,27 +28,19 @@ import csv
 import json
 import shutil
 import unittest
-import CSV.debk.src.debk as debk
-#import debk
+import src.entities as E
+from src.config import DEFAULTS as D
+import src.debk as debk
 
 VERSION = "v0.0.1"
 
-DEFAULT_DIR = './tests/debk.d'  # for testing
-# DEFAULT_DIR = debk.DEFAULT_DIR
-# debk.DEFAULT_DIR gets its value from debk.config.DEFAULT_DIR
+D['home'] = './tests/debk.d'  # for testing
 
-CofA = os.path.join(DEFAULT_DIR, 
-                    debk.DEFAULT_CofA)
-ENTITIES = ['EntityNoAccounts',
-            'testentity',
-            ]
-entity_dirs = {entity: os.path.join(
-                    DEFAULT_DIR, entity+'.d')
-                            for entity in ENTITIES}
+CofA = os.path.join(D['home'], 
+                    D['cofa_template'])
 
+TheFollowingIsNotBeingUsed = """
 def testing_wrapper(collect, source=None):
-    """
-    """
     if source:
         ostdin = sys.stdin
         ostdout = sys.stdout
@@ -66,6 +58,7 @@ def testing_wrapper(collect, source=None):
         sys.stdout = ostdout
     
     return ret
+"""
 
 class global_show_args(unittest.TestCase):
     """test the global function show_args()"""
@@ -188,33 +181,42 @@ class AcntTypeFromCode(unittest.TestCase):
 class CreateEntity(unittest.TestCase):
     """Test creation of an accounting entity."""
 
+    ENTITIES = ['EntityNoAccounts',
+                'testentity',
+                ]
+    entity_dirs = {entity: os.path.join(
+                        D['home'], entity+'.d')
+                                for entity in ENTITIES}
+
     def setUp(self):
         """
         """
-        for entity_dir in entity_dirs.values():
+        for entity_dir in self.entity_dirs.values():
             if os.path.isdir(entity_dir):  # tearDown not executed
                 shutil.rmtree(entity_dir)  # if previous run failed.
-        for entity in ENTITIES:
-            debk.create_entity(entity, DEFAULT_DIR)
+                print(
+    "Within test1.CreateEntity.setUp: unexpected deletion needed.")
+        for entity in self.ENTITIES:
+            E.create_entity(entity, D)
 
     def test_dir_creation(self):
         """
         Tests that new home directories are created for each entity.
         """
-        for entity in ENTITIES:
-            self.assertTrue(os.path.isdir(entity_dirs[entity]))
+        for entity in self.ENTITIES:
+            self.assertTrue(os.path.isdir(self.entity_dirs[entity]))
 
     def test_CofA_creation_0(self):
         """
         Tests creation of a non prepopulated CofA.
         """
-        with open(os.path.join(DEFAULT_DIR,
-                        debk.DEFAULT_CofA), 'r') as f:
+        with open(os.path.join(D['home'],
+                        D['cofa_template']), 'r') as f:
             original = f.read()
         with open(os.path.join(
-                        DEFAULT_DIR,
-                        ENTITIES[0]+'.d',
-                        debk.CofA_name), 'r') as f:
+                        D['home'],
+                        self.ENTITIES[0]+'.d',
+                        D['cofa_name']), 'r') as f:
             new = f.read()
         self.assertEqual(original, new)
 
@@ -222,14 +224,14 @@ class CreateEntity(unittest.TestCase):
         """
         Tests creation of a prepopulated CofA.
         """
-        with open(os.path.join(DEFAULT_DIR,
+        with open(os.path.join(D['home'],
                         'testentityChartOfAccounts'),
                 'r') as f:
             original = f.read()
         with open(os.path.join(
-                        DEFAULT_DIR,
-                        ENTITIES[1]+'.d',
-                        debk.CofA_name), 'r') as f:
+                        D['home'],
+                        self.ENTITIES[1]+'.d',
+                        D['cofa_name']), 'r') as f:
             new = f.read()
 #       print()
 #       print(original)
@@ -241,7 +243,7 @@ class CreateEntity(unittest.TestCase):
         """
         Tests that an empty journal has been created.
         """
-        for entity_dir in entity_dirs.values():
+        for entity_dir in self.entity_dirs.values():
             with open(os.path.join(entity_dir, 'Journal.json'),
                     'r') as journal_file_obj:
                 self.assertTrue(
@@ -251,10 +253,10 @@ class CreateEntity(unittest.TestCase):
         """
         Tests for a correclty set up json metadata file.
         """
-        for entity in ENTITIES:
+        for entity in self.ENTITIES:
             match = {"next_journal_entry_number": 1,
                     "entity_name": entity}
-            with open(os.path.join(entity_dirs[entity],
+            with open(os.path.join(self.entity_dirs[entity],
                         'Metadata.json'), 'r') as metadata_file_obj:
                 metadata = json.load(metadata_file_obj)
 #               print()
@@ -267,8 +269,8 @@ class CreateEntity(unittest.TestCase):
     def tearDown(self):
         """
         """
-        for entity in ENTITIES:
-            shutil.rmtree(entity_dirs[entity])
+        for entity in self.ENTITIES:
+            shutil.rmtree(self.entity_dirs[entity])
 
 class LineEntry(unittest.TestCase):
     """Test LineEntry class"""
@@ -298,7 +300,6 @@ class CreateAccount(unittest.TestCase):
         self.acnt = debk.Account(
             dict(code= '1020', indent= 3,
                 full_name= 'Full Name', name= 'Account Name',
-                notes= 'Some notes about the account.',
                 hidden= 'F', place_holder= 'F', split= 0)
                 )
 
@@ -358,12 +359,13 @@ class Account_empty(unittest.TestCase):
             reader = csv.DictReader(cofa_file_object)
             for row in reader:  # Collects a CofAs without entries.
                 self.cofa.append(debk.Account(row))
+#               print(debk.Account(row))  #debugging print
 
 
     def test_init_and_str(self):
         testdata = [
     (19, 'Acnt#3000 EQUITY  Title_Account- subtotal: 0.00'),
-    (46, '      Acnt#5501 Petrol          (/10) Total:      0.00'),
+    (50, '      Acnt#5501 Petrol          (/10) Total:      0.00'),
             ]
         for n, show in testdata:
             with self.subTest(n=n, show=show):
@@ -372,6 +374,10 @@ class Account_empty(unittest.TestCase):
                     self.cofa[n].__str__(), show)
 
 class Account_signed_balance(unittest.TestCase):
+    """
+    Creates (debk.Account())  and then
+    populates some values into instances of Account.
+    """
     def test_signed_balance_Dr_accounts(self):
         acnt_dict = dict(code= '1110', indent= 0,
                 full_name= 'Full Name', name= 'Account Name',
@@ -433,6 +439,17 @@ class Account_loaded(unittest.TestCase):
     def setUp(self):
         pass
 
+problem = """
+ERROR: test_sum_accounts2 (__main__.Ledger)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./tests/test1.py", line 523, in setUp
+    self.cofa = debk.ChartOfAccounts(D)
+  File "/home/alex/Py/CSV/debk/src/debk.py", line 502, in __init__
+    self.entity = defaults['entity']
+KeyError: 'entity'
+"""
+
 class JournalClass(unittest.TestCase):
 
     def setUp(self):
@@ -440,12 +457,11 @@ class JournalClass(unittest.TestCase):
             print("Deleting '{}'- shouldn't exist."
                 .format('./tests/debk.d/testentity.d'))
             shutil.rmtree('./tests/debk.d/testentity.d')
-        debk.create_entity("testentity", DEFAULT_DIR)
+        E.create_entity("testentity", D)
 
     def test_load(self):
         self.maxDiff = None
-        journal = debk.Journal({"--entity": 'testentity'},
-                                DEFAULT_DIR)
+        journal = debk.Journal(D)
         journal.extend(debk.JournalEntry.load(
 """July 3, 2015
 Alex Kleider
@@ -500,27 +516,24 @@ JOURNAL ENTRIES:......           Entity: 'testentity'
 
 class Ledger(unittest.TestCase):
     """Test ChartOfAccounts and Account classes."""
+    test_entity = "Manero"
+    entity_dir = './tests/debk.d/Manero.d'
     def setUp(self):
-        entity_dir = './tests/debk.d/testentity.d'
-        if os.path.isdir(entity_dir):
-            shutil.rmtree(entity_dir)
+        if os.path.isdir(self.entity_dir):
+            shutil.rmtree(self.entity_dir)
             print(
-"Shouldn't need to delete entity dir '{}'".format(entity_dir))
-        self.test_entity = "testentity"
-        self.entity = debk.create_entity(self.test_entity,
-                                        DEFAULT_DIR)
-        self.cofa = debk.ChartOfAccounts(
-            {"--entity": self.entity,
-            "--verbosity": 2,
-            }, DEFAULT_DIR)
-        self.journal = debk.Journal(
-            {"--entity": self.entity,
-            "--verbosity": 2,
-            }, DEFAULT_DIR)
-        self.journal.load('./tests/debk.d/testentity_journal')
+"Shouldn't need to delete entity dir '{}'".format(self.entity_dir))
+        self.test_journal_input = (
+            '/home/alex/Py/CSV/debk/tests/debk.d/Manero_input0')
+        self.entity = E.create_entity(self.test_entity, D)
+        self.cofa = debk.ChartOfAccounts(D)
+        self.journal = debk.Journal(D)
+        self.journal.load(self.test_journal_input)
+#       print("\ntest1-Ledger setUP:\n".       # debugging print
+#               format(self.journal.show()))
         self.journal.save()
         self.cofa.load_journal_entries(self.journal.journal)
-        with open('TestReport', 'w') as file_object:
+        with open('TestReport', 'w') as file_object:  # debugging pr
             file_object.write(self.cofa.show_accounts())
 
     def test_init(self):
@@ -529,11 +542,11 @@ class Ledger(unittest.TestCase):
     def test_sum_accounts0(self):
         """This test will break if the account code schema changes."""
         testdata = [
-            (self.cofa.sum_accounts("1000:1999"), 17926.60), 
-            (self.cofa.sum_accounts("2000:2999"), 0),  # 0
-            (self.cofa.sum_accounts("3000:3999"), 47320.19), # 
-            (self.cofa.sum_accounts("4000:4999"), 0.0),  
-            (self.cofa.sum_accounts("5000:5999"), 29393.59),  #
+            (self.cofa.sum_accounts("1000:1999"), 22600.00), 
+            (self.cofa.sum_accounts("2000:2999"), 7000.00),  # 0
+            (self.cofa.sum_accounts("3000:3999"), 15000.00), # 
+            (self.cofa.sum_accounts("4000:4999"), 600.00),  
+            (self.cofa.sum_accounts("5000:5999"), 00.00),  #
                     ]
         for acnt_sum, amount in testdata:
             with self.subTest(acnt_sum=acnt_sum, amount=amount):
@@ -553,16 +566,19 @@ class Ledger(unittest.TestCase):
 
     def test_sum_accounts1(self):
         self.assertEqual('{:.2f}'.format(
-                            self.cofa.sum_accounts([5310, 5320])),
-                        '{:.2f}'.format(2402.33))
+                            self.cofa.sum_accounts([1210, 1311])),
+                        '{:.2f}'.format(7000))
     def test_sum_accounts2(self):
         total = '{:.2f}'.format(
-                self.cofa.sum_accounts("5020:5600"))
-        self.assertEqual(total, str(29393.59))
+                self.cofa.sum_accounts("2000:3999"))
+        self.assertEqual(total, '{:.2f}'.format(22000))
+
     def tearDown(self):
-        entity_dir = './tests/debk.d/testentity.d'
-        if os.path.isdir(entity_dir):
-            shutil.rmtree(entity_dir)
+        if os.path.isdir(self.entity_dir):
+            shutil.rmtree(self.entity_dir)
+        else:
+            print("Should have had to rmdir {}"
+                .format(self.entity_dir))
 
 if __name__ == '__main__':  # code block to run the application
     unittest.main()

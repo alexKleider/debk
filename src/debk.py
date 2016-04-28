@@ -1,4 +1,4 @@
-#!../venv/bin/python
+#!./venv/bin/python
 # -*- coding: utf-8 -*-
 # vim: set file encoding=utf-8
 #
@@ -31,47 +31,10 @@ other needs as well.
 
 Usage:
   debk.py -h | --version
-  debk.py menu
 
 Options:
   -h --help  Print usage statement.
   --version  Print version.
-  -v --verbosity  How much info to show (>2 = 2)
-  --entity=ENTITY  Specify entity.  default: ''
-
-Commands:
-  <new> creates a new set of books.
-  <show_accounts> displays the chart of accounts.
-  <show_journal> displays the journal entries.
-  <journal_entry> provides for user entry...
-                        unless infile(s) are specified
-  in which case, entries are take from the file(s) named.
-  <check_path>  NOT for production code.
-  <custom> serves the specialized needs of Kazan15:
-    prompt> ./src/debk.py -vvv custom ./debk.d/kazan_journal
-                                                --entity=Kazan15
-    Then look for a file 'Report'.
-    To make the above work, the following files are provided:
-      ./debk.d/kazan_journal
-      /var/opt/debk.d/Kazan15ChartOfAccounts (a copy of which is
-      provided in ./debk.d/)
-
-Comments:
-  The --entity=ENTITY option is mandatory with the 'new' command.
-  In the case of other commands: when not provided, it defaults to
-  the last entity referenced.
-  Loglevel is set in config.py.
-
-[1] canoetripping.info:5380
-"""
-troublesome_part_of__doc__ = """
-  debk.py check_path
-  debk.py  new --entity=ENTITY
-  debk.py journal_entry [<infiles>...] [--entity=ENTITY]
-  debk.py  [-v ...] show_journal [--entity=ENTITY]
-  debk.py  [-v ...] show_accounts [--entity=ENTITY]
-  debk.py  [-v ...] custom [<infiles>...] [--entity=ENTITY]
-  debk.py  [-v ...] print_books [<infiles>...] [--entity=ENTITY]
   """
 
 # Clarification of some issues that might otherwise cause confusion:
@@ -93,8 +56,10 @@ import shutil
 import logging
 import datetime
 
-import docopt
-import CSV.debk.src.config as config
+# import docopt
+import src.config as config
+from src.config import DEFAULTS as D
+logging.basicConfig(level = config.LOGLEVEL)
 
 import re
 # Dollar entries require a decimal ('.') but must not have a '$' sign.
@@ -103,47 +68,38 @@ money_pattern = re.compile(regex_dollar_as_float_expression)
 
 VERSION = config.VERSION
 
-MAXIMUM_VERBOSITY = config.MAXIMUM_VERBOSITY
-EPSILON = config.EPSILON
-INDENTATION_MULTIPLIER = config.INDENTATION_MULTIPLIER
-INDENTATION_CONSTANT = ' ' * INDENTATION_MULTIPLIER  
+INDENTATION_CONSTANT = ' ' * config.INDENTATION_MULTIPLIER  
 
 N_ASSET_OWNERS = config.N_ASSET_OWNERS
                      #Must jive with 'split' values in CofAs.
                      #Only used for custom function adjust4assets()
-DEFAULT_DIR = config.DEFAULT_DIR
-# Each entity will have its home directory in DEFAULT_DIR.
+# D = config.DEFAULTS
+# Each entity will have its home directory in D['home'].
 # create_entity, Journal.__init__ and ChartOfAccounts.__init__ all
-# have a named default.dir=DEFAULT_DIR paramter as a useful override
+# have a named default.dir=D['home'] paramter as a useful override
 # when testing.  (See contents of tests/ directory.)
 
-# The following are names of files which are
-# expected to be in the DEFAULT_DIR directory:
-DEFAULT_CofA = config.DEFAULT_CofA
-# The default chart of accounts. (For now: place holders only.)
-# A file of this name is kept in DEFAULT_DIR to serve as a template
+# A minimum of one file specified by D['cofa_template'] is
+# expected to be in the D['home'] directory to serve as a template
 # during entity creation although a different file can be used: see
 # docstring for create_entity().
-DEFAULT_Metadata = config.DEFAULT_Metadata
-# A template used during entity creation.
-DEFAULT_Entity = config.DEFAULT_Entity
-# DEFAULT_Entity  - contains the name of the last entity accessed.
-# Its content serves as a default if an entity is required but
-# not specified on the command line.
-# It begins life as an empty file.
+# D['entity']  - a file specified by this value may also be found in
+# the D['home'] directory.  If so and if not an empty file, it 
+# provides the name of the last entity accessed to serve as a
+# default.
 
-CofA_name = config.CofA_name           #| These three files will be
-Journal_name = config.Journal_name     #| in the home directory of
-Metadata_name = config.Metadata_name   #| each newly created entity.
+# D['cofa_name']         | These three files will be
+# D['journal_name']      | in the home directory of
+# D['metadata_name']     | each newly created entity.
 
 NotesAboutAccountCodes = """
 During development: Account codes each consisted of 4 digits,
 with the first digit being one of the following:
-1 for Assets
-2 for Liabilities
+1 for Asset
+2 for Liability
 3 for Equity
 4 for Income, and 
-5 for Expenses.
+5 for Expense accounts respectively.
 The config.py is now structured in such a way that this can be
 changed.  If you wish to change to a different code schema, the
 global functions that are 'custom' for the Kazan15 entity
@@ -183,7 +139,8 @@ def show_args(args, name = 'Arguments'):
 
 def none2float(n):
     """                     [../tests/test1.py: none2float.
-    Solves the need to interpret a non-entry as zero."""
+    Solves the need to interpret a non-entry as zero.
+    """
     if not n: return 0.0
     else: 
         try:
@@ -225,13 +182,16 @@ def divider(dollar_amount, split):
           ret.append(quotient/100.0)
         else:  # Still need to 'use up' remainder.
             ret.append((quotient + 1)/100.0)
-    assert (abs(dollars) - abs(sum(ret))) < EPSILON  # Sanity check.
+    assert (abs(dollars)-abs(sum(ret)))<config.EPSILON  # Sanity chk.
     return ret
 
+# The following two functions are being kept here (rather than in
+# config.py) because they use the logging module.
 def valid_account_type(type_):
     """     tested in tests/test1 class ValidAccountType
     Checks validity of an account type:
-    i.e. checks that it is interpretable as either Debit or Credit.
+    i.e. checks that it is a string beginning with either of the two
+    letters 'd' or 'c': interpretable as either Debit or Credit.
     Note: attribute type_ refers to an associated amount or balance.
     while the attribute acnt_type refers to the account itself and can
     refer to Debit, Credit or place_holder (while category refers to
@@ -266,64 +226,8 @@ def acnt_type_from_code(account_code):
     logging.critical(
     "Malformed account code: %s.", account_code)
 
-def get_default_entity(default_dir=DEFAULT_DIR):
-    with open(os.path.join(default_dir, DEFAULT_Entity), 'r') as fo:
-        return fo.read()
-
 #####  END OF HELPER FUNCTIONS  #####
 
-
-def create_entity(entity_name, default_dir=DEFAULT_DIR):
-    """                        [../tests/test1.py: CreateEntity] 
-    Establishes a new accounting system. 
-    Indicates success by returning the entity_name.
-
-    Creates a new dirctory '<entity_name>.d' within default_dir
-    and populates it with a set of required files including a
-    default start up chart of accounts.
-    An attempt will be made to find a file name that is the 
-    concatenation of the entity name and 'ChartOfAccounts'.
-    If not found, the file specified by DEFAULT_CofA will be used.
-    Reports error if:
-        1. <entity_name> already exists, or
-        2. not able to write to new directory.
-    Also sets up an empty journal file and a metadata file.
-    Leaves a record of the entity_name to serve as a default for
-    future commands.
-    """
-    cofa_source = os.path.join(  # | Use a prepopulated chart  |
-                default_dir,     # | of accounts if it exists. |
-                entity_name + 'ChartOfAccounts')
-    if not os.path.isfile(cofa_source):  # Fall back on default.
-        cofa_source = os.path.join(default_dir, DEFAULT_CofA)
-    new_dir = os.path.join(default_dir, entity_name+'.d')
-    new_CofA_file_name = os.path.join(new_dir, CofA_name)
-    new_Journal = os.path.join(new_dir, Journal_name)
-    meta_source = os.path.join(default_dir, DEFAULT_Metadata)
-    meta_dest = os.path.join(new_dir, Metadata_name)
-    with open(meta_source, 'r') as meta_file:
-        metadata = json.load(meta_file)
-    metadata['entity_name'] = entity_name
-    entity_file_path = os.path.join(default_dir, DEFAULT_Entity)
-    try:
-        # The following keeps track of the last entity referenced.
-        with open(entity_file_path, 'w') as entity_file_object:
-            entity_file_object.write(entity_name)
-        os.mkdir(new_dir)
-        shutil.copy(cofa_source, new_CofA_file_name)
-        with open(new_Journal, 'w') as journal_file_object:
-            journal_file_object.write('{"Journal": []}')
-        with open(meta_dest, 'w') as json_file:
-            json.dump(metadata, json_file)
-    except FileExistsError:
-        logging.error("Directory %s already exists", new_dir)
-        sys.exit(1)
-    except OSError:
-        logging.error("Destination %s &/or %s may not be writeable.",
-                            new_CofA_file_name, new_Journal)
-        sys.exit(1)
-    else:
-        return entity_name
 
 ## Ledger related classes:  LineEntry, Account, ChartOfAccounts ##
 
@@ -359,8 +263,8 @@ class LineEntry(object):
 
     def show(self):
         """
-        Returns a one line representation.
-        Indents can be handled by client code.
+        Returns a _one_line_ representation.
+        Any required indention can be handled by the client code.
         """
         if self.type_ == 'D': dr = '{:>12.2f}Dr'.format(self.amount)
         else: dr = '{:>14}'.format(' ')
@@ -373,7 +277,8 @@ class LineEntry(object):
 
 class Account(object):
     """              [../tests/test1.py: CreateAccount,
-                        Account_empty, Account_loaded] 
+                        Account_empty, Account_loaded
+                        Account_signed_balance]
     Provides data type for values of the dict
     ChartOfAccounts.accounts which is keyed by account code.
     Attributes include: 
@@ -387,7 +292,7 @@ class Account(object):
         acnt_type: 'Dr' if debits are positive,
                    'Cr' if credits are positive,
                 or 'place_holder'.
-    Place holder accounts will have the attribute s_balance
+    Place holder accounts will have the attribute s_balance (summed)
     depending on their acnt_type: 'D' totals in 'Cr' accounts
     and 'C' totals in 'Dr' accounts will be shown as negative.
     Non place_holder accounts have the signed_balance property to
@@ -397,14 +302,18 @@ class Account(object):
     def __init__(self, dict_from_csv):
         """                  [../tests/test1.py: CreateAccount]
         Accepts dict delivered by csv module as its parameter.
+        code,indent,type,full_name,name,hidden,place_holder,split
         """
+        dict_from_csv['code'] = dict_from_csv['code'].strip()
         self.code = dict_from_csv['code']
+#       print("dict_from_csv => {}"  # debugging print
+#                   .format(dict_from_csv))
         self.category = config.account_category(self.code)
         self.indent = INDENTATION_CONSTANT * int(
                                     dict_from_csv['indent'])
         self.full_name = dict_from_csv['full_name']
         self.name = dict_from_csv['name']
-        self.notes = dict_from_csv['notes']
+#       self.notes = dict_from_csv['notes']  # removed from csv
         self.hidden = dict_from_csv['hidden']
         if dict_from_csv['place_holder'] in 'Tt':
             self.place_holder = True 
@@ -445,7 +354,7 @@ class Account(object):
         REFACTOR TO USE category INSTEAD OF code ATTRIBUTE.
         """
         #  If nothing in account, not to worry:
-        if (self.balance < EPSILON or 
+        if (self.balance < config.EPSILON or 
         #  Asset and Expense accounts are Debit accounts:
         (self.code[:1] in config.DR_FIRSTS and self.type_ == 'D')
         #  Liability, Equity and Income accounts are Credit accounts:
@@ -485,7 +394,7 @@ class Account(object):
                     split_as_string = self.split_as_str,
                     )
 
-    def show_account(self, verbosity = MAXIMUM_VERBOSITY):
+    def show_account(self, verbosity = config.MAXIMUM_VERBOSITY):
         """   Indirectly tested in tests/test1 class Ledger.setUp-
                             must examine TestReport.
         Returns a string representation of an account.
@@ -512,12 +421,16 @@ class Account(object):
                     self.split_as_str,
                     self.s_balance))
         else: 
+            if self.balance:
+                type_ = self.type_ + 'r'
+            else:
+                type_ = ''
             ret.append("{:<15} {} Total:{:>10.2f}{}"
                     .format(
                             self.name,
                             self.split_as_str,
                             self.balance,
-                            self.type_))
+                            type_))
         # Join the two parts to complete the first (header) line:
         ret = [' '.join(ret)]
 
@@ -580,7 +493,7 @@ class ChartOfAccounts(object):
 #                                        ^
 #                  ^ Journal entry number
 
-    def __init__(self, args, default_dir=DEFAULT_DIR):
+    def __init__(self, defaults=D):
         """
         Loads the chart of accounts belonging to a specified entity.
         The accounts attribute is a dict keyed by account codes and
@@ -589,11 +502,11 @@ class ChartOfAccounts(object):
         Use the load_journal_entries method after instatiation in
         order to populate the accounting information.
         """
-        self.args = args
-        self.entity = args['--entity']
-        self.verbosity = args['--verbosity']
-        self.home = os.path.join(default_dir, self.entity  + '.d')
-        self.cofa_file = os.path.join(self.home, CofA_name)
+        self.defaults = defaults
+        self.entity = defaults['entity']
+        self.verbosity = defaults['verbosity']
+        self.home = os.path.join(D['home'], self.entity  + '.d')
+        self.cofa_file = os.path.join(self.home, D['cofa_name'])
         self.csv_dict = {}  # Keyed by account number ('code'.)
         self.code_set = set()
         try:
@@ -602,7 +515,11 @@ class ChartOfAccounts(object):
                 for row in reader:
 #                   logging.debug(
 #                       show_args(row, 'CofA input line values'))
+                    row['code'] = row['code'].strip()
                     if row['code'] in self.code_set:
+#                       print(   # debugging print
+#               "Duplicate account code:{}; Fix before rerunning.."
+#                               .format(row['code']))
                         logging.error(
                 "Duplicate account code:%s; Fix before rerunning..",
                                 row['code'])
@@ -734,8 +651,9 @@ class ChartOfAccounts(object):
         ret = ["\nLEDGER/CHART of ACCOUNTS:......  Entity: '{}'\n"
             .format(self.entity)]
         for code in self.ordered_codes:
-            ret.append(
+            text2show = (
                     self.accounts[code].show_account(self.verbosity))
+            if text2show: ret.append(text2show)
 #           logging.debug("Signed balance Acnt %s: %.2f",
 #               code, self.accounts[code].signed_balance)
         return '\n'.join(ret)
@@ -784,6 +702,7 @@ class LineItem(object):
         They can appear in any order.
         Returns a list of LineItem instances (or None.)
         """
+        if not line: return
         ret = []
         match_object = money_pattern.search(line)
         if match_object is None:
@@ -819,7 +738,7 @@ class LineItem(object):
 #-----------------------------------------------------------
         else:
             logging.warning(
-    """Malformed LineItem entry line- bad type (now Dr or CR.)
+    """Malformed LineItem entry line- bad type (not Dr or CR.)
 ...line was: {}""".format(line))
             return
 
@@ -829,7 +748,7 @@ class LineItem(object):
             ret.append(LineItem(code_part, type_part, amnt_part))
         return ret
 
-    @property
+    @property       # LineItem
     def _dict(self):
         """
         Returns the dictionary version of a LineItem.
@@ -853,7 +772,7 @@ class LineItem(object):
     def __str__(self):
         return self.show()
 
-    def get_LineItems(indent=0, _input=input):
+    def get_LineItems(indent=0):
         """
         Interactively prompts the user for a LineItem.
         Returns a list of instances (usually only one),
@@ -861,11 +780,11 @@ class LineItem(object):
         Returns a list to allow for possibility of multi-account 
         input format.
         """
-        return LineItem.list_from_text(_input(
+        return LineItem.list_from_text(input(
             config.LineEntry_input_format
                     .format(" " * indent)))
 
-    @classmethod
+    @classmethod       # LineItem
     def balanced_LineItem_list(src, list_of_LineItems):
         """
         Returns True if list_of_LineItems is balanced.
@@ -874,6 +793,9 @@ class LineItem(object):
         totals = dict(D= 0,
                       C= 0)
         for line_item in list_of_LineItems:
+#           print(             # debugging print
+#               "line_item is type '{}': '{}'"
+#               .format(type(line_item), line_item))
             totals[line_item.type_] += line_item.amount
         return (totals['D'] - totals['C']) < config.EPSILON
 
@@ -901,87 +823,13 @@ class JournalEntry(object):
                         line_items  # list of LineItem instances
                         ):
         """
+        Creates a JournalEntry instance from its 5 parameters.
         """
         self.entry_number = int(entry_number)
         self.date_stamp = date_stamp
         self.user = user
         self.description = description
         self.line_items = line_items
-
-    @property
-    def _dict(self):
-        return dict(entry_number= self.entry_number,
-                    date_stamp= self.date_stamp,
-                    user= self.user,
-                    description= self.description,
-                    line_items= [
-                        item._dict for item in self.line_items],
-                    )
-
-    @classmethod
-    def from_dict(cls, _dict):
-        """
-        Takes the dict version and returns an instance.
-        Need this because list of LineItem objects must
-        also be converted from corresponding dicts.
-        """
-#       print("Caling JournalEntry.from_dict on: {}"
-#               .format(_dict))
-        dict_copy = copy.deepcopy(_dict)
-        # Make a copy to prevent side effect.
-        dict_copy["line_items"] = [
-                LineItem(**item) for item in _dict["line_items"]]
-        return JournalEntry(**dict_copy)
-
-    def get_JournalEntry(_input=input):
-        """
-        An interactive cass method: prompts the user for and returns
-        a JournalEntry instance (with entry_number set to 0.)
-        Returns None if unsuccessful.
-        Usage:
-        Empty 'date_stamp' line terminates (None is returned.)
-        Two empty account number entries in the face of an imbalance
-        will also terminate (None is returned.) 
-        A valid entry is returned following a single blank line_item
-        so long as debits and credits balance (else None is returned.)
-        """
-        date_stamp = _input("""
-    A journal entry must include a date, a user ID, a transaction
-    description (more than one line is OK, an empty line terminates
-    description entry) and a list of line items each consisting of the
-    following three white space separated values: 
-    {}.
-    Debit and credit values must balance.  (Empty line terminates.)
-        Date: """.format(config.LineEntry_input_prompt))
-        if not date_stamp:  # Empty 'date_stamp' line terminates
-            print()
-            return
-        user = _input("        Your ID: ")
-        description_array = []
-        while True:  # Allow multiline transaction description.
-            description_line = _input("        Description: ")
-            if not description_line: break
-            description_array.append(description_line)
-        description = '\n'.join(description_array)
-        line_items = []
-        blanks = 0   # Keep track of blank entries.
-        while True:  # Allow multiple account entries, all balanced.
-            line_item = LineItem.get_LineItem(indent=8, _input=_input)
-            if line_item is None:
-                blanks += 1
-            else:
-                line_items.append(line_item)
-                blanks = 0
-            if (blanks >= 1 
-            and LineItem.balanced_LineItem_list(line_items)):
-                return JournalEntry(**dict(
-                            entry_number= 0,
-                            date_stamp= date_stamp,
-                            user= user,
-                            description= description,
-                            line_items= line_items))
-            if blanks >= 2:
-                return
 
     def show(self):
         """
@@ -1002,21 +850,101 @@ class JournalEntry(object):
 
     def __str__(self):
         return self.show()
+
+    @property       # JournalEntry
+    def _dict(self):
+        return dict(entry_number= self.entry_number,
+                    date_stamp= self.date_stamp,
+                    user= self.user,
+                    description= self.description,
+                    line_items= [
+                        item._dict for item in self.line_items],
+                    )
+
+    @classmethod       # JournalEntry
+    def from_dict(cls, _dict):
+        """      a classmethod
+        Takes the dict version and returns an instance.
+        Need this because list of LineItem objects must
+        also be converted from corresponding dicts.
+        """
+#       print("Calling JournalEntry.from_dict(_dict) on:\n{}"
+#               .format(_dict))
+        dict_copy = copy.deepcopy(_dict)
+        # Make a copy to prevent side effect.
+        dict_copy["line_items"] = [
+                LineItem(**item) for item in _dict["line_items"]]
+        return JournalEntry(**dict_copy)
+
+    @classmethod       # JournalEntry
+    def get_JournalEntry(cls):
+        """
+        An interactive class method: prompts the user for and returns
+        a JournalEntry instance (with entry_number set to 0.)
+        Returns None if unsuccessful.
+        Usage:
+        Empty 'date_stamp' line terminates (None is returned.)
+        Two empty account number entries in the face of an imbalance
+        will also terminate (None is returned.) 
+        A valid entry is returned following a single blank line_item
+        so long as debits and credits balance (else None is returned.)
+        """
+        date_stamp = input("""
+    A journal entry must include a date, a user ID, a transaction
+    description (more than one line is OK, an empty line terminates
+    description entry) and a list of line items each consisting of the
+    following three white space separated values: 
+    {}.
+    Debit and credit values must balance.  (Empty line terminates.)
+        Date: """.format(config.LineEntry_input_prompt))
+        if not date_stamp:  # Empty 'date_stamp' line terminates
+            print()
+            return
+        user = input("        Your ID: ")
+        description_array = []
+        while True:  # Allow multiline transaction description.
+            description_line = input("        Description: ")
+            if not description_line: break
+            description_array.append(description_line)
+        description = '\n'.join(description_array)
+        line_items = []
+        blanks = 0   # Keep track of blank entries.
+        while True:  # Allow multiple account entries, all balanced.
+            line_item_s = LineItem.get_LineItems(indent=8)
+            if line_item_s is None:
+                blanks += 1
+            else:
+                line_items.extend(line_item_s)
+                blanks = 0
+            if (blanks >= 1 
+            and LineItem.balanced_LineItem_list(line_items)):
+                return JournalEntry(**dict(
+                            entry_number= 0,
+                            date_stamp= date_stamp,
+                            user= user,
+                            description= description,
+                            line_items= line_items))
+            if blanks >= 2:
+                return
  
     @classmethod    # JournalEntry
-    def load(src, text_or_file):
+    def load(cls, text_or_filename):
         """     
-        Returns a list of JournalEntry instances all with their
-        'entry_number's set to zero.  'entry_number's will be reset
-        when list is appended to the Journal instance.
-        Input is text provided as a string or in a file.
-        The text must be in a specific format described in 'how2input'
-        and exemplified in 'input'.
+        Accepts properly formatted text or the name of a file
+        containing such text.
+        IF SUCCESSFUL: Returns a list of JournalEntry instances
+        all with their 'entry_number's set to zero.
+        ('entry_number's will be reset when the list is appended
+        to the Journal instance.)
+        The text must be in a specific format described in
+        'how2input' and exemplified in 
+        'debk/tests/debk.d/testEntityJournal_input0'.
         NB: No user approval mechanism for this form of journal entry.
         """
 
         def initialize():
-#           print("Initializing a new journal_entry dict.")
+#           print(  # debugging print
+#               "Initializing a new journal_entry dict.")
             return  dict(entry_number= 0,
                         date_stamp= '',
                         user= '',
@@ -1024,11 +952,11 @@ class JournalEntry(object):
                         line_items= [],
                         )
 
-        if os.path.isfile(text_or_file):
-            with open(text_or_file, 'r') as f:
+        if os.path.isfile(text_or_filename):
+            with open(text_or_filename, 'r') as f:
                 raw_data = f.read()
         else:
-            raw_data = text_or_file
+            raw_data = text_or_filename
         data = raw_data.split('\n')
         journal_entries = []   # What's to be returned.
         # Initialize what will potentially be the first entry...
@@ -1038,50 +966,58 @@ class JournalEntry(object):
             if not line:  # Blank line.
                 # Assume have collected a journal entry so ...
                 # save the description & then save the entry:
-#               print(
+#               print(  # debugging print
 # "Empty line being processed: assume an entry has been collected...")
                 new_dict['description'] = (
                     '\n'.join(new_dict['description']))
                 new_je = JournalEntry(**new_dict)
-#               print("\nEntry being considered: ".format(new_je))
+#               print(  # debugging print
+#                   "\nEntry being considered: ".format(new_je))
                 if new_je.ok():
-#                   print("JE passed: {}".format(new_je.show()))
+#                   print(  # debugging print
+#                       "JE passed: {}".format(new_je.show()))
                     journal_entries.append(new_je)
                 else:
                     pass
-#                   print(
+#                   print(  # debugging print
 #                   "Expect to fail after last JE is collected.")
                 new_dict = initialize()
                 continue
             # Not a blank line.
             if not new_dict['date_stamp']:
-#               print("setting date_stamp to '{}'"
-#                                   .format(line))
+#               print(  # debugging print
+#                  "setting date_stamp to '{}'".format(line))
                 new_dict['date_stamp'] = line
             elif not new_dict['user']:
-#               print("setting user to '{}'"
-#                                   .format(line))
+#               print(   # debugging print
+#                  "setting user to '{}'".format(line))
                 new_dict['user'] = line
             elif (not 'Dr' in line) and (not 'Cr' in line):
-#               print("Appending description: '{}'"
-#                                   .format(line))
+#               print(  # debugging print
+#                  "Appending description: '{}'".format(line))
                 new_dict['description'].append(line)
             else:  # Parse LineItem
                 # Note: might be of the form 1010,1011,1012 Cr 4.50
                 for line_item in LineItem.list_from_text(line):
                     if isinstance(line_item, LineItem):
-#                       print("Got a LineItem: '{}'"
-#                           .format(line_item))
+#                       print( # debugging pr
+#                           "Got a LineItem: '{}'".format(line_item))
                         new_dict['line_items'].append(line_item)
                     else:
                         pass
-#                       print(
+#                       print(   # debugging print
 #               "Expect to fail after last line_item is collected.")
+#       if not journal_entries:   # next 6 lines debugging print
+#           print("\nJournalEntry.load on '{}' => {} (nothing!)"
+#                   .format(text_or_filename, journal_entries))
+#       else:
+#           for journal_entry in journal_entries:
+#               print("\n{}".format(journal_entry.show()))
         return journal_entries
 
     def ok(self):
         """             Tested in ./tests/test2.py JournalEntryTests
-        A rigorous self check.
+        A rigorous self check of a JournalEntry instance.
         """
 #       print(show_args(self._dict, 'JournalEntry.ok()'))
         if (isinstance(self.entry_number, int)
@@ -1095,6 +1031,10 @@ class JournalEntry(object):
         and LineItem.balanced_LineItem_list(self.line_items)):
             return True
         else:
+            print("""Rejecting journal entry:
+{}
+^^^^^^^^^^ Some rejections are OK (i.e. blank entries.) ^^^^^^^^^^"""
+                .format(self.show()))
             return False
 
 class Journal(object):
@@ -1130,7 +1070,7 @@ class Journal(object):
     JournalEntry methods get_entry and show.
     """
 
-    def __init__(self, args, default_dir=DEFAULT_DIR):
+    def __init__(self, defaults=D):
         """
         Loads (from persistent storage) an entity's metadata
         and all journal entries to date in preparation for
@@ -1141,18 +1081,23 @@ class Journal(object):
         Also consider collecting new entries and not even loading
         those in persistent storage until user decides to save.
         """
-        self.args = args
-        self.entity = args["--entity"]
+        self.changed = False
+        self.defaults = defaults
+        self.entity = defaults["entity"]
         self.infiles_loaded = False
-        dir_name = os.path.join(default_dir, self.entity + '.d')
-        self.metadata_file = os.path.join(dir_name, Metadata_name)
-        self.journal_file = os.path.join(dir_name, Journal_name)
+        dir_name = os.path.join(D['home'], self.entity + '.d')
+        self.metadata_file = os.path.join(dir_name,
+                                        defaults['metadata_name'])
+        self.journal_file = os.path.join(dir_name,
+                                        defaults['journal_name'])
         # The json file consists of a dict with only one entry
         # keyed by "journal" and its value is a list of dicts,
         # each corresponding to a JournalEntry instance.
         with open(self.journal_file, 'r') as f_object:
             persistent_dict = json.load(f_object)
 #           logging.debug(persistent_dict)
+#           print("persistent journal_dict: {}"
+#                       .format(persistent_dict))
             self.journal = [JournalEntry.from_dict(_dict) for
                             _dict in persistent_dict["Journal"]]
         with open(self.metadata_file, 'r') as f_object:
@@ -1167,10 +1112,12 @@ class Journal(object):
         journal_entry.entry_number = self.next_entry
         self.next_entry += 1
         self.journal.append(journal_entry)
+        self.changed = True
 
     def extend(self, journal_entries):
         for journal_entry in journal_entries:
             self.append(journal_entry)
+        self.changed = True
 
     def show(self):
         """
@@ -1184,6 +1131,9 @@ class Journal(object):
         return '\n'.join(ret)
 
     def __str__(self):
+        """
+        Implemented as self.show()
+        """
         return self.show()
 
     def save(self):
@@ -1192,14 +1142,21 @@ class Journal(object):
         Replaces, rather than adds to, what was previously in
         persistent storage.  What was previously stored is loaded
         when a Journal is instantiated so data will not be lost.
+        Returns an error string if unsuccessfull.
         """
+        if not self.changed:
+            return "No entries to save."
         persistent_dict = {"Journal":
                                 [je._dict for je in self.journal]}
-        with open(self.journal_file, 'w', newline='') as f_object:
-            json.dump(persistent_dict, f_object)
         self.metadata['next_journal_entry_number'] = self.next_entry
-        with open(self.metadata_file, 'w') as f_object:
-            json.dump(self.metadata, f_object)
+        try:
+            with open(self.journal_file,
+                            'w', newline='') as f_object:
+                json.dump(persistent_dict, f_object)
+            with open(self.metadata_file, 'w') as f_object:
+                json.dump(self.metadata, f_object)
+        except IOError:
+            return "Encountered an IOError; journal NOT saved."
 
 #   def _get_entry(self):
 #       """Used by the get method to add an entry to the the journal.
@@ -1226,19 +1183,18 @@ class Journal(object):
         for journal_entry in JournalEntry_list:
             self.append(journal_entry)  # Takes care of updating 
 
-    def get(self, _input=input):
+    def get(self):
         """Interactively collects journal entries from the user and,
         if well formed and validated by the user, appends each one to
         the Journal.  An empty or malformed entry terminates.
         """
         while True:
-            journal_entry = JournalEntry.get_JournalEntry(
-                                                        _input=_input)
+            journal_entry = JournalEntry.get_JournalEntry()
             if journal_entry != None:
                 print(
                     "You have submitted the following journal entry:")
                 print(journal_entry)
-                answer = _input(
+                answer = input(
                     "Do you want it added to the journal (Yes/No)? ")
                 if answer and answer[:1] in 'Yy':
                     self.append(journal_entry)
@@ -1247,13 +1203,14 @@ class Journal(object):
             else:
                 break
 
-    def load(self, text_or_file):
+    def load(self, text_or_filename):
         """
-        Accepts properly formatted text (string or file) and adds
-        JournalEntries to those already existing.
+        Accepts properly formatted text or the name of a file
+        containing such text and adds the JournalEntries specified
+        in that text to those already existing.
         See docstring for JournalEntry.load.
         """
-        for journal_entry in JournalEntry.load(text_or_file): 
+        for journal_entry in JournalEntry.load(text_or_filename): 
             self.append(journal_entry)
 
 
@@ -1430,272 +1387,9 @@ def check_equity_vs_bank(chart_of_accounts):
 ## End of Kazan15 'custom' functions.
 ######################################################################
 
-#### The following make up the menu framework aka user interface.
-####       Selecting (creating, deleting) an entity.
-
-def get_default_entity(default_dir = DEFAULT_DIR,
-                        default_file = DEFAULT_Entity):
-    default_entity = ''
-    try:
-        with open(os.path.join(default_dir,
-                                default_file), 'r') as f_object:
-            default_entity = f_object.read()
-    except OSError("Unable to find a default entity."):
-        return
-    if default_entity:
-        return default_entity
-
-def clear_default_entity(default_dir = DEFAULT_DIR,
-                        default_file = DEFAULT_Entity):
-    try:
-        with open(os.path.join(default_dir,
-                                default_file), 'w') as f_object:
-            f_object.write('')
-    except OSError:
-        print("Unable to clear the DEFAULT_Entity file: {}."
-                .format(path))
-        return
-
-def get_default_entity(default_dir = DEFAULT_DIR,
-                        default_file = DEFAULT_Entity):
-    path = os.path.join(default_dir, default_file)
-    try:
-        with open(path, 'r') as f_object:
-            default_entity = f_object.read()
-    except FileNotFoundError:
-        print("Unable to find the DEFAULT_Entity file: {}."
-                .format(path))
-        default_entity = None
-    return default_entity
-
-def clear_default_entity(default_dir = DEFAULT_DIR,
-                        default_file = DEFAULT_Entity):
-    path = os.path.join(default_dir, default_file)
-    try:
-        with open(path, 'w') as f_object:
-            f_object.write('')
-    except OSError:
-        print("Unable to clear the DEFAULT_Entity file: {}."
-                .format(path))
-        return
-
-def entities_available():
-    return [file_name[:-2]
-            for file_name in os.listdir(DEFAULT_DIR)
-            if file_name.endswith(".d")]
-
-def entity_listing():
-    return ''.join([ "\n\t    {}".format(entity)
-                    for entity in entities_available()])
-
-def show_entity_menu(default_entity=''):
-    if default_entity:
-        default_entity = ("\n\t_: Default is '{}', just hit enter."
-                            .format(get_default_entity()))
-
-def show_entity_menu(default_entity=''):
-    if default_entity:
-        default_entity = ("\n\t_: Default is '{}', just hit enter."
-                            .format(get_default_entity()))
-    return ('\n'.join(["\t{}: {}".format(n, entity)
-                for (n, entity) in enumerate(entities_available(), 1)])
-            + default_entity)
-
-def create_new(entity):
-    print("Picked '{}. Create a new entity.'".format(entity))
-
-def get_existing_entity():
-    """
-    Prompts user to choose an existing entity which is returned.
-    Returns None if user aborts.
-    """
-    default_entity = get_default_entity()
-    while True:
-        choice = input(
-"""Choose one of the following:
-{}
-\t0: to exit.
-Pick an entity: """.format(show_entity_menu(get_default_entity)))
-        if choice == '':
-            return get_default_entity()
-        try:
-            choice = int(choice)
-        except ValueError:
-            print("Invalid entry! (It must be an integer.)")
-            continue
-        if choice in range(1, len(entities_available()) + 1):
-            return entities_available()[choice - 1]
-        elif choice == 0:
-            return None
-        else:
-            print("Invalid entry- try again ('0' to quit.)")
-
-def choose_existing(option, entity_menu):
-    print("Picked '{}'. Choose an entity."
-            .format(option))
-    return get_existing_entity()
-
-def delete_entity(entity):
-    if entity == get_default_entity():
-        clear_default_entity()
-    shutil.rmtree(os.path.join(DEFAULT_DIR, entity+'.d'))
-
-def delete_option(option):
-    print("Picked '{}. Delete an existing entity.'".format(option))
-    while True:
-        entity = get_existing_entity()
-        if entity is None: return
-        y_n = input("About to delete entity '{}', ARE YOU SURE? "
-                .format(entity))
-        if y_n and y_n[0] in 'Yy':
-            print("Deleting entity '{}'.".format(entity))
-#           delete_entity(entity)
-        else:
-            print("No deletion being done.")
-        break
-
-def main():
-    if args['new']:
-        if args['--entity'] == create_entity(args['--entity']):
-            print(
-        "An accounting system for '{}' has been successfully created."
-                        .format(args['--entity']))
-    if not args['--entity']:
-        with open(os.path.join(DEFAULT_DIR,
-                    DEFAULT_Entity), 'r') as entity_file_object:
-            args['--entity'] = entity_file_object.read()
-    
-    if args['print_books']:
-        print(show_args(args))
-        ret = []
-        entity = create_entity(args['--entity'])
-        assert args["--entity"] == entity
-        journal = Journal(args)  # Loaded from persistent storage.
-        for infile in args["<infiles>"]:
-            journal.load(infile)
-        journal.save()  # Sends journal to persistent storage.
-
-        cofa = ChartOfAccounts(args)
-        cofa.load_journal_entries(journal.journal)
-
-        ret.append(journal.show())
-
-        ret.append("\n")
-        ret.append(cofa.show_accounts())
-        ret.append('\n')
-#       ret.append(check_equity_vs_bank(cofa))
-
-        with open("Report", 'w') as report_file:
-            report_file.write('\n'.join(ret))
-    
-    if args['journal_entry']:
-        journal = Journal(args)
-        if args['<infiles>']:
-            for infile in args["<infiles>"]:
-                journal.load(infile)
-        else:
-            journal.get(_input=_input)
-
-    if args['show_journal']:
-        journal = Journal(args)
-        print(journal.show())
-
-    if args['show_accounts']:
-        journal = Journal(args)
-        cofa = ChartOfAccounts(args)
-        cofa.load_journal_entries(journal.journal)
-        print(cofa.show_accounts(args))
-
-    if args['check_path']:
-        print(show_args(sys.path, "Contents of sys.path"))
-
-    if args['custom']:
-        # For testing purposes, this is often run and each time
-        # creates a directory which must be removed if next run
-        # is to go through:
-        entity_dir = os.path.join(DEFAULT_DIR, args['--entity']+'.d')
-        if os.path.isdir(entity_dir):
-            shutil.rmtree(entity_dir)
-
-        # Check that args are sane:
-        print(show_args(args))
-        ret = []
-
-        entity = create_entity(args['--entity'])
-        assert args["--entity"] == entity
-        journal = Journal(args)  # Loaded from persistent storage.
-        for infile in args["<infiles>"]:
-            journal.extend(JournalEntry.load(infile))
-        journal.save()  # Sends journal to persistent storage.
-
-        cofa = ChartOfAccounts(args)
-        # Get journal from persistent storage....
-        cofa.load_journal_entries(journal.journal)
-
-        expense_adjustment = zero_temporaries(cofa)
-        asset_adjustment = adjust4assets(cofa)
-
-        journal = Journal(args)  # ?unnecessary retrieval?
-        journal.extend(JournalEntry.load(expense_adjustment))
-        journal.extend(JournalEntry.load(asset_adjustment))
-        cofa = ChartOfAccounts(args)  # A virgin ledger.
-        journal.save()
-
-        with open("Kazan15_Journal", 'w') as file_object:
-            file_object.write(journal.show())
-
-        cofa.load_journal_entries(journal.journal)
-
-        with open("Kazan15_Ledger", 'w') as file_object:
-            file_object.write(cofa.show_accounts())
-
-        print(check_equity_vs_bank(cofa))
-
-def work_with(entity):
-    pass
-
-def menu(args):
-    """
-    Returns the name of an entity which which to work.
-    or exits the program.
-    """
-    while True:
-        default_entity = get_default_entity()
-        choice = input("""
-Choices are:
-    1. Create a new entity.
-    2. Choose an existing entity.
-        (Currently existing entities are: {})
-    9. Delete an entity.
-    0. Exit
-Choice must be "0", "1", "2", or "9": """.format(entity_listing()))
-        if choice == '0':
-            sys.exit()
-        elif choice == '1':
-            entity = create_new(choice)
-        elif choice == '2':
-            entity = choose_existing(choice,
-                        show_entity_menu(get_default_entity()))
-        elif choice == '9':
-            delete_option(choice)
-            entity = ''
-        else:
-            print("BAD CHOICE- try again....")
-            entity = None
-        if entity:
-            break
-
-    _ = input("Ready to work with entity: {}".format(entity))
-    work_with(entity)
-    
+#### The menu framework is in menu.py and work_with.py
 
 if __name__ == '__main__':  # code block to run the application
-    print('Running src/debk.py')
-    logging.basicConfig(level = config.LOGLEVEL)
-    args = docopt.docopt(__doc__, version=VERSION)
-    logging.debug(show_args(args, "Command line arguments"))
-    if args['menu']:
-        menu(args)
-    else:
-        main()
+    print('Running src/debk.py which does nothing but print this.')
+    # Need docopt to deal with --help and --version cl options.
 

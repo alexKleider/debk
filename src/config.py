@@ -1,4 +1,4 @@
-#!../venv/bin/python3
+#!./venv/bin/python
 # -*- coding: utf-8 -*-
 # vim: set file encoding=utf-8 :
 #
@@ -22,12 +22,7 @@
 #   <http://www.gnu.org/licenses/>.
 #   Look for file named COPYING.
 
-"""
-If editing this file, beaware that the testing suite uses its own
-version of config.py which differs only in the home directory specified.
-REMEMBER TO INCLUDE ANY CHANGES MADE TO THE OTHER VERSION.
-"""
-VERSION = "0.0.1"
+VERSION = "0.0.2"
 
 # LOGLEVEL = "DEBUG"
 # LOGLEVEL = "INFO"
@@ -35,22 +30,31 @@ LOGLEVEL = "WARNING"
 # LOGLEVEL = "ERROR"
 # LOGLEVEL = "CRITICAL"
 
+CofA_HEADERS = ['code', 'indent', 'full_name', 'name',
+                    'hidden', 'place_holder', 'split']
+N_COMPONENTS = len(CofA_HEADERS) -1
+
 ACCOUNT_CATEGORIES = dict(
-    ASSETS= '1000',
+    ASSET= '1000',
     LIABILITY= '2000',
     EQUITY= '3000',
     INCOME= '4000',
-    EXPENSES= '5000',
+    EXPENSE= '5000',
     )
 
 def account_category(code):
+    """
+    Depending on code provided, returns one of the following
+    ASSETS, LIABILITY, EQUITY, INCOME, EXPENSE
+    ACCOUNT_CATEGORIES.
+    """
     for category in ACCOUNT_CATEGORIES:
         if ACCOUNT_CATEGORIES[category][:1]  == code[:1]:
             return category
 
-ACCOUNT_CODE_LENGTH = len(ACCOUNT_CATEGORIES['ASSETS'])
+ACCOUNT_CODE_LENGTH = len(ACCOUNT_CATEGORIES['ASSET'])
 
-DR_ACCOUNTS = {'ASSETS', 'EXPENSES'}
+DR_ACCOUNTS = {'ASSET', 'EXPENSE'}
 CR_ACCOUNTS = {'LIABILITY', 'EQUITY', 'INCOME'}
 DR_FIRSTS = {ACCOUNT_CATEGORIES[item][:1] for item in DR_ACCOUNTS}
 CR_FIRSTS = {ACCOUNT_CATEGORIES[item][:1] for item in CR_ACCOUNTS}
@@ -62,44 +66,57 @@ def valid_account_code(account_code):
         return True
 
 MAXIMUM_VERBOSITY = 3
-EPSILON = 0.01  # We want acuracy to the nearest $0.01.
-INDENTATION_MULTIPLIER = 3  
+EPSILON = 0.001  # We want acuracy to the nearest $0.001.
+INDENTATION_MULTIPLIER = 3   # Might want to move this into DEFAULTS.
 
 N_ASSET_OWNERS = 8   # Specific to Kazan15
-                     #Must jive with 'split' values in CofAs.
+                     # Must jive with 'split' values in CofAs.
+                     # Will try to move this out of here and into a
+                     # special use module.
 
-# Each entity will have its home directory in DEFAULT_DIR.
-DEFAULT_DIR = '/var/opt/debk.d'  # for production
-# Rather than importing from debk which imports from config,
-# the testing module assigns its own
-# DEFAULT_DIR = './tests/debk.d'  # for testing
+DEFAULTS = dict(                # DEFAULTS defined here.       ####
+    home = '/var/opt/debk.d',  # Must have permissions set!!
+    # reset to './tests/debk.d' in the testing modules. 
 
-# Will need to have a setup routine to put the following into the
-# DEFAULT_DIR directory-----
-# The following files are expected to be in the DEFAULT_DIR directory:
-DEFAULT_CofA = "defaultChartOfAccounts"     # A file name.
-# The default chart of accounts. (For now: place holders only.)
-# A file of this name is kept in DEFAULT_DIR to serve as a template
-# during entity creation although a different file can be used, see
-# docstring for create_entity().
-DEFAULT_Metadata = "defaultMetadata.json"   # A file name.
-# A template used during entity creation.
-DEFAULT_Entity = "defaultEntity"            # A file name.
-# DEFAULT_Entity  - Keeps track of the last entity accessed.
-# Its content serves as a default if an entity is required but
-# not specified on the command line.
+    # Files expected to be in the "home" directory:
+    cofa_template = "defaultChartOfAccounts",     # A file name.
+    # A default chart of accounts used if there is no 'suffixed file'.
+    cofa_suffix = 'ChartOfAccounts',  # Suffix used to indicate which
+    # file to use rather than falling back on the default.
+#   metadata_template = "defaultMetadata.json",   # A file name.
+    # A template used during entity creation.
+    # No longer use- eventually delete DEFAULTS['metadata_tmeplate']
+    last_entity = "defaultEntity",            # A file name.
+    # Keeps track of the last entity accessed (the default.)
+    # An empty file if there is no default set.
 
-CofA_name = 'CofA'               #| These three files will appear
-Journal_name = 'Journal.json'    #| in the home directory of
-Metadata_name = 'Metadata.json'  #| each newly created entity.
+    cofa_name = 'CofA',              #| These three files will appear
+    metadata_name = 'Metadata.json', #| in the .d directory of each
+    journal_name = 'Journal.json',   #| entity at the time of its
+        # creation . The first one is copied from a template in the
+        # home directory; the other two are created.
+    verbosity = 3,
+    # Plan to make verbosity a bit map:
+    #   Names only
+    #   Names and totals only
+    #   Names, journal entries (brief), and totals.
+    #   Names, journal entries with descriptions, and totals.
+#   indentation = '',
+#   indentation_multiplier = 3,
 
+)   #### End of DEFAULTS dictionary.  ####
+
+
+
+# The following is no longer necessary: code is written to accept
+# these items in any order.
 LineEntry_input_order = dict(account_code= 0, #| Determines order in
                             _type= 1,      #| which LineItem textual
                             amount= 2)     #| input will be accepted.
-# The above must match the following prompt:
+# The above no longer need match the following prompt:
 LineEntry_input_format = "{}Enter AccntNum cr/dr Amount: "
 LineEntry_input_prompt = (
-"an account number, a D(ebit) or or C(redit) specifier, an amount")
+"an account number, D(ebit or or C(redit specifier, and n.n amount")
                             
 def valid_account_code_length(account_code):
     """
@@ -112,8 +129,8 @@ def valid_account_code_length(account_code):
         return True
 
 def test_firsts():
-    print("DR_FIRSTS are {}".format(DR_FIRSTS))
-    print("CR_FIRSTS are {}".format(CR_FIRSTS))
+    print("DR_FIRSTS are {}".format(sorted(list(DR_FIRSTS))))
+    print("CR_FIRSTS are {}".format(sorted(list(CR_FIRSTS))))
 
 def main():
     test_firsts()
