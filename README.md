@@ -27,6 +27,7 @@ the following command:
 _prompt>_ **git pull https://github.com/alexKleider/debk.git**
 which will create a _debk_ directory tree containing the source
 files.  Check that all the _.py_ files have the execution bits set.
+_prompt>_ **chmod 755 .py**
 
 The directory in which the data files are kept is specified in 
 the _debk/src/config.py_ file. If you wish to change the default
@@ -34,14 +35,17 @@ value (_/var/opt/debk.d_) you'll have to edit _debk/src/config.py_
 and change the value of DEFAULTS['home'].  Be sure to set ownership
 and permissions appropriately.  You will need to use root privileges
 to create and change ownership if you use the default.
+_prompt>_ **sudo mkdir /var/opt/debk.d**
+_prompt>_ **sudo chown alex:alex /var/opt/debk.d**
+You must of course use your own user name (rather than 'alex'.)
 
 Another requirement is to add your project directory to the
 PYTHONPATH environment variable.  Provided is _path.sh_, a shell
 script, which can be sourced, perhaps after editing to suit local
 needs:
 _prompt>_ **bash path.sh**
-This assumes that you've chosen your
-home directory into which to clone the _debk_ project.
+This script assumes that you've chosen your home directory into
+which to clone the _debk_ project.  If not, edit to suit.
 
 Finally, set up an environment: from within the project directory:
 _prompt>_ **virtualenv -p python3 venv
@@ -59,18 +63,27 @@ _prompt>_ **./src/menu.py**
 
 Most of the functionality is found in _src/debk.py_ although entity
 creation is handled by _src/entities.py_.  A menu driven user
-interface is provided in _src/menu.py_ module.  The next level down
-menu driven interface is provided by _src/workwith.py_.  There is
-also a _src/config.py_ dependency.  A test suite is found under the
-_tests_ directory.  _debk.d/defaultChartOfAccounts_ provides a 
+interface is provided by the _src/menu.py_ module.  The next level
+down menu driven interface is provided by _src/workwith.py_.  There
+is also a _src/config.py_ dependency.  A test suite is found under
+the _tests_ directory.  _debk.d/defaultChartOfAccounts_ provides a 
+suggested chart of accounts (aka ledger) which can be edited to 
+suit your own needs.  Indentation is for readability only. Comments
+are not permitted.  A copy must be placed in the _debk.d_ directory
+discussed in the next paragraph.
+_prompt>_ **cp debk.d/defaultChartOfAccounts**  \
+                        **/var/opt/debk.d/defaultChartOfAccounts**
+A leading white space stripped version of this file is treated as a
+CSV file so apart from the leading white space, it must conform to
+the format of a CSV file.
 
 ## Persistent Storage
 
 The system depends on the existence of a debk.d directory found under
-a 'home' directory specified by config.DEFAULTS['home'] by default set
-to /var/opt. It must be populated with appropriate content which at a
-minimum must include a _defaultChartOfAccounts_ file, an example of
-which can be copied from _debk/debk.d/_.
+a 'home' directory specified by config.DEFAULTS['home'] by default
+set to _/var/opt_. It must be populated with appropriate content
+which at a minimum must include a _defaultChartOfAccounts_ file, an
+example of which can be copied from _debk/debk.d/_.
 
 ## Entities
 
@@ -78,31 +91,34 @@ The system allows management of more than one set of books, each
 representing a named entity.  Entity creation, selection and deletion
 are handled through the menu interface which relies on entities.py.
 
+Entity names must consist only of letters, no dashes or underscores.
 Before creating a new entity, _testentity_ for example, you might like
 to first create a testentityChartOfAccounts (a concatenation of the name
 of the entity and 'ChartOfAccounts') and edit it to suit.
 _debk/tests/debk.d/ManeroChartOfAccounts_ and
-_debk/debk.d/defaultChartOfAccounts_ serves as examples.
+_debk/debk.d/defaultChartOfAccounts_ serve as examples.
 New entity creation wil result in a new sub-directory **testentity.d**
-and populate it with the following files:
+populated it with the following files:
     CofA
     Journal.json
     Metadata.json
 Any user must of course have read/write privileges.
-A **debk.d** directory is provided for use as a template under tests.
+
 
 ## Journal Entry
 
-Journal entry can be automated using redirection or, more conveniently,
-an input file, as described in the file **how2input**.  Further
-automation can be done using a bash script as demonstrated in **k15.sh**.
+Journal entry can be done individually by the user responding to
+prompts, or, more conveniently, by means of a previously created
+input file, as described in the file **how2input**.
+
 
 ## Back Ground
 
-The project was inspired by the book keeping needs of a group (Kazan15)
-taking a wilderness canoe trip on the Kazan River, Nunavit, Canada. The
-soft ware includes 'custom' facilities specialized for this group.  The
-accompanying 'explanation' file provides details.
+The project was inspired by the book keeping needs of a group
+(Kazan15) taking a wilderness canoe trip on the Kazan River in
+Nunavit, Canada. The soft ware includes several 'custom' features
+specialized for this group. 
+
 
 ## Disclaimers
 
@@ -113,7 +129,7 @@ docstring.  Although not tested, it should be possible after entity
 creation to add accounts by simply editing the entity's CofA file.
 Deleting accounts will likely create havoc!
 
-To use this software, the user must have a clear idea of the meaning of
-'debit' and 'credit' in the context of double entry book keeping.
-Familiarity with text editing and file manipulation and redirection is
-also assumed.
+To use this software, the user must have a clear idea of the meaning
+of 'debit' and 'credit' in the context of double entry book keeping.
+Familiarity with the command line, text editing, file manipulation
+and Python's virtualenv is also assumed.

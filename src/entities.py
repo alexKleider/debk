@@ -30,13 +30,12 @@ def get_file_info(defaults):
 #   print("home dir: {}, entity file: {}"
 #                   .format(home, default_file))
     try:
-        assert (os.path.isdir(home)
-            and os.path.isfile(default_file))
+        assert os.path.isdir(home)
     except AssertionError:
         logging.critical(
-        "Needed files ('%s' & '%s') don't exist." % (
-            home, default_file))
-        print("Unable to continue: missing vital files.")
+        "Needed directory ('%s') doesn't exist." % (
+            home))
+        print("Unable to continue: missing vital 'home' directory.")
         sys.exit(1)
     lst = [file_name[:-2]
         for file_name in os.listdir(home)
@@ -47,8 +46,7 @@ def get_file_info(defaults):
     except OSError:
         default_entity = ''
         logging.warning(
-        "Expected file '%' could not be found by 'get_file_info()'."
-                % default_path)
+    "Expected file (%s) could not be found by 'get_file_info()'." % default_file)
     if default_entity in lst:
         default = default_entity
     else:

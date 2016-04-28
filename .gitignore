@@ -2,6 +2,7 @@ accounting
 *defaultEntity
 TestReport
 tests/debk.d/defaultEntity
+venv/
 *.pyc
 __pycache__
 
