@@ -39,6 +39,7 @@ _prompt>_ **sudo mkdir /var/opt/debk.d**
 _prompt>_ **sudo chown alex:alex /var/opt/debk.d**
 You must of course use your own user name (rather than 'alex'.)
 
+<<<<<<< HEAD
 Another requirement is to add your project directory to the
 PYTHONPATH environment variable.  Provided is _path.sh_, a shell
 script, which can be sourced, perhaps after editing to suit local
@@ -52,6 +53,21 @@ _prompt>_ **virtualenv -p python3 venv
 _prompt>_ **source venv/bin/activate
 To exit the environment (when done) the command to use is simply:
 _prompt>_ **deactivate**
+=======
+A final requirement is to add your project directory to the PYTHONPATH
+environment variable.  The following code fragment illustrates how
+this can be done and can be added to the end of your ~/.profile file.
+myPyDir='Py'
+PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}${HOME}/$myPyDir"
+myPyDir='some/other/project'
+PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}${HOME}/$myPyDir"
+myPyDir='debk'
+export PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}${HOME}/$myPyDir"
+Only the last two lines are needed but the rest is provided to
+illustrate how you could set it up so several projects would be
+included in your PYTHONPATH.  This assumes that you've chosen your
+home directory into which to clone the _debk_ project.
+>>>>>>> 0803e4e197aabcfc5e092764f648257a55ab1172
 
 
 Usage:
