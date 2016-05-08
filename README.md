@@ -16,65 +16,50 @@ the significance differs depending on the account type.
 
 The following is a suggested way of getting up and running.
 
-Choose (1.) a directory within which you want the project directory to
-reside and (2.) a directory for the data files.  They can both be the
+Choose (1) a directory within which you want the project directory to
+reside and (2) a directory for the data files.  They can both be the
 same directory; the latter can be within the former; they can be in
-disparate locations of your choosing.
+disparate locations of your choosing.  It is suggested that you use 
+the defaults: your 'home directory' and _debk.d_ within the project
+directory.  This will minimize the amount of configuration necessary.
 
-Let's assume you choose _/home/user/python_ to be the parent of your
-project directory.  Make it your working directory and then execute
-the following command:
+Let's assume you choose _/home/user_ to be the parent of your
+project directory.  (You will want to substitute your user name for
+the 'user' part.)  Make it your working directory:
+_prompt>_ **cd /home/user**
+and then execute the following command:
 _prompt>_ **git pull https://github.com/alexKleider/debk.git**
 which will create a _debk_ directory tree containing the source
-files.  Check that all the _.py_ files have the execution bits set.
-_prompt>_ **chmod 755 .py**
+files as well as a _debk.d_ directory for persistent storage.
+Change to the project directory directory:
+_prompt>_ **cd debk**
+All of what follows assumes that you have the project directory
+as your current working directory.
+Check that all the _.py_ files have the execution bits set.
+_prompt>_ **chmod 755 */*.py**
 
-The directory in which the data files are kept is specified in 
-the _debk/src/config.py_ file. If you wish to change the default
-value (_/var/opt/debk.d_) you'll have to edit _debk/src/config.py_
+The directory in which the data files are kept is specified in the
+_debk/src/config.py_ file. If you wish to change the default value
+(_~/debk/debk.d_) you'll have to edit _~/debk/src/config.py_
 and change the value of DEFAULTS['home'].  Be sure to set ownership
-and permissions appropriately.  You will need to use root privileges
-to create and change ownership if you use the default.
-_prompt>_ **sudo mkdir /var/opt/debk.d**
-_prompt>_ **sudo chown alex:alex /var/opt/debk.d**
-You must of course use your own user name (rather than 'alex'.)
+and permissions appropriately.
 
-<<<<<<< HEAD
 Another requirement is to add your project directory to the
 PYTHONPATH environment variable.  Provided is _path.sh_, a shell
 script, which can be sourced, perhaps after editing to suit local
 needs:
 _prompt>_ **bash path.sh**
-This script assumes that you've chosen your home directory into
-which to clone the _debk_ project.  If not, edit to suit.
+This script assumes that you've chosen to clone the _debk_ project
+into your home directory.  If not, edit to suit.
 
-Finally, set up an environment: from within the project directory:
-_prompt>_ **virtualenv -p python3 venv
-_prompt>_ **source venv/bin/activate
+Finally, set up an environment.  From within the project directory:
+_prompt>_ **virtualenv -p python3 venv**
+_prompt>_ **source venv/bin/activate**
 To exit the environment (when done) the command to use is simply:
 _prompt>_ **deactivate**
-=======
-A final requirement is to add your project directory to the PYTHONPATH
-environment variable.  The following code fragment illustrates how
-this can be done and can be added to the end of your ~/.profile file.
-myPyDir='Py'
-PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}${HOME}/$myPyDir"
-myPyDir='some/other/project'
-PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}${HOME}/$myPyDir"
-myPyDir='debk'
-export PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}${HOME}/$myPyDir"
-Only the last two lines are needed but the rest is provided to
-illustrate how you could set it up so several projects would be
-included in your PYTHONPATH.  This assumes that you've chosen your
-home directory into which to clone the _debk_ project.
->>>>>>> 0803e4e197aabcfc5e092764f648257a55ab1172
 
 
 Usage:
-
-The following is no longer implemented:
-_prompt>_ **./src/python3 debk.py -h**
-Instead use
 _prompt>_ **./src/menu.py**
 
 Most of the functionality is found in _src/debk.py_ although entity
@@ -95,11 +80,11 @@ the format of a CSV file.
 
 ## Persistent Storage
 
-The system depends on the existence of a debk.d directory found under
-a 'home' directory specified by config.DEFAULTS['home'] by default
-set to _/var/opt_. It must be populated with appropriate content
-which at a minimum must include a _defaultChartOfAccounts_ file, an
-example of which can be copied from _debk/debk.d/_.
+The system depends on the existence of a _debk.d_ directory found
+under a 'home' directory specified by config.DEFAULTS['home']. By
+default this is set to _/var/opt_. It must be populated with a 
+_defaultChartOfAccounts_ file, an example of which can be copied
+from _debk/debk.d/_ as described above.
 
 ## Entities
 
@@ -114,11 +99,11 @@ of the entity and 'ChartOfAccounts') and edit it to suit.
 _debk/tests/debk.d/ManeroChartOfAccounts_ and
 _debk/debk.d/defaultChartOfAccounts_ serve as examples.
 New entity creation wil result in a new sub-directory **testentity.d**
-populated it with the following files:
+populated with the following files:
     CofA
     Journal.json
     Metadata.json
-Any user must of course have read/write privileges.
+Read/write privileges may have to be adjusted.
 
 
 ## Journal Entry

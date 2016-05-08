@@ -224,7 +224,7 @@ def acnt_type_from_code(account_code):
     elif first in config.CR_FIRSTS:  # Liability, Equity, Income
         return('Cr')
     logging.critical(
-    "Malformed account code: %s.", account_code)
+    "Malformed account code: '%s'", account_code)
 
 #####  END OF HELPER FUNCTIONS  #####
 

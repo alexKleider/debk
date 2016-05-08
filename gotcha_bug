@@ -2,15 +2,14 @@ problem with
 ./src/debk.py
 ......
 file too long
-results from there not being a shebang line and can be circumvented
-by adding one or by prefacing the command with 
-python
+results from there not being a shebang line.
 
 The shebang line to use is
-#!../venv/bin/python
-as long as the venv has been activated.
-#!../../venv/bin/python
-will also work but will be the ~/Py/venv 
-rather than the ~/Py/CSV/venv
+#!./venv/bin/python
+as long as the venv has been set up and activated 
+in the project (in my case: /home/alex/debk) directory.
 
+
+Alternatively, problem can be circumvented (not
+recommended) by prefacing the command with python
 
