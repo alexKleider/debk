@@ -10,7 +10,6 @@ part of the double entry book keeping system.
 import os
 import sys
 import shutil
-import csv
 import json
 import logging
 
@@ -84,6 +83,8 @@ def create_entity(entity_name, defaults, set_default=True):
     new_Journal = os.path.join(new_dir, defaults['journal_name'])
     meta_dest = os.path.join(new_dir, defaults['metadata_name'])
 
+    # Following provides the metadata content eliminating the need to
+    # have a separate file as was done initially.
     metadata = ("""{{\n"entity_name": "{}",
 "next_journal_entry_number": 1\n}}""".format(entity_name))
 

@@ -22,6 +22,8 @@
 #   <http://www.gnu.org/licenses/>.
 #   Look for file named COPYING.
 
+import os
+
 VERSION = "0.0.2"
 
 # LOGLEVEL = "DEBUG"
@@ -74,21 +76,20 @@ N_ASSET_OWNERS = 8   # Specific to Kazan15
                      # Will try to move this out of here and into a
                      # special use module.
 
-DEFAULTS = dict(                # DEFAULTS defined here.       ####
-    home = '/var/opt/debk.d',  # Must have permissions set!!
-    # reset to './tests/debk.d' in the testing modules. 
+DEFAULTS = dict(        # DEFAULTS, often imported "as D".  ####
+    home = os.path.expanduser('~/debk/debk.d'),
+    # If changing the above, be sure permissions are set properly.
+    # DEFAULTS["home"] is reset to './tests/debk.d' for tests.
 
-    # Files expected to be in the "home" directory:
     cofa_template = "defaultChartOfAccounts",     # A file name.
-    # A default chart of accounts used if there is no 'suffixed file'.
+    # A file by this name and consisting of a default chart of
+    # accounts is expected to be in the "home" directory to be
+    # used if there is no 'suffixed file'.
     cofa_suffix = 'ChartOfAccounts',  # Suffix used to indicate which
     # file to use rather than falling back on the default.
-#   metadata_template = "defaultMetadata.json",   # A file name.
-    # A template used during entity creation.
-    # No longer use- eventually delete DEFAULTS['metadata_tmeplate']
     last_entity = "defaultEntity",            # A file name.
     # Keeps track of the last entity accessed (the default.)
-    # An empty file if there is no default set.
+    # May be empty or non existent (until file if there is no default set.
 
     cofa_name = 'CofA',              #| These three files will appear
     metadata_name = 'Metadata.json', #| in the .d directory of each
