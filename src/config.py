@@ -23,6 +23,10 @@
 #   Look for file named COPYING.
 
 import os
+import time
+DEFAULT_YEAR = time.localtime().tm_year
+MONTHS = ('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec')
 
 VERSION = "0.0.2"
 
@@ -133,9 +137,39 @@ def test_firsts():
     print("DR_FIRSTS are {}".format(sorted(list(DR_FIRSTS))))
     print("CR_FIRSTS are {}".format(sorted(list(CR_FIRSTS))))
 
-def main():
-    test_firsts()
+def check_date(entry):
+    """
+    Checks that something reasonable was provided as a date.
+    Expects Month, Day, Year format.
+    Returns standard Month, Day, Year formated string
+    or None if uninterpretable.
+    """
+    parts = entry.translate(str.maketrans(',.-/-','     ')).split()
+    if len(parts) == 2:
+        parts.append(DEFAULT_YEAR)
+    if len(parts) != 3:
+        return
+    parts[0] = parts[0].capitalize()[:3]
+    if not parts[0] in MONTHS:
+        return
+    try:
+        day = int(parts[1])
+        year = int(parts[2])
+    except ValueError:
+        return
+    if day > 31:
+        return
+    if year < 100:
+        year += 2000
+    return "{} {:0>2d}, {}".format(parts[0], day, year)
 
 if __name__ == '__main__':
-    main()
+    print("DEFAULT_YEAR is '{}'.".format(DEFAULT_YEAR))
+    while True:
+        date = input("Date: ")
+        date = check_date(date)
+        if date:
+            print("Valid date: '{}'.".format(date))
+        else:
+            print("Invalid date.")
 
