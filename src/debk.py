@@ -889,17 +889,27 @@ class JournalEntry(object):
         A valid entry is returned following a single blank line_item
         so long as debits and credits balance (else None is returned.)
         """
-        date_stamp = input("""
+        print("""
     A journal entry must include a date, a user ID, a transaction
     description (more than one line is OK, an empty line terminates
     description entry) and a list of line items each consisting of the
     following three white space separated values: 
     {}.
-    Debit and credit values must balance.  (Empty line terminates.)
-        Date: """.format(config.LineEntry_input_prompt))
-        if not date_stamp:  # Empty 'date_stamp' line terminates
-            print()
-            return
+    Debit and credit values must balance. Empty line terminates.""" 
+                        .format(config.LineEntry_input_prompt))
+        while True:
+            date_stamp = input("""
+        Date (Month, day, year format please): """)
+            if not date_stamp:  # Empty 'date_stamp' line terminates
+                print()
+                return
+            date = config.check_date(date_stamp)
+            if date:
+                date_stamp = date
+                break
+            else:
+                print("!!!! Invalid date entry- please try again.")
+
         user = input("        Your ID: ")
         description_array = []
         while True:  # Allow multiline transaction description.

@@ -23,6 +23,11 @@
 #   Look for file named COPYING.
 
 import os
+import time
+DEFAULT_YEAR = time.localtime().tm_year
+Short_Months = {'Feb', 'Apr', 'Jun', 'Sep', 'Nov'}
+Months = (
+{'Jan', 'Mar', 'May', 'Jul', 'Aug', 'Oct', 'Dec'} | Short_Months)
 
 VERSION = "0.0.2"
 
@@ -133,9 +138,62 @@ def test_firsts():
     print("DR_FIRSTS are {}".format(sorted(list(DR_FIRSTS))))
     print("CR_FIRSTS are {}".format(sorted(list(CR_FIRSTS))))
 
-def main():
-    test_firsts()
+def split_month_day(date):
+    i = 0
+    letters = []
+    numbers = []
+    while i<len(date):
+        if date[i].isalpha():
+            letters.append(date[i])
+            i+=1
+        else:
+            break
+    while i<len(date):
+        if date[i].isdigit():
+            numbers.append(date[i])
+            i+=1
+        else:
+            break
+    return [''.join(letters), ''.join(numbers)]
+
+def check_date(entry):
+    """
+    Checks that something reasonable was provided as a date.
+    Expects Month, Day, Year format.
+    Month and Day can be without any separator between them.
+    Returns standard Month, Day, Year formated string
+    or None if uninterpretable.
+    """
+    parts = entry.translate(str.maketrans(',.-/-','     ')).split()
+    if parts and parts[0][:1].isalpha() and parts[0][-1:].isdigit():
+        parts = split_month_day(parts[0]) + (parts[1:])
+    if len(parts) == 2:
+        parts.append(DEFAULT_YEAR)
+    if (len(parts) != 3) or (not parts[0].isalpha()):
+        return
+    parts[0] = parts[0].capitalize()[:3]
+    if not parts[0] in Months:
+        return
+    try:
+        day = int(parts[1])
+        year = int(parts[2])
+    except ValueError:
+        return
+    if ( (day > 31) or (day < 1) or
+         (day == 31 and parts[0] in Short_Months) or
+         ( parts[0] == 'Feb' and day > 29)):
+        return
+    if year < 100:
+        year += 2000
+    return "{} {:0>2d}, {}".format(parts[0], day, year)
 
 if __name__ == '__main__':
-    main()
+    print("DEFAULT_YEAR is '{}'.".format(DEFAULT_YEAR))
+    while True:
+        date = input("Date: ")
+        date = check_date(date)
+        if date:
+            print("Valid date: '{}'.".format(date))
+        else:
+            print("Invalid date.")
 
