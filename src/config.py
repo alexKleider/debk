@@ -138,7 +138,6 @@ def test_firsts():
     print("DR_FIRSTS are {}".format(sorted(list(DR_FIRSTS))))
     print("CR_FIRSTS are {}".format(sorted(list(CR_FIRSTS))))
 
-
 def split_month_day(date):
     i = 0
     letters = []
