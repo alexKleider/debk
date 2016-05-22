@@ -161,6 +161,7 @@ def check_date(entry):
     """
     Checks that something reasonable was provided as a date.
     Expects Month, Day, Year format.
+    Month and Day can be without any separator between them.
     Returns standard Month, Day, Year formated string
     or None if uninterpretable.
     """
