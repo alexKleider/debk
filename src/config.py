@@ -25,9 +25,14 @@
 import os
 import time
 DEFAULT_YEAR = time.localtime().tm_year
+<<<<<<< HEAD
 Short_Months = {'Feb', 'Apr', 'Jun', 'Sep', 'Nov'}
 Months = (
 {'Jan', 'Mar', 'May', 'Jul', 'Aug', 'Oct', 'Dec'} | Short_Months)
+=======
+MONTHS = ('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec')
+>>>>>>> 7ba5c3ac0c63f6119551787ff04363ea9a294aae
 
 VERSION = "0.0.2"
 
@@ -138,6 +143,7 @@ def test_firsts():
     print("DR_FIRSTS are {}".format(sorted(list(DR_FIRSTS))))
     print("CR_FIRSTS are {}".format(sorted(list(CR_FIRSTS))))
 
+<<<<<<< HEAD
 
 def split_month_day(date):
     i = 0
@@ -161,6 +167,7 @@ def check_date(entry):
     """
     Checks that something reasonable was provided as a date.
     Expects Month, Day, Year format.
+    Month and Day can be without any separator between them.
     Returns standard Month, Day, Year formated string
     or None if uninterpretable.
     """
