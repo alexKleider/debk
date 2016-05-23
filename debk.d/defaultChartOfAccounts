@@ -38,7 +38,9 @@ code,indent,full_name,name,hidden,place_holder,split
     5300,1,Expenses:Supplies,Supplies,F,F
     5350,1,Expenses:Repairs,Repairs,F,F
     5400,1,Expenses:Rent,Rent,F,F
-    5500,1,Expenses:Utilities,Utilities,F,F
+    5500,1,Expenses:Utilities,Utilities,F,T
+    5501,2,Expenses:Utilities:Propane,Propane,F,F
+    5502,2,Expenses:Utilities:Electricity,Electricity,F,F
     5600,1,Expenses:Advertising,Advertising,F,F
     5700,1,Expenses:Depreciation,Depreciation,F,F
     5910,1,Non-Operating Expense:Loss on Sale of Assets,Loss on Sale of Assets,F,F

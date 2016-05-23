@@ -29,8 +29,14 @@ This project was inspired by and serves the special accounting
 needs of the Kazan15 'group of 10.'[1]  Perhaps it might serve
 other needs as well.
 
+The current implementation is driven using the following command:
+    ./src/menu.py
+Run ./src/menu.py --help for further information.
+
 Usage:
-  debk.py -h | --version
+  ./src/debk.py
+  ./src/debk.py -h | --help
+  ./src/debk.py --version
 
 Options:
   -h --help  Print usage statement.
@@ -55,8 +61,7 @@ import copy
 import shutil
 import logging
 import datetime
-
-# import docopt
+from docopt import docopt
 import src.config as config
 from src.config import DEFAULTS as D
 logging.basicConfig(level = config.LOGLEVEL)
@@ -65,8 +70,6 @@ import re
 # Dollar entries require a decimal ('.') but must not have a '$' sign.
 regex_dollar_as_float_expression = (r"\d{0,}\.\d{0,2}")
 money_pattern = re.compile(regex_dollar_as_float_expression)
-
-VERSION = config.VERSION
 
 INDENTATION_CONSTANT = ' ' * config.INDENTATION_MULTIPLIER  
 
@@ -1400,6 +1403,8 @@ def check_equity_vs_bank(chart_of_accounts):
 #### The menu framework is in menu.py and work_with.py
 
 if __name__ == '__main__':  # code block to run the application
-    print('Running src/debk.py which does nothing but print this.')
-    # Need docopt to deal with --help and --version cl options.
+    args = docopt(__doc__, version=config.VERSION)
+    print(
+    'Running src/debk.py which does nothing but print its args:')
+    print(args)
 

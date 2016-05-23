@@ -5,11 +5,28 @@
 """
 A simple menu model to be used as a front end for the
 double entry book keeping project.
+
+Usage: 
+    ./src/menu.py
+    ./src/menu.py -h | --help
+    ./src/menu.py --version
+    ./src/menu.py <data_directory>
+
+Options:
+  -h --help  Print usage statement.
+  --version  Print version.
+
+A single positional parameter, if provided, specifies a
+directory which will replace that specified by DEFAULTS['home']
+in ./src/config.py
 """
 
 import sys
+from docopt import docopt
 from src.work_with import work_with
 from src import entities as E
+from src.config import VERSION
+from src.config import DEFAULTS as D
 
 def choose_entity(entities, indent=0):
     """
@@ -170,6 +187,8 @@ Choice: """.format(defaults['home'], listing))
             work_with(defaults)
 
 if __name__ == "__main__":
-    from CSV.debk.src.config import DEFAULTS as D
-#   D['home'] = "/home/alex/Py/CSV/debk/tests/debk.d"
+    args = docopt(__doc__, version=VERSION)
+#   print(args)
+    if args['<data_directory>']:
+        D['home'] = args["<data_directory>"]
     menu(D)
