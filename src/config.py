@@ -22,6 +22,15 @@
 #   <http://www.gnu.org/licenses/>.
 #   Look for file named COPYING.
 
+verbosity_levels_explained = """
+0: Show all the accounts without any accounting data.
+1: Show accounts and their balances but only if there is a balance.
+2: Show accounts along with each contributing journal entry
+but only for accounts that have at least one journal entry.
+3: Show everything; that is to say, all the accounts, devoid of
+activity or not, along with all the relevant journal entries..
+"""
+
 import os
 import time
 DEFAULT_YEAR = time.localtime().tm_year
@@ -72,7 +81,7 @@ def valid_account_code(account_code):
     and len(account_code) == ACCOUNT_CODE_LENGTH):
         return True
 
-MAXIMUM_VERBOSITY = 3
+DEFAULT_VERBOSITY = 2
 EPSILON = 0.001  # We want acuracy to the nearest $0.001.
 INDENTATION_MULTIPLIER = 3   # Might want to move this into DEFAULTS.
 
@@ -101,17 +110,12 @@ DEFAULTS = dict(        # DEFAULTS, often imported "as D".  ####
     journal_name = 'Journal.json',   #| entity at the time of its
         # creation . The first one is copied from a template in the
         # home directory; the other two are created.
-    verbosity = 3,
+    verbosity = DEFAULT_VERBOSITY,
     # Plan to make verbosity a bit map:
-    #   Names only
-    #   Names and totals only
-    #   Names, journal entries (brief), and totals.
-    #   Names, journal entries with descriptions, and totals.
 #   indentation = '',
 #   indentation_multiplier = 3,
 
 )   #### End of DEFAULTS dictionary.  ####
-
 
 
 # The following is no longer necessary: code is written to accept

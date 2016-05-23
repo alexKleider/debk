@@ -397,11 +397,17 @@ class Account(object):
                     split_as_string = self.split_as_str,
                     )
 
-    def show_account(self, verbosity = config.MAXIMUM_VERBOSITY):
+    def show_account(self, verbosity = config.DEFAULT_VERBOSITY):
         """   Indirectly tested in tests/test1 class Ledger.setUp-
                             must examine TestReport.
         Returns a string representation of an account.
         Assigned to __str__.
+        What is shown depends on verbosity which is determined
+        by the value of /src/config.DEFAULTS['verbosity'] which 
+        defaults to 2 but can be can be set by the CLI and within
+        the src/menu.py menu.
+        See src/config.py for details of what each verbosity level
+        means.
         """
         if not verbosity:    # Just show the account metadata.
             ret = []
@@ -417,7 +423,11 @@ class Account(object):
         # Assign first part of first line:
         ret = ['{}Acnt#{}'.format(self.indent, self.code)]
         # Assign 2nd part of first line- depending if place_holder:
-        if self.place_holder: ret.append(
+        has_balance = False
+        if self.place_holder:
+            if self.s_balance:
+                has_balance = True
+            ret.append(
                 "{} {} Title_Account- subtotal: {:.2f}".
                 format(
                     self.full_name.upper(),
@@ -425,6 +435,7 @@ class Account(object):
                     self.s_balance))
         else: 
             if self.balance:
+                has_balance = True
                 type_ = self.type_ + 'r'
             else:
                 type_ = ''
@@ -443,7 +454,10 @@ class Account(object):
                                         line_entry.show()))
 
         # Put it all together and return it:
-        return '\n'.join(ret)
+        if (verbosity > 3) or (has_balance):
+            return '\n'.join(ret)
+        else:
+            return ''
 
     __str__ = show_account
 
