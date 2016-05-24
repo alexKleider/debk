@@ -45,7 +45,7 @@ VERSION = "0.0.2"
 LOGLEVEL = "WARNING"
 # LOGLEVEL = "ERROR"
 # LOGLEVEL = "CRITICAL"
-
+DEFAULT_CURRENCY_SIGN = '$'
 CofA_HEADERS = ['code', 'indent', 'full_name', 'name',
                     'hidden', 'place_holder', 'split']
 N_COMPONENTS = len(CofA_HEADERS) -1
@@ -190,6 +190,15 @@ def check_date(entry):
     if year < 100:
         year += 2000
     return "{} {:0>2d}, {}".format(parts[0], day, year)
+
+def normalizeValue(val):
+    """
+    Provides for parens as an alternative to minus
+    and eliminates currency sign if present.
+    """
+    if amt.startswith('(') and amt.endswith(')'):
+       amt = '-' + amt[1:-1]
+    return amt.replace(DEFAULT_CURRENCY_SIGN,'')
 
 if __name__ == '__main__':
     print("DEFAULT_YEAR is '{}'.".format(DEFAULT_YEAR))

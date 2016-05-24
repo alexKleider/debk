@@ -969,25 +969,28 @@ class JournalEntry(object):
         NB: No user approval mechanism for this form of journal entry.
         """
 
-        def initialize():
-#           print(  # debugging print
-#               "Initializing a new journal_entry dict.")
-            return  dict(entry_number= 0,
-                        date_stamp= '',
-                        user= '',
-                        description = [],
-                        line_items= [],
-                        )
+        def initialize():                                  # Helper
+#           print(  # debugging print                      # func.
+#               "Initializing a new journal_entry dict.")  #
+            return  dict(entry_number= 0,                  #
+                        date_stamp= '',                    #
+                        user= '',                          #
+                        description = [],                  #
+                        line_items= [],                    #
+                        )                                  #
 
-        if os.path.isfile(text_or_filename):
-            with open(text_or_filename, 'r') as f:
-                raw_data = f.read()
-        else:
-            raw_data = text_or_filename
-        data = raw_data.split('\n')
-        journal_entries = []   # What's to be returned.
+        if os.path.isfile(text_or_filename):               # collect
+            with open(text_or_filename, 'r') as f:         # text
+                raw_data = f.read()                        # i.e.
+        else:                                              # raw
+            raw_data = text_or_filename                    # data
+        data = raw_data.split('\n')                        #
+
+        ret = []   # To collect journal_entries.
+
         # Initialize what will potentially be the first entry...
         new_dict = initialize()
+
         for line in data:
             line = line.strip()
             if not line:  # Blank line.
@@ -1003,7 +1006,7 @@ class JournalEntry(object):
                 if new_je.ok():
 #                   print(  # debugging print
 #                       "JE passed: {}".format(new_je.show()))
-                    journal_entries.append(new_je)
+                    ret.append(new_je)
                 else:
                     pass
 #                   print(  # debugging print
@@ -1014,7 +1017,7 @@ class JournalEntry(object):
             if not new_dict['date_stamp']:
 #               print(  # debugging print
 #                  "setting date_stamp to '{}'".format(line))
-                new_dict['date_stamp'] = line
+                new_dict['date_stamp'] = config.check_date(line)
             elif not new_dict['user']:
 #               print(   # debugging print
 #                  "setting user to '{}'".format(line))
@@ -1034,13 +1037,13 @@ class JournalEntry(object):
                         pass
 #                       print(   # debugging print
 #               "Expect to fail after last line_item is collected.")
-#       if not journal_entries:   # next 6 lines debugging print
+#       if not ret:   # next 6 lines debugging print
 #           print("\nJournalEntry.load on '{}' => {} (nothing!)"
-#                   .format(text_or_filename, journal_entries))
+#                   .format(text_or_filename, ret))
 #       else:
-#           for journal_entry in journal_entries:
+#           for journal_entry in ret:
 #               print("\n{}".format(journal_entry.show()))
-        return journal_entries
+        return ret
 
     def ok(self):
         """             Tested in ./tests/test2.py JournalEntryTests

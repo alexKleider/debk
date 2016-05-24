@@ -461,11 +461,11 @@ Reflect ownership of fixed assets.
 """
 JOURNAL ENTRIES:......           Entity: 'testentity'
 
-  #001 on July 3, 2015 by Alex Kleider.
+  #001 on Jul 03, 2015 by Alex Kleider.
     Pay for some food.
       5310:      304.20Dr
       3009:                    304.20Cr
-  #002 on August 26, 2015 by book keeper.
+  #002 on Aug 26, 2015 by book keeper.
     Reflect ownership of fixed assets.
       3001:      262.57Dr
       3002:      262.57Dr
