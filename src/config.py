@@ -31,14 +31,33 @@ but only for accounts that have at least one journal entry.
 activity or not, along with all the relevant journal entries..
 """
 
+VERSION = "0.0.2"
+
 import os
 import time
+
 DEFAULT_YEAR = time.localtime().tm_year
 Short_Months = {'Feb', 'Apr', 'Jun', 'Sep', 'Nov'}
 Months = (
 {'Jan', 'Mar', 'May', 'Jul', 'Aug', 'Oct', 'Dec'} | Short_Months)
 
-VERSION = "0.0.2"
+DEFAULT_CURRENCY = 'dollar'
+currency_signs = {
+    "dollar": "\u0024",
+    "pound": "\u00a3",
+    "yuan": "\u00a5",
+    "yen": "\u00a5",
+    "euro": "\u20ac",
+    }
+DEFAULT_CURRENCY_SIGN = currency_signs[DEFAULT_CURRENCY]
+def assign_money_regex(currency_sign=DEFAULT_CURRENCY):
+    if currency_sign == 'dollar':
+        return r"\${0,1}\d{0,}\.\d{0,2}"
+    else:
+        return (
+            "(?:{})".format(currency_signs[currency_sign]) +
+                r"{0,1}\d{0,}\.\d{0,2}")
+MONEY_REGEX = assign_money_regex()
 
 # LOGLEVEL = "DEBUG"
 # LOGLEVEL = "INFO"
@@ -195,6 +214,8 @@ def normalizeValue(val):
     """
     Provides for parens as an alternative to minus
     and eliminates currency sign if present.
+    If both are used, the currency sign is expected
+    to be with in the parens.
     """
     if amt.startswith('(') and amt.endswith(')'):
        amt = '-' + amt[1:-1]
@@ -203,7 +224,10 @@ def normalizeValue(val):
 if __name__ == '__main__':
     print("DEFAULT_YEAR is '{}'.".format(DEFAULT_YEAR))
     while True:
+        print("Type 'end' to end date testing.")
         date = input("Date: ")
+        if date == "end":
+            break
         date = check_date(date)
         if date:
             print("Valid date: '{}'.".format(date))

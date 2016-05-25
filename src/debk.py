@@ -67,9 +67,10 @@ from src.config import DEFAULTS as D
 logging.basicConfig(level = config.LOGLEVEL)
 
 import re
-# Dollar entries require a decimal ('.') but must not have a '$' sign.
-regex_dollar_as_float_expression = (r"\d{0,}\.\d{0,2}")
-money_pattern = re.compile(regex_dollar_as_float_expression)
+# Dollar entries require a decimal ('.'); may or may not have a
+# currency sign, but if they do, it must match that specified by 
+# src/config.DEFAULT_CURRENCY_SIGN.
+money_pattern = re.compile(config.regex_money_as_float_expression)
 
 INDENTATION_CONSTANT = ' ' * config.INDENTATION_MULTIPLIER  
 

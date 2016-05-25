@@ -21,9 +21,10 @@
 #   Look for file named COPYING.
 """
 test suite for debk.src.config.check_date.
+and debk.src.config.assign_money_regex.
 """
 import unittest
-from src.config import check_date
+import src.config as config
 
 VERSION = "v0.0.1"
 
@@ -78,11 +79,15 @@ class DateStamp(unittest.TestCase):
             ("november31, 2015", None),
             ("december32, 2015", None),
                     ]
-        for input_string, result in testdata:
-            with self.subTest(input_string=input_string,
-                                    result=result):
-                self.assertEqual(check_date(input_string),
-                                    result)
+        for currency_sign in config.currency_signs:
+            for input_string, result in testdata:
+                with self.subTest(currency_sign=currency_sign,
+                                input_string=input_string,
+                                result=result):
+                    self.assertEqual(
+                        config.assign_money_regex(input_string),
+                                        result)
+
 
 if __name__ == '__main__':  # code block to run the application
     unittest.main()
