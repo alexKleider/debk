@@ -188,7 +188,7 @@ Choice: """.format(defaults['home'], listing))
 
 if __name__ == "__main__":
     args = docopt(__doc__, version=VERSION)
-#   print(args)
+    print(args)
     if args['<data_directory>']:
         D['home'] = args["<data_directory>"]
     menu(D)

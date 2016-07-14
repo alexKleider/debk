@@ -23,6 +23,7 @@
 test suite for debk.src.config.check_date.
 and debk.src.config.assign_money_regex.
 """
+import re
 import unittest
 import src.config as config
 
@@ -79,14 +80,66 @@ class DateStamp(unittest.TestCase):
             ("november31, 2015", None),
             ("december32, 2015", None),
                     ]
+        for input_string, result in testdata:
+            with self.subTest(input_string=input_string,
+                                    result=result):
+                self.assertEqual(config.check_date(input_string),
+                                    result)
+
+class MoneyRegex(unittest.TestCase):
+    """Test the assign_money_regex function of src/config.py."""
+    def test_assign_money_regex(self):
+        testdata = {
+            "dollar": [
+                ("1010 Cr .", None),
+                ("1010 Cr $.", None),
+                ("1010 Cr $75.45", 75.45),
+                ("1010 Cr $75.", 75.00),
+                ("1010 Cr 75.", 75.00),
+                ("1010 $75.3 Cr", 75.30),
+                ("1010 75.3 Cr", 75.30),
+                ("Cr 1010 $75.", 75.00),
+                ("Cr 1010 75.", 75.00),
+                ("Cr $75. 1010", 75.00),
+                ("Cr 75. 1010", 75.00),
+                ("$75. Cr 1010", 75.00),
+                ("75. Cr 1010", 75.00),
+                ("$75.3 1010 Cr ", 75.30),
+                ("75.3 1010 Cr ", 75.30),
+                ("1010 Cr $75.", 75.00),
+                ("1010 Cr 75.", 75.00),
+            ],
+            "pound": [
+                ("1010 Cr \u00a375.", 75.00),
+            ],
+            "yuan" : [
+                ("1010 Cr \u00a575.", 75.00),
+            ],
+            "yen" : [
+                ("1010 Cr \u00a575.", 75.00),
+            ],
+            "euro" : [
+                ("1010 Cr \u20ac75.", 75.00),
+            ]
+        }
         for currency_sign in config.currency_signs:
-            for input_string, result in testdata:
-                with self.subTest(currency_sign=currency_sign,
-                                input_string=input_string,
+            money_regex = config.assign_money_regex(currency_sign)
+            pattern = re.compile(money_regex)
+            for input_string, result in testdata[currency_sign]:
+                with self.subTest(input_string=input_string,
                                 result=result):
-                    self.assertEqual(
-                        config.assign_money_regex(input_string),
-                                        result)
+                    match_object = pattern.search(input_string)
+                    if match_object:
+                        match = float(match_object.group())
+#                       res = ("{:0.2f}"
+#                           .format(match))
+#                       print("match: '{}' from '{}'"
+#                           .format(res, money_regex))
+                    else:
+                        match = match_object
+#                       print("Failed: {}".format(input_string))
+#                       print("  using '{}'".format(money_regex))
+                    self.assertEqual(match, result)
 
 
 if __name__ == '__main__':  # code block to run the application

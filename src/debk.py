@@ -70,7 +70,7 @@ import re
 # Dollar entries require a decimal ('.'); may or may not have a
 # currency sign, but if they do, it must match that specified by 
 # src/config.DEFAULT_CURRENCY_SIGN.
-money_pattern = re.compile(config.regex_money_as_float_expression)
+money_pattern = re.compile(config.MONEY_REGEX)
 
 INDENTATION_CONSTANT = ' ' * config.INDENTATION_MULTIPLIER  
 
@@ -729,7 +729,8 @@ class LineItem(object):
 ...line was: {}""".format(line))
             return
         try:  # If regex works the following will always succeed.
-            amount = float(match_object.group())
+            amount = float(
+            config.normalize_value(match_object.group()))
         except ValueError:
             logging.warning(
 """Malformed LineItem entry line- invalid $ amount (possibly more.)
@@ -899,7 +900,8 @@ class JournalEntry(object):
         """
         An interactive class method: prompts the user for and returns
         a JournalEntry instance (with entry_number set to 0.)
-        Returns None if unsuccessful.
+        Returns None if unsuccessful.   (a UI controller in the mvc
+        model?)
         Usage:
         Empty 'date_stamp' line terminates (None is returned.)
         Two empty account number entries in the face of an imbalance
@@ -959,7 +961,7 @@ class JournalEntry(object):
     def load(cls, text_or_filename):
         """     
         Accepts properly formatted text or the name of a file
-        containing such text.
+        containing such text.  (a batch controller in the mvc model?)
         IF SUCCESSFUL: Returns a list of JournalEntry instances
         all with their 'entry_number's set to zero.
         ('entry_number's will be reset when the list is appended
@@ -1218,6 +1220,7 @@ class Journal(object):
         """Interactively collects journal entries from the user and,
         if well formed and validated by the user, appends each one to
         the Journal.  An empty or malformed entry terminates.
+        A client of JournalEntry.get_JournalEntry ; a ui controller?
         """
         while True:
             journal_entry = JournalEntry.get_JournalEntry()
@@ -1240,6 +1243,7 @@ class Journal(object):
         containing such text and adds the JournalEntries specified
         in that text to those already existing.
         See docstring for JournalEntry.load.
+        A client of JournalEntry.load ; a batch controller?
         """
         for journal_entry in JournalEntry.load(text_or_filename): 
             self.append(journal_entry)

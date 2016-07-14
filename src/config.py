@@ -50,21 +50,23 @@ currency_signs = {
     "euro": "\u20ac",
     }
 DEFAULT_CURRENCY_SIGN = currency_signs[DEFAULT_CURRENCY]
-def assign_money_regex(currency_sign=DEFAULT_CURRENCY):
-    if currency_sign == 'dollar':
-        return r"\${0,1}\d{0,}\.\d{0,2}"
+
+def assign_money_regex(currency):
+    if currency == 'dollar':
+    # Special treatment because it's a regex special character.
+        return r"\b-?\(?\$?\d*\.\d{0,2}\)?"
     else:
         return (
-            "(?:{})".format(currency_signs[currency_sign]) +
-                r"{0,1}\d{0,}\.\d{0,2}")
-MONEY_REGEX = assign_money_regex()
+            r"\b-?\(?{}?".format(currency_signs[currency]) +
+                r"?\-?\d*\.\d{0,2}\)?")
+MONEY_REGEX = assign_money_regex(DEFAULT_CURRENCY)
 
 # LOGLEVEL = "DEBUG"
 # LOGLEVEL = "INFO"
 LOGLEVEL = "WARNING"
 # LOGLEVEL = "ERROR"
 # LOGLEVEL = "CRITICAL"
-DEFAULT_CURRENCY_SIGN = '$'
+
 CofA_HEADERS = ['code', 'indent', 'full_name', 'name',
                     'hidden', 'place_holder', 'split']
 N_COMPONENTS = len(CofA_HEADERS) -1
@@ -210,16 +212,16 @@ def check_date(entry):
         year += 2000
     return "{} {:0>2d}, {}".format(parts[0], day, year)
 
-def normalizeValue(val):
+def normalize_value(val):
     """
     Provides for parens as an alternative to minus
     and eliminates currency sign if present.
     If both are used, the currency sign is expected
     to be with in the parens.
     """
-    if amt.startswith('(') and amt.endswith(')'):
-       amt = '-' + amt[1:-1]
-    return amt.replace(DEFAULT_CURRENCY_SIGN,'')
+    if val.startswith('(') and val.endswith(')'):
+       val = '-' + val[1:-1]
+    return val.replace(DEFAULT_CURRENCY_SIGN,'')
 
 if __name__ == '__main__':
     print("DEFAULT_YEAR is '{}'.".format(DEFAULT_YEAR))
