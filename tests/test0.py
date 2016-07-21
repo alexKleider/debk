@@ -23,8 +23,8 @@
 test suite for debk.src.config.check_date.
 and debk.src.config.assign_money_regex.
 """
-import re
 import unittest
+import src.money_re as money_re
 import src.config as config
 
 VERSION = "v0.0.1"
@@ -122,23 +122,17 @@ class MoneyRegex(unittest.TestCase):
                 ("1010 Cr \u20ac75.", 75.00),
             ]
         }
-        for currency_sign in config.currency_signs:
-            money_regex = config.assign_money_regex(currency_sign)
-            pattern = re.compile(money_regex)
-            for input_string, result in testdata[currency_sign]:
+        for currency_name in money_re.CURRENCY_SIGNS.keys():
+            for input_string, result in testdata[currency_name]:
                 with self.subTest(input_string=input_string,
                                 result=result):
-                    match_object = pattern.search(input_string)
-                    if match_object:
-                        match = float(match_object.group())
-#                       res = ("{:0.2f}"
-#                           .format(match))
-#                       print("match: '{}' from '{}'"
-#                           .format(res, money_regex))
+                    res = money_re.pull_money(input_string,
+                                    currency_name=currency_name)
+                    if result:
+                        match = res[0]
                     else:
-                        match = match_object
+                        match = res
 #                       print("Failed: {}".format(input_string))
-#                       print("  using '{}'".format(money_regex))
                     self.assertEqual(match, result)
 
 

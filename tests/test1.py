@@ -423,12 +423,7 @@ class Account_signed_balance(unittest.TestCase):
             with self.subTest(result=result, expected=expected):
                 self.assertEqual(result, expected)
 
-class Account_loaded(unittest.TestCase):
-    """Test Account class
-    I think this can more easily be done once we have 
-    a chart of accounts."""
-    def setUp(self):
-        pass
+###############################################################################
 
 class JournalClass(unittest.TestCase):
 
@@ -559,6 +554,15 @@ class Ledger(unittest.TestCase):
         else:
             print("Should have had to rmdir {}"
                 .format(self.entity_dir))
+
+
+###############################################################################
+class Account_loaded(unittest.TestCase):
+    """Test Account class
+    I think this can more easily be done once we have 
+    a chart of accounts."""
+    def setUp(self):
+        pass
 
 if __name__ == '__main__':  # code block to run the application
     unittest.main()

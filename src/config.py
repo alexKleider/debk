@@ -41,25 +41,8 @@ Short_Months = {'Feb', 'Apr', 'Jun', 'Sep', 'Nov'}
 Months = (
 {'Jan', 'Mar', 'May', 'Jul', 'Aug', 'Oct', 'Dec'} | Short_Months)
 
-DEFAULT_CURRENCY = 'dollar'
-currency_signs = {
-    "dollar": "\u0024",
-    "pound": "\u00a3",
-    "yuan": "\u00a5",
-    "yen": "\u00a5",
-    "euro": "\u20ac",
-    }
-DEFAULT_CURRENCY_SIGN = currency_signs[DEFAULT_CURRENCY]
-
-def assign_money_regex(currency):
-    if currency == 'dollar':
-    # Special treatment because it's a regex special character.
-        return r"\b-?\(?\$?\d*\.\d{0,2}\)?"
-    else:
-        return (
-            r"\b-?\(?{}?".format(currency_signs[currency]) +
-                r"?\-?\d*\.\d{0,2}\)?")
-MONEY_REGEX = assign_money_regex(DEFAULT_CURRENCY)
+DEFAULT_CURRENCY = 'dollar'  # Choices are as provided by the keys
+                             # found in src.money_re.currency_signs.
 
 # LOGLEVEL = "DEBUG"
 # LOGLEVEL = "INFO"
@@ -131,6 +114,7 @@ DEFAULTS = dict(        # DEFAULTS, often imported "as D".  ####
     journal_name = 'Journal.json',   #| entity at the time of its
         # creation . The first one is copied from a template in the
         # home directory; the other two are created.
+    currency = DEFAULT_CURRENCY,
     verbosity = DEFAULT_VERBOSITY,
     # Plan to make verbosity a bit map:
 #   indentation = '',
@@ -214,6 +198,7 @@ def check_date(entry):
 
 def normalize_value(val):
     """
+    Expect to NOT need this with new money_re module.
     Provides for parens as an alternative to minus
     and eliminates currency sign if present.
     If both are used, the currency sign is expected

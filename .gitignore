@@ -6,4 +6,5 @@ tests/debk.d/defaultEntity
 venv/
 *.pyc
 __pycache__
+.git
 

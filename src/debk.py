@@ -64,13 +64,8 @@ import datetime
 from docopt import docopt
 import src.config as config
 from src.config import DEFAULTS as D
+from src.money_re import pull_money
 logging.basicConfig(level = config.LOGLEVEL)
-
-import re
-# Dollar entries require a decimal ('.'); may or may not have a
-# currency sign, but if they do, it must match that specified by 
-# src/config.DEFAULT_CURRENCY_SIGN.
-money_pattern = re.compile(config.MONEY_REGEX)
 
 INDENTATION_CONSTANT = ' ' * config.INDENTATION_MULTIPLIER  
 
@@ -722,30 +717,23 @@ class LineItem(object):
         """
         if not line: return
         ret = []
-        match_object = money_pattern.search(line)
-        if match_object is None:
+        money_pull = pull_money(line,
+                currency_name = D["currency"],
+                debug=False)
+        if money_pull is None:
             logging.warning(
         """Malformed LineItem entry line- 1st test: no dollar amount.
 ...line was: {}""".format(line))
             return
-        try:  # If regex works the following will always succeed.
-            amount = float(
-            config.normalize_value(match_object.group()))
-        except ValueError:
-            logging.warning(
-"""Malformed LineItem entry line- invalid $ amount (possibly more.)
-...line was: {}""".format(line))
-            return
-        dollar_amnt_part = match_object.group()
-        span = match_object.span()
+        value, span = money_pull
         remaining_line = line[:span[0]] + line[span[1]:]
         parts = remaining_line.split()
         if len(parts) != 2:
             logging.warning(
         """Malformed LineItem entry line- $ OK but wrong # of params.
 ...line was: {}""".format(line))
-            print("'parts' consisted of {}"
-                .format(parts))
+#           print("'parts' consisted of {}"
+#               .format(parts))
             return
 #-----------------------------------------------------------
         if valid_account_type(parts[0]):
@@ -762,7 +750,7 @@ class LineItem(object):
             return
 
         code_parts = code_part.split(',')
-        amnt_parts = divider(float(dollar_amnt_part), len(code_parts))
+        amnt_parts = divider(value, len(code_parts))
         for (code_part, amnt_part) in zip(code_parts, amnt_parts):
             ret.append(LineItem(code_part, type_part, amnt_part))
         return ret
@@ -1031,7 +1019,9 @@ class JournalEntry(object):
                 new_dict['description'].append(line)
             else:  # Parse LineItem
                 # Note: might be of the form 1010,1011,1012 Cr 4.50
+#               print("DEBUG: line: '{}'.".format(line))
                 for line_item in LineItem.list_from_text(line):
+#                   print("DEBUG: line OK: '{}'.".format(line))
                     if isinstance(line_item, LineItem):
 #                       print( # debugging pr
 #                           "Got a LineItem: '{}'".format(line_item))
