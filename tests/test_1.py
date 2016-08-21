@@ -173,7 +173,7 @@ class AcntTypeFromCode(unittest.TestCase):
             ("0123", None),
             ("", None),
             ]
-        print("\nExpect logging critical re 3 malformed codes.")
+        print("\nExpect logging critical re 3 malformed codes:")
         for code, dr_cr in testdata:
             with self.subTest(code=code, dr_cr=dr_cr):
                 self.assertEqual(debk.acnt_type_from_code(code), dr_cr)

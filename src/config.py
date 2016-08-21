@@ -31,7 +31,7 @@ but only for accounts that have at least one journal entry.
 activity or not, along with all the relevant journal entries..
 """
 
-VERSION = "0.0.2"
+VERSION = "0.1.0"
 
 import os
 import time

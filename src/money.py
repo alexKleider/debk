@@ -13,6 +13,7 @@ CURRENCY_SIGNS = {     # The dollar sign must be escaped because
     "yuan": "[¥]",     # character class) to make processing
     "yen": "[¥]",      # simpler.  The square brackets are stripped
     "euro": "[€]",     # when not wanted.
+    "rupee": "[₹]",   
     }
 
 RE_EXPRESSION_SANS_CURRENCY_SYMBOL = r"""

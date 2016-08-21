@@ -21,10 +21,9 @@
 #   Look for file named COPYING.
 """
 test suite for debk.src.config.check_date.
-and debk.src.config.assign_money_regex.
 """
 import unittest
-import src.money_re as money_re
+import src.money as money
 import src.config as config
 
 VERSION = "v0.0.1"
@@ -120,13 +119,15 @@ class MoneyRegex(unittest.TestCase):
             ],
             "euro" : [
                 ("1010 Cr \u20ac75.", 75.00),
-            ]
+            ],
+            "rupee" : [
+            ],
         }
-        for currency_name in money_re.CURRENCY_SIGNS.keys():
+        for currency_name in money.CURRENCY_SIGNS.keys():
             for input_string, result in testdata[currency_name]:
                 with self.subTest(input_string=input_string,
                                 result=result):
-                    res = money_re.pull_money(input_string,
+                    res = money.pull_money(input_string,
                                     currency_name=currency_name)
                     if result:
                         match = res[0]

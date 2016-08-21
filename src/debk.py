@@ -64,7 +64,7 @@ import datetime
 from docopt import docopt
 import src.config as config
 from src.config import DEFAULTS as D
-from src.money_re import pull_money
+from src.money import pull_money
 logging.basicConfig(level = config.LOGLEVEL)
 
 INDENTATION_CONSTANT = ' ' * config.INDENTATION_MULTIPLIER  

@@ -35,6 +35,7 @@ Change to the project directory directory:
 _prompt>_ **cd debk**
 All of what follows assumes that you have the project directory
 as your current working directory.
+Although not likely to be necessary, if experiencing difficulties:
 Check that all the _.py_ files have the execution bits set.
 _prompt>_ **chmod 755 */*.py**
 
@@ -54,37 +55,43 @@ into your home directory.  If not, edit to suit.
 
 Finally, set up an environment.  From within the project directory:
 _prompt>_ **virtualenv -p python3 venv**
+Activate the environment:
 _prompt>_ **source venv/bin/activate**
-To exit the environment (when done) the command to use is simply:
+When done, you exit the environment with the following command:
 _prompt>_ **deactivate**
+... but don't do it now!
+pip install -r requirements.text
 
-
+Now we are ready to begin-
+To do so you'll need to be familiar with the DefaultChartOfAccounts
+which can be edited to suit your purposes.  Rather than editing it,
+you might want instead to create copies for specific entities and
+customize each as described further down.
 Usage:
 _prompt>_ **./src/menu.py**
 
 Most of the functionality is found in _src/debk.py_ although entity
 creation is handled by _src/entities.py_.  A menu driven user
 interface is provided by the _src/menu.py_ module.  The next level
-down menu driven interface is provided by _src/workwith.py_.  There
-is also a _src/config.py_ dependency.  A test suite is found under
-the _tests_ directory.  _debk.d/defaultChartOfAccounts_ provides a 
-suggested chart of accounts (aka ledger) which can be edited to 
-suit your own needs.  Indentation is for readability only. Comments
-are not permitted.  A copy must be placed in the _debk.d_ directory
-discussed in the next paragraph.
-_prompt>_ **cp debk.d/defaultChartOfAccounts**  \
-                        **/var/opt/debk.d/defaultChartOfAccounts**
-A leading white space stripped version of this file is treated as a
-CSV file so apart from the leading white space, it must conform to
-the format of a CSV file.
+down menu driven interface is provided by _src/workwith.py_. 
+_src/money.py_ provides regex support for reading money values. 
+There is also a _src/config.py_ dependency.  A test suite is found
+under the _tests_ directory.  _debk.d/defaultChartOfAccounts_
+provides a suggested chart of accounts (aka ledger) which can be
+edited to suit your own needs.  Indentation is for readability only.
+Comments are not permitted.  A copy must exist in the _debk.d_
+directory discussed in the next paragraph.  A leading white space
+stripped version of this file is treated as a CSV file so apart from
+the leading white space, it must conform to the format of a CSV file.
+
 
 ## Persistent Storage
 
 The system depends on the existence of a _debk.d_ directory found
 under a 'home' directory specified by config.DEFAULTS['home']. By
-default this is set to _/var/opt_. It must be populated with a 
-_defaultChartOfAccounts_ file, an example of which can be copied
-from _debk/debk.d/_ as described above.
+default this is set to _~/debk/debk.d_ which is populated with a 
+_defaultChartOfAccounts_ file.  If you change this default, be sure to
+copy this file into it.
 
 ## Entities
 
@@ -93,9 +100,9 @@ representing a named entity.  Entity creation, selection and deletion
 are handled through the menu interface which relies on entities.py.
 
 Entity names must consist only of letters, no dashes or underscores.
-Before creating a new entity, _testentity_ for example, you might like
-to first create a testentityChartOfAccounts (a concatenation of the name
-of the entity and 'ChartOfAccounts') and edit it to suit.
+Before creating a new entity, _testentity_ for example, you might
+like to first create a testentityChartOfAccounts (a concatenation of
+the name of the entity and 'ChartOfAccounts') and edit it to suit.
 _debk/tests/debk.d/ManeroChartOfAccounts_ and
 _debk/debk.d/defaultChartOfAccounts_ serve as examples.
 New entity creation wil result in a new sub-directory **testentity.d**
@@ -103,7 +110,8 @@ populated with the following files:
     CofA
     Journal.json
     Metadata.json
-Read/write privileges may have to be adjusted.
+If you experience difficulties, verify that read/write privileges
+are appropriate.
 
 
 ## Journal Entry
@@ -118,17 +126,16 @@ input file, as described in the file **how2input**.
 The project was inspired by the book keeping needs of a group
 (Kazan15) taking a wilderness canoe trip on the Kazan River in
 Nunavit, Canada. The soft ware includes several 'custom' features
-specialized for this group. 
+specialized for this group.  These custom features probably do not
+work in the current version since their support has been neglected as
+the project has evolved.  Support may reappear in a later version.
 
 
 ## Disclaimers
 
-There is still, as of this version (0.0.1,) no support for adding
-accounts except to create and then use a custom chart of accounts
-prior to account creation as described in the create_entity()
-docstring.  Although not tested, it should be possible after entity
-creation to add accounts by simply editing the entity's CofA file.
-Deleting accounts will likely create havoc!
+There is still, as of __src/config.VERSION__no support for adding
+accounts except by editing the entity's CofA file.  Deleting accounts
+will likely create havoc!
 
 To use this software, the user must have a clear idea of the meaning
 of 'debit' and 'credit' in the context of double entry book keeping.
