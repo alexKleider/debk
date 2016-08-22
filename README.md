@@ -23,10 +23,10 @@ disparate locations of your choosing.  It is suggested that you use
 the defaults: your 'home directory' and _debk.d_ within the project
 directory.  This will minimize the amount of configuration necessary.
 
-Let's assume you choose _/home/user_ to be the parent of your
-project directory.  (You will want to substitute your user name for
-the 'user' part.)  Make it your working directory:
-_prompt>_ **cd /home/user**
+Let's assume you choose your home directory (_/home/user_) to be the
+parent of your project directory.  (You will want to substitute your
+user name for the 'user' part.)  Make it your working directory:
+_prompt>_ **cd /home/user**  ## or simply **cd**
 and then execute the following command:
 _prompt>_ **git pull https://github.com/alexKleider/debk.git**
 which will create a _debk_ directory tree containing the source
@@ -49,7 +49,7 @@ Another requirement is to add your project directory to the
 PYTHONPATH environment variable.  Provided is _path.sh_, a shell
 script, which can be sourced, perhaps after editing to suit local
 needs:
-_prompt>_ **bash path.sh**
+_prompt>_ **source ./path.sh**
 This script assumes that you've chosen to clone the _debk_ project
 into your home directory.  If not, edit to suit.
 
@@ -60,13 +60,15 @@ _prompt>_ **source venv/bin/activate**
 When done, you exit the environment with the following command:
 _prompt>_ **deactivate**
 ... but don't do it now!
-pip install -r requirements.text
+pip install -r requirements.txt
 
 Now we are ready to begin-
 To do so you'll need to be familiar with the DefaultChartOfAccounts
 which can be edited to suit your purposes.  Rather than editing it,
 you might want instead to create copies for specific entities and
 customize each as described further down.
+
+
 Usage:
 _prompt>_ **./src/menu.py**
 
