@@ -36,7 +36,7 @@ structure, and then make it your working directory::
     git pull https://github.com/alexKleider/debk.git
     cd debk
 
-The ``debk`` project directory tree with will contain all needed
+The ``debk`` project directory tree will contain all needed
 files and subdirectories including a ``debk.d`` directory for
 persistent storage.
 
