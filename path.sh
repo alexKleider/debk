@@ -5,8 +5,8 @@
 # commented out.
 
 #unset PYTHONPATH
-myPyDir='debk'  # this is where you put the path you want added.
-PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}${HOME}/$myPyDir"
+myPyDir=$(pwd)  # this is where you put the path you want added.
+PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}$myPyDir"
 #myPyDir='some/other/project'
 #PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}${HOME}/$myPyDir"
 #myPyDir='debk'

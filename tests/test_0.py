@@ -25,6 +25,7 @@ test suite for debk.src.config.check_date.
 import unittest
 import src.money as money
 import src.config as config
+import tests.money_test_data as more_test_data
 
 VERSION = "v0.0.1"
 
@@ -56,7 +57,8 @@ class DateStamp(unittest.TestCase):
             ("July 4, 2015", "Jul 04, 2015"),
             ("August 3, 2015", "Aug 03, 2015"),
             ("Septe4, 2015", "Sep 04, 2015"),
-            ("Sept14", "Sep 14, 2016"),
+            ("Sept14", "Sep 14, 2017"),
+# The above will fail with each new year! Change 2017 to 2018 when the time comes.
             ("Sept 4, 2015", "Sep 04, 2015"),
             ("january31, 2015", "Jan 31, 2015"),
             ("january 31, 2015", "Jan 31, 2015"),
@@ -136,6 +138,17 @@ class MoneyRegex(unittest.TestCase):
 #                       print("Failed: {}".format(input_string))
                     self.assertEqual(match, result)
 
+    def test_assign_money_regex_external_input(self):
+        for input_string, result in more_test_data.more_tests:
+            with self.subTest(input_string=input_string,
+                            result=result):
+                res = money.pull_money(input_string)
+                if result:
+                    match = "{:.2f}".format(res[0])
+                else:
+                    match = res
+                    print("Failed: {}".format(input_string))
+                self.assertEqual(match, result)
 
 if __name__ == '__main__':  # code block to run the application
     unittest.main()

@@ -1,8 +1,7 @@
-nextcommit
 accounting
 *defaultEntity
 TestReport
-tests/debk.d/defaultEntity
+testresults
 venv/
 *.pyc
 __pycache__

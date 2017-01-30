@@ -14,7 +14,7 @@ CURRENCY_SIGNS = {     # The dollar sign must be escaped because
     "yen": "[¥]",      # simpler.  The square brackets are stripped
     "euro": "[€]",     # when not wanted.
     "rupee": "[₹]",   
-    }
+    }    # Multicharacter currency signs are not supported at present.
 
 RE_EXPRESSION_SANS_CURRENCY_SYMBOL = r"""
 {0:}?  # Optional currency sign.
@@ -113,7 +113,7 @@ def pull_money(source,
 
 
 def test():
-    """Testing suite: run of module is run as __main__.
+    """Testing suite: run if module is run as __main__.
     """
     failures = []
     source = (
