@@ -13,9 +13,8 @@ PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}$myPyDir"
 #PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}${HOME}/$myPyDir"
 export PYTHONPATH
 
-# The uncommented lines add '~/debk' to the PYTHONPATH environment
-# variable. If you are in your home directory when you clone the
-# repo, it will be cloned into '~/debk' 
+# The uncommented lines add the current working directory to the
+# PYTHONPATH environment variable.
 # Some of the commented lines are provided to illustrate how you
 # might want to add other paths so several projects could be
 # included in your PYTHONPATH.

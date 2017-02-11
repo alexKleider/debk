@@ -35,7 +35,7 @@ directory, clone the repository thus creating the project directory
 structure, and then make it your working directory::
 
     cd ~ 
-    git pull https://github.com/alexKleider/debk.git
+    git clone https://github.com/alexKleider/debk.git
     cd debk
 
 The ``debk`` project directory tree will contain all needed
@@ -56,29 +56,23 @@ and change the value of ``DEFAULTS['home']``.  Be sure to set
 ownership and permissions appropriately.  (This will not be necessary
 if you stick to the defaults.)
 
-Another requirement is to add your project directory to the
-``PYTHONPATH`` environment variable.  Provided is ``path.sh``, a
-shell script, which can be sourced, perhaps after editing to suit
-local needs::
-
-    source ./path.sh
-
-This script assumes that you've chosen to clone the ``debk`` project
-into your home directory.  If not, edit to suit.
-
-Finally, set up and activage an environment.  From within the
-project directory::
+Still from within your project directory, prepare your environment,
+activate it and bring in dependencies as follows::
 
     virtualenv -p python3 venv
     source venv/bin/activate
+    pip install -r requirements.txt
 
-When done, you exit the environment with the following command::
+Not now, but when it's time to exit the environment, you can do so
+with the following command::
 
     deactivate   #... but don't do it now!
 
-Bring the dependencies into this new environment::
+Another requirement is to add your project directory to the
+``PYTHONPATH`` environment variable.  Provided is ``path.sh``,
+a shell script, which can be sourced to accomplish this::
 
-    pip install -r requirements.txt
+    source ./path.sh
 
 
 *****
@@ -157,7 +151,10 @@ Journal Entry
 
 Journal entry can be done individually by the user responding to
 prompts, or, more conveniently, by means of a previously created
-input file, as described in the file ``how2input``.
+input file, as described in the file ``how2input``. It is suggested
+that you create a ``Pvt`` directory and keep journal input files there
+with file names such as ``MyEntity16`` (containing 2016 entries for
+MyEntity.)
 
 
 ***********

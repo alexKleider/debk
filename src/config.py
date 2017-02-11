@@ -95,7 +95,7 @@ N_ASSET_OWNERS = 8   # Specific to Kazan15
                      # special use module.
 
 DEFAULTS = dict(        # DEFAULTS, often imported "as D".  ####
-    home = os.path.expanduser('~/debk/debk.d'), # home of data files
+    home = os.path.join(os.getcwd(), 'debk.d'), # home of data files
     # If changing the above, be sure permissions are set properly.
     # DEFAULTS["home"] is reset to './tests/debk.d' for tests.
 

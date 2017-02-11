@@ -711,9 +711,14 @@ class LineItem(object):
         """     
         Accepts a string with the following three white space
         separated components: account_code, type_, & amount.
-        # Note: might be of the form 1010,1011,1012 Cr 4.50
-        They can appear in any order.
-        Returns a list of LineItem instances (or None.)
+        The <account_code> component may be a comma separated
+        (no whitespace) list of <account_code>s. (For example
+        "1010,1011,1012 Cr 4.50") in which case the the currency
+        amount is divided (as evenly as possible) between the
+        accounts listed.
+        The components can appear in any order.
+        Returns a list of LineItem instances (or None if parsing
+        is unsuccessful.)
         """
         if not line: return
         ret = []
