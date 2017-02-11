@@ -263,8 +263,8 @@ class CreateEntity(unittest.TestCase):
         for entity in self.ENTITIES:
             shutil.rmtree(self.entity_dirs[entity])
 
-class LineEntry(unittest.TestCase):
-    """Test LineEntry class"""
+class LineItem(unittest.TestCase):
+    """Test LineItem class"""
 
     def test_init_and_str(self):
         testdata = [
@@ -274,13 +274,14 @@ class LineEntry(unittest.TestCase):
         for params, show in testdata:
             with self.subTest(params=params, show=show):
                 self.assertEqual(
-                    debk.LineEntry(*params).show(),show)
+                    debk.LineItem(*params).show(),show)
 
     def test_str_error(self):
         print(
-"Expect logging critical re LineEntry.__init__ with bad type_: '0'")
+"Expect logging critical re LineItem.__init__ with bad type_: '0'")
         with self.assertRaises(ValueError):
-            debk.LineEntry("12.30", '0', 5).show()
+#       with self.assertRaises(AssertionError):
+            debk.LineItem("12.30", '0', 5).show()
 
 class CreateAccount(unittest.TestCase):
     """Test account creation.

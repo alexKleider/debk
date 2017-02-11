@@ -81,7 +81,8 @@ CR_FIRSTS = {ACCOUNT_CATEGORIES[item][:1] for item in CR_ACCOUNTS}
 
 def valid_account_code(account_code):
     if (account_code
-    and type(account_code) == str
+    and isinstance(account_code, str)
+    and account_code.isdigit()
     and len(account_code) == ACCOUNT_CODE_LENGTH):
         return True
 

@@ -50,8 +50,8 @@ Options:
 # acnt_type  Account    Dr, Cr, or place_holder qualifies the account.
 # category   Account    ASSETS, LIABILITIES, EQUITY, INCOME, EXPENSES.
 # type_      Account    | D, C  | qualifies the balance attribute.
-#            LineEntry  |       | qualifies the amount attribute.
-#            LineItem   |       | ditto for JournalEntry LineItems.
+#            LineItem  |       | qualifies the amount attribute.
+#            LineEntry   |       | ditto for JournalEntry LineEntrys.
 
 import os
 import sys
@@ -228,18 +228,18 @@ def acnt_type_from_code(account_code):
 #####  END OF HELPER FUNCTIONS  #####
 
 
-## Ledger related classes:  LineEntry, Account, ChartOfAccounts ##
+## Ledger related classes:  LineItem, Account, ChartOfAccounts ##
 
-class LineEntry(object): 
-    """                        [../tests/test1.py: LineEntry] 
-    Instances are collected from JournalEntry LineItem objects and
-    are used to populate the line_entries array attribute of
+class LineItem(object): 
+    """                        [../tests/test1.py: LineItem] 
+    Instances are collected from JournalEntry LineEntry objects and
+    are used to populate the line_items array attribute of
     instances of the Account class.
     Each instance has the following attributes:
         number: a journal entry number: discoverable from Journal
         amount: monitary value   }|  Both discoverable from
         type_:  specify Dr or Cr }|  a JournalEntry instance.
-    Do NOT confuse this class with Journal LineItem entries.
+    Do NOT confuse this class with Journal LineEntry entries.
     """
     
     def __init__(self, entry_number, type_, amount):
@@ -248,13 +248,13 @@ class LineEntry(object):
         type_: 'D'(ebit or 'C'(redit. 
         amount: float.
         """
-#       print("\n Running LineEntry({}, {}, {})"
+#       print("\n Running LineItem({}, {}, {})"
 #                   .format(entry_number, type_,amount))
 #       print(
-#       "Calling LineEntry.__init__ with type_ '{}'".format(type_))
+#       "Calling LineItem.__init__ with type_ '{}'".format(type_))
         if not (valid_account_type(type_)):
             logging.critical(
-                "Calling LineEntry.__init__ with bad type_: '{}'"
+                "Calling LineItem.__init__ with bad type_: '{}'"
                 .format(type_))
         self.entry_number = int(entry_number)
         self.amount = float(amount)
@@ -262,7 +262,8 @@ class LineEntry(object):
 
     def show(self):
         """
-        Returns a _one_line_ representation.
+        Returns a _one_line_ string representation of a LineItem
+        instance.
         Any required indention can be handled by the client code.
         """
         if self.type_ == 'D': dr = '{:>12.2f}Dr'.format(self.amount)
@@ -283,7 +284,7 @@ class Account(object):
     Attributes include: 
     1. from csv file:   code, indent, full_name, name, notes,
                         hidden, place_holder, split, 
-    2. derived:   balance, line_entries,
+    2. derived:   balance, line_items,
         s_balance, signed_balance,  
         (depending if place_holder, see below)
         type_: specifies if the balance is a D(ebit or C(redit,
@@ -298,7 +299,7 @@ class Account(object):
     return the corresponding (signed) value.
     """
 
-    def __init__(self, dict_from_csv):
+    def __init__(self, dict_from_csv):         # Account
         """                  [../tests/test1.py: CreateAccount]
         Accepts dict delivered by csv module as its parameter.
         code,indent,type,full_name,name,hidden,place_holder,split
@@ -335,7 +336,7 @@ class Account(object):
         else:  # 'split' was not specified, already set to 0.
             self.split_as_str = ''
         # End of attributes derived from dict_from_csv.
-        #self.line_entries = []  # list of LineEntry objects.
+        #self.line_items = []  # list of LineItem objects.
         self.balance = 0
         self.type_ = ''  # Set to empty string if balance is 0.
                         # Specifies if the balance is 'D' or 'C'
@@ -343,7 +344,7 @@ class Account(object):
                             # _set_place_holder_signed_balances method
                             # of the ChartOfAccounts class and
                             # applies only to place_holder accounts.
-        self.line_entries = []
+        self.line_items = []
 
     @property
     def signed_balance(self):
@@ -445,9 +446,9 @@ class Account(object):
         ret = [' '.join(ret)]
 
         if verbosity > 1: # Add the line entries:
-            for line_entry in self.line_entries:
+            for line_item in self.line_items:
                 ret.append('{}{}'.format(self.indent,
-                                        line_entry.show()))
+                                        line_item.show()))
 
         # Put it all together and return it:
         if (verbosity > 3) or (has_balance):
@@ -460,21 +461,21 @@ class Account(object):
 
     def update_balance(self):
         """
-        Traverses line_entries to populate the balance and type_
+        Traverses line_items to populate the balance and type_
         attributes.  Accounts (all the place holder accounts for
         sure) with no entries will continue to have their
         type_ attribute set to the empty string.  (It is only for
         display purposes that place holders have a balance assigned,
         and this is done by the show method of ChartOfAccounts.)
-        Note: the line_entries themselves are populated by the
+        Note: the line_items themselves are populated by the
         ChartOfAccounts load_journal_entries method.
         """
         if self.place_holder == 'T':
             return  # Defaults have already been set.
         totals = dict(D= 0, C= 0)
-        for line_entry in self.line_entries:
-            if line_entry.amount:
-                totals[line_entry.type_] += line_entry.amount
+        for line_item in self.line_items:
+            if line_item.amount:
+                totals[line_item.type_] += line_item.amount
         if (totals['D'] - totals['C']) > config.EPSILON:
             self.balance = totals['D'] - totals['C']
             self.type_ = 'D'
@@ -585,21 +586,22 @@ class ChartOfAccounts(object):
 
     def load_journal_entries(self, list_of_journal_entries): 
         """
+        LineItem => LineEntrys
         Posts journal entries to the ledger.
         """
         # Populate accounts with entries...
         for je in list_of_journal_entries:
-            for line_item in je.line_items:
-                if line_item.account_code not in self.code_set:
+            for line_entry in je.line_entries:
+                if line_entry.account_code not in self.code_set:
                     logging.error(
                     "Journal entry #%s: unrecognized AcntCode '%s'.",
-                        je.entry_number, line_item.account_code)
+                        je.entry_number, line_entry.account_code)
                 else:
                     self.accounts[
-                    line_item.account_code].line_entries.append(
-                            LineEntry(je.entry_number,
-                                        line_item.type_,
-                                            line_item.amount,
+                    line_entry.account_code].line_items.append(
+                            LineItem(je.entry_number,
+                                        line_entry.type_,
+                                            line_entry.amount,
                                     )                         )
         # All jounal entries have now been posted but
         # the ledger still needs to be 'cleaned up.'
@@ -673,17 +675,17 @@ class ChartOfAccounts(object):
 
 #The following classes pertain to the journal:
 
-class LineItem(object):
+class LineEntry(object):
     """
-    LineItem: the individual line_items of each JournalEntry.
+    LineEntry: the individual line_entries of each JournalEntry.
     Attributes are account_code, type_ (dr or cr), and amount.
     type_ is converted to 'D' or 'C'.
     Provides the following methods:
     _dict: @property- returns a dict (for json compatibility.)
     show == __str__
     list_from_text: a class method, returns a list of instances
-    get_LineItem: a class method, interactively returns an instance.
-    balanced_LineItem_list: a class method, returns True or False.
+    get_LineEntry: a class method, interactively returns an instance.
+    balanced_LineEntry_list: a class method, returns True or False.
     """
 
     def __init__(self, account_code, type_, amount):
@@ -697,7 +699,7 @@ class LineItem(object):
         try:
             self.amount = float(amount)
         except ValueError:
-            logging.warning("LineItem({}, {}, {}), bad last param."
+            logging.warning("LineEntry({}, {}, {}), bad last param."
                 .format(account_code, type_, amount))
             raise
 
@@ -706,7 +708,7 @@ class LineItem(object):
             and self.type_ == other.type_
             and self.amount == other.amount)
 
-    @classmethod     # LineItem
+    @classmethod     # LineEntry
     def list_from_text(src, line):
         """     
         Accepts a string with the following three white space
@@ -717,7 +719,7 @@ class LineItem(object):
         amount is divided (as evenly as possible) between the
         accounts listed.
         The components can appear in any order.
-        Returns a list of LineItem instances (or None if parsing
+        Returns a list of LineEntry instances (or None if parsing
         is unsuccessful.)
         """
         if not line: return
@@ -727,7 +729,7 @@ class LineItem(object):
                 debug=False)
         if money_pull is None:
             logging.warning(
-        """Malformed LineItem entry line- 1st test: no dollar amount.
+        """Malformed LineEntry entry line- 1st test: no dollar amount.
 ...line was: {}""".format(line))
             return
         value, span = money_pull
@@ -735,7 +737,7 @@ class LineItem(object):
         parts = remaining_line.split()
         if len(parts) != 2:
             logging.warning(
-        """Malformed LineItem entry line- $ OK but wrong # of params.
+        """Malformed LineEntry entry line- $ OK but wrong # of params.
 ...line was: {}""".format(line))
 #           print("'parts' consisted of {}"
 #               .format(parts))
@@ -750,20 +752,20 @@ class LineItem(object):
 #-----------------------------------------------------------
         else:
             logging.warning(
-    """Malformed LineItem entry line- bad type (not Dr or CR.)
+    """Malformed LineEntry entry line- bad type (not Dr or CR.)
 ...line was: {}""".format(line))
             return
 
         code_parts = code_part.split(',')
         amnt_parts = divider(value, len(code_parts))
         for (code_part, amnt_part) in zip(code_parts, amnt_parts):
-            ret.append(LineItem(code_part, type_part, amnt_part))
+            ret.append(LineEntry(code_part, type_part, amnt_part))
         return ret
 
-    @property       # LineItem
+    @property       # LineEntry
     def _dict(self):
         """
-        Returns the dictionary version of a LineItem.
+        Returns the dictionary version of a LineEntry.
         """
         return dict(account_code = self.account_code,
                     amount = self.amount,
@@ -784,31 +786,31 @@ class LineItem(object):
     def __str__(self):
         return self.show()
 
-    def get_LineItems(indent=0):
+    def get_LineEntrys(indent=0):
         """
-        Interactively prompts the user for a LineItem.
+        Interactively prompts the user for a LineEntry.
         Returns a list of instances (usually only one),
         None if unsuccessful.
         Returns a list to allow for possibility of multi-account 
         input format.
         """
-        return LineItem.list_from_text(input(
-            config.LineEntry_input_format
+        return LineEntry.list_from_text(input(
+            config.LineItem_input_format
                     .format(" " * indent)))
 
-    @classmethod       # LineItem
-    def balanced_LineItem_list(src, list_of_LineItems):
+    @classmethod       # LineEntry
+    def balanced_LineEntry_list(src, list_of_LineEntrys):
         """
-        Returns True if list_of_LineItems is balanced.
+        Returns True if list_of_LineEntrys is balanced.
         i.e. if Debits equal Credits.  Else returns False.
         """
         totals = dict(D= 0,
                       C= 0)
-        for line_item in list_of_LineItems:
+        for line_entry in list_of_LineEntrys:
 #           print(             # debugging print
-#               "line_item is type '{}': '{}'"
-#               .format(type(line_item), line_item))
-            totals[line_item.type_] += line_item.amount
+#               "line_entry is type '{}': '{}'"
+#               .format(type(line_entry), line_entry))
+            totals[line_entry.type_] += line_entry.amount
         return (totals['D'] - totals['C']) < config.EPSILON
 
 class JournalEntry(object):
@@ -818,7 +820,7 @@ class JournalEntry(object):
             date_stamp: date_stamp,  # string- any format
             user: name,  # person making the journal entry
             description: explanation, # string with imbedded CRs
-            line_items: list of LineItem objects
+            line_entries: list of LineEntry objects
                 (need conversion to dict to fit json format)
     We use the _dict property to convert to json format.
     Provides the following methods:
@@ -832,7 +834,7 @@ class JournalEntry(object):
                         date_stamp,
                         user,
                         description,
-                        line_items  # list of LineItem instances
+                        line_entries  # list of LineEntry instances
                         ):
         """
         Creates a JournalEntry instance from its 5 parameters.
@@ -841,7 +843,7 @@ class JournalEntry(object):
         self.date_stamp = date_stamp
         self.user = user
         self.description = description
-        self.line_items = line_items
+        self.line_entries = line_entries
 
     def show(self):
         """
@@ -856,8 +858,8 @@ class JournalEntry(object):
         description_lines = _dict["description"].split('\n')
         for line in description_lines:
             ret.append("    {}".format(line))
-        for line_item in _dict["line_items"]:
-            ret.append(LineItem(**line_item).show())
+        for line_entry in _dict["line_entries"]:
+            ret.append(LineEntry(**line_entry).show())
         return '\n'.join(ret)
 
     def __str__(self):
@@ -869,23 +871,23 @@ class JournalEntry(object):
                     date_stamp= self.date_stamp,
                     user= self.user,
                     description= self.description,
-                    line_items= [
-                        item._dict for item in self.line_items],
+                    line_entries= [
+                        item._dict for item in self.line_entries],
                     )
 
     @classmethod       # JournalEntry
     def from_dict(cls, _dict):
         """      a classmethod
         Takes the dict version and returns an instance.
-        Need this because list of LineItem objects must
+        Need this because list of LineEntry objects must
         also be converted from corresponding dicts.
         """
 #       print("Calling JournalEntry.from_dict(_dict) on:\n{}"
 #               .format(_dict))
         dict_copy = copy.deepcopy(_dict)
         # Make a copy to prevent side effect.
-        dict_copy["line_items"] = [
-                LineItem(**item) for item in _dict["line_items"]]
+        dict_copy["line_entries"] = [
+                LineEntry(**item) for item in _dict["line_entries"]]
         return JournalEntry(**dict_copy)
 
     @classmethod       # JournalEntry
@@ -899,7 +901,7 @@ class JournalEntry(object):
         Empty 'date_stamp' line terminates (None is returned.)
         Two empty account number entries in the face of an imbalance
         will also terminate (None is returned.) 
-        A valid entry is returned following a single blank line_item
+        A valid entry is returned following a single blank line_entry
         so long as debits and credits balance (else None is returned.)
         """
         print("""
@@ -909,7 +911,7 @@ class JournalEntry(object):
     following three white space separated values: 
     {}.
     Debit and credit values must balance. Empty line terminates.""" 
-                        .format(config.LineEntry_input_prompt))
+                        .format(config.LineItem_input_prompt))
         while True:
             date_stamp = input("""
         Date (Month, day, year format please): """)
@@ -930,23 +932,23 @@ class JournalEntry(object):
             if not description_line: break
             description_array.append(description_line)
         description = '\n'.join(description_array)
-        line_items = []
+        line_entries = []
         blanks = 0   # Keep track of blank entries.
         while True:  # Allow multiple account entries, all balanced.
-            line_item_s = LineItem.get_LineItems(indent=8)
-            if line_item_s is None:
+            line_entry_s = LineEntry.get_LineEntrys(indent=8)
+            if line_entry_s is None:
                 blanks += 1
             else:
-                line_items.extend(line_item_s)
+                line_entries.extend(line_entry_s)
                 blanks = 0
             if (blanks >= 1 
-            and LineItem.balanced_LineItem_list(line_items)):
+            and LineEntry.balanced_LineEntry_list(line_entries)):
                 return JournalEntry(**dict(
                             entry_number= 0,
                             date_stamp= date_stamp,
                             user= user,
                             description= description,
-                            line_items= line_items))
+                            line_entries= line_entries))
             if blanks >= 2:
                 return
  
@@ -954,15 +956,16 @@ class JournalEntry(object):
     def load(cls, text_or_filename):
         """     
         Accepts properly formatted text or the name of a file
-        containing such text.  (a batch controller in the mvc model?)
+        containing such text. (A batch controller in the mvc model?)
         IF SUCCESSFUL: Returns a list of JournalEntry instances
-        all with their 'entry_number's set to zero.
-        ('entry_number's will be reset when the list is appended
-        to the Journal instance.)
+        all with their <entry_number>s set to zero.
+        (<entry_number>s will be set appropriately when the list
+        is appended to the Journal instance.)
         The text must be in a specific format described in
         'how2input' and exemplified in 
         'debk/tests/debk.d/testEntityJournal_input0'.
-        NB: No user approval mechanism for this form of journal entry.
+        NB: There is noo user approval mechanism for this form of
+        journal entry.
         """
 
         def initialize():                                  # Helper
@@ -972,7 +975,7 @@ class JournalEntry(object):
                         date_stamp= '',                    #
                         user= '',                          #
                         description = [],                  #
-                        line_items= [],                    #
+                        line_entries = [],                    #
                         )                                  #
 
         if os.path.isfile(text_or_filename):               # collect
@@ -1022,19 +1025,19 @@ class JournalEntry(object):
 #               print(  # debugging print
 #                  "Appending description: '{}'".format(line))
                 new_dict['description'].append(line)
-            else:  # Parse LineItem
+            else:  # Parse LineEntry
                 # Note: might be of the form 1010,1011,1012 Cr 4.50
 #               print("DEBUG: line: '{}'.".format(line))
-                for line_item in LineItem.list_from_text(line):
+                for line_entry in LineEntry.list_from_text(line):
 #                   print("DEBUG: line OK: '{}'.".format(line))
-                    if isinstance(line_item, LineItem):
+                    if isinstance(line_entry, LineEntry):
 #                       print( # debugging pr
-#                           "Got a LineItem: '{}'".format(line_item))
-                        new_dict['line_items'].append(line_item)
+#                           "Got a LineEntry: '{}'".format(line_entry))
+                        new_dict['line_entries'].append(line_entry)
                     else:
                         pass
 #                       print(   # debugging print
-#               "Expect to fail after last line_item is collected.")
+#               "Expect to fail after last line_entry is collected.")
 #       if not ret:   # next 6 lines debugging print
 #           print("\nJournalEntry.load on '{}' => {} (nothing!)"
 #                   .format(text_or_filename, ret))
@@ -1055,8 +1058,8 @@ class JournalEntry(object):
         and self.user
         and isinstance(self.description, str)
         and self.description
-        and self.line_items
-        and LineItem.balanced_LineItem_list(self.line_items)):
+        and self.line_entries
+        and LineEntry.balanced_LineEntry_list(self.line_entries)):
             return True
         else:
             print("""Rejecting journal entry:

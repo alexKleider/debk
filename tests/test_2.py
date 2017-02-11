@@ -44,7 +44,7 @@ class JournalEntryTests(unittest.TestCase):
             date_stamp= 'Sept 3, 2015',
             user= 'book keeper',
             description= 'dummy journal entry',
-            line_items= [
+            line_entries= [
                 dict(account_code = '1234',
                     amount= 12.50,
                     type_= 'C'),
