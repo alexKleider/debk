@@ -22,11 +22,10 @@ in ./src/config.py
 """
 
 import sys
-from docopt import docopt
-from src.work_with import work_with
-from src import entities as E
-from src.config import VERSION
-from src.config import DEFAULTS as D
+import docopt
+import src.work_with as work_with
+import src.entities as entities
+import src.config as config
 
 def choose_entity(entities, indent=0):
     """
@@ -78,7 +77,7 @@ def choose_existing(defaults, entities):
     chosen_entity = choose_entity(entities, 4)
     if chosen_entity:
         defaults['entity'] = chosen_entity
-        work_with(defaults)
+        work_with.work_with(defaults)
 
 def create_new(entities):
     """
@@ -137,19 +136,20 @@ def menu(defaults):
     Creating a new entity or choosing an existing one, if successful,
     begins the accounting process with that entity.
     """
-    entities = E.Entities(*E.get_file_info(defaults),
+    entities_ = entities.Entities(
+                            *entities.get_file_info(defaults),
                             defaults=defaults)
-#   print("'entities' is of type '{}'.".format(type(entities)))
-#   print("Initializing 'entities' with the following values:")
-#   print("\t", entities.lst)
-#   print("\t", entities.default)
+#   print("'entities_' is of type '{}'.".format(type(entities_)))
+#   print("Initializing 'entities_' with the following values:")
+#   print("\t", entities_.lst)
+#   print("\t", entities._default)
     while True:
-        listing = entities.show_entities(indent=8)
+        listing = entities_.show_entities(indent=8)
         if listing:
             listing = (
-"""\n    (Currently existing entities are:\n{}          )"""
+"""\n    (Currently existing entities_ are:\n{}          )"""
                     .format(listing))
-        else: listing = "\n    (No entities currently exist.)"
+        else: listing = "\n    (No entities_ currently exist.)"
 #       print("listing is '{}'.".format(listing))
         option = input("""
 Main Menu:
@@ -171,11 +171,11 @@ Choice: """.format(defaults['home'], listing))
                         .format(option))
             continue
         if option == 1:
-            entity = create_new(entities)
+            entity = create_new(entities_)
         elif option == 2:
-            entity = choose_existing(defaults, entities)
+            entity = choose_existing(defaults, entities_)
         elif option == 3:
-            delete_option(defaults, entities)
+            delete_option(defaults, entities_)
             entity = ''
         elif option == 9:
             change_args_option(defaults)
@@ -184,11 +184,11 @@ Choice: """.format(defaults['home'], listing))
             entity = None
         if entity:
             defaults["entity"] = entity
-            work_with(defaults)
+            work_with.work_with(defaults)
 
 if __name__ == "__main__":
-    args = docopt(__doc__, version=VERSION)
-    print(args)
+    args = docopt.docopt(__doc__, version=config.VERSION)
+#   print(args)
     if args['<data_directory>']:
-        D['home'] = args["<data_directory>"]
-    menu(D)
+        config.Defaults['home'] = args["<data_directory>"]
+    menu(config.Defaults)

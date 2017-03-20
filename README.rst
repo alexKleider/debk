@@ -15,6 +15,9 @@ the significance differs depending on the account type.  Expressed
 different way: this is only suitable for use by those who understand
 the fundamentals of double entry book keeping.
 
+Yet to be implemented is a method of 'closing the books,' that is to
+say there is no accounting cycle concept as of yet.
+
 ************
 Installation
 ************
@@ -24,17 +27,14 @@ The following is a suggested way of getting up and running.
 Choose:
     #. An existing directory to serve as a parent for the project directory.
     #. A directory for the data files.
-
-If you use the following defaults, no configuration is necessary:
-    #. Your home directory (``~``), and
-    #. ``debk.d`` within the project directory.
+By default the latter will appear within the project directory.
 
 Let's assume you've choosen your home directory (e.g. ``/home/user``)
 to be the parent of your project directory.  Make it your working
 directory, clone the repository thus creating the project directory
 structure, and then make it your working directory::
 
-    cd ~ 
+    cd /home/user 
     git clone https://github.com/alexKleider/debk.git
     cd debk
 
@@ -186,8 +186,8 @@ and Python's virtualenv is also assumed.
 TESTING
 -------
 
-The script ``test.sh`` runs the whole test suite, redirects all output
-to ``testresults``.
+The script ``test.sh`` runs the whole test suite redirecting all
+output to ``testresults`` which is then opened with ``vim``.
 
 *******
 Finally

@@ -1021,13 +1021,14 @@ class JournalEntry(object):
 #               print(   # debugging print
 #                  "setting user to '{}'".format(line))
                 new_dict['user'] = line
-            elif (not 'Dr' in line) and (not 'Cr' in line):
+            elif (not ' Dr ' in line) and (not ' Cr ' in line):
 #               print(  # debugging print
 #                  "Appending description: '{}'".format(line))
                 new_dict['description'].append(line)
             else:  # Parse LineEntry
                 # Note: might be of the form 1010,1011,1012 Cr 4.50
 #               print("DEBUG: line: '{}'.".format(line))
+#               print(LineEntry.list_from_text(line).show())
                 for line_entry in LineEntry.list_from_text(line):
 #                   print("DEBUG: line OK: '{}'.".format(line))
                     if isinstance(line_entry, LineEntry):

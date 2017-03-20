@@ -27,6 +27,7 @@ code,indent,full_name,name,hidden,place_holder,split
 4000,0,REVENUE ACCOUNTS,Revenue,F,T
     4100,1,Service Revenue,Service,F,F
     4200,1,Rental Income,Rental,F,F
+    4201,1,Utility Reimbursements,Utility Reimbursement,F,F
     4910,1,Non-Operating Revenue:Interest,Interest,F,F
     4920,1,Non-Operating Revenue:Gain on Sale of Assets,Gain on Sale of Assets,F,F
 

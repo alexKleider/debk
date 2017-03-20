@@ -442,7 +442,7 @@ class JournalClass(unittest.TestCase):
 """July 3, 2015
 Alex Kleider
 Pay for some food.
-5310 304.20 Dr
+5310 Dr 304.20
 3009 Cr 304.20
 
 August 26, 2015
