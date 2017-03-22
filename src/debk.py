@@ -381,7 +381,7 @@ class Account(object):
                     indent= self.indent,
                     full_name= self.full_name,
                     name= self.name,
-                    notes= self.notes,
+#                   notes= self.notes,
                     header= self.header,
 
                     balance= self.balance,
@@ -425,7 +425,7 @@ class Account(object):
             if self.s_balance:
                 has_balance = True
             ret.append(
-                "{} {} Title_Account- subtotal: {:.2f}".
+                "{} {} (Title_Account) subtotal: {:.2f}".
                 format(
                     self.full_name.upper(),
                     self.split_as_str,
@@ -626,15 +626,17 @@ class ChartOfAccounts(object):
         """        -test: see class Ledger in tests/test1.py
         Parameter can be a list of account_codes (as numbers or
         strings) or a string with two account codes separated by a
-        colon representing a range of accounts.
+        dash (-) representing a range of accounts.
         Returns the sum of all the non place holder balances.
         Cr values are considered negative if in a Debit account and
         Dr values are considered negative if in a Credit account.
+        self.sum_accounts(4000-5999) will return Net Income.
         """
 #       print("Calling ChartOfAccounts.sum_accounts({})."
 #                   .format(account_codes))
         if isinstance(account_codes, str):
-            split = account_codes.split(':')
+            split = account_codes.split(
+                            D['account_range_indicator'])
             codes = []
             if len(split) != 2:
                 logging.critical(
@@ -657,7 +659,7 @@ class ChartOfAccounts(object):
             acnt = self.accounts[str(code)]
             if not acnt.place_holder:
                 ret += acnt.signed_balance
-    #               print("Adding balance for acnt#{}: {:.2f}"
+#               print("Adding balance for acnt#{}: {:.2f}"
         return ret
 
     def show_accounts(self):
@@ -671,6 +673,9 @@ class ChartOfAccounts(object):
             if text2show: ret.append(text2show)
 #           logging.debug("Signed balance Acnt %s: %.2f",
 #               code, self.accounts[code].signed_balance)
+        ret.append("\nNET INCOME: ${:.2f}"
+                .format(self.sum_accounts("4000:4999")
+                        - self.sum_accounts("5000:5999")))
         return '\n'.join(ret)
 
 #The following classes pertain to the journal:

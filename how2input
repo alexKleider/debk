@@ -14,15 +14,20 @@ file 'tests/debk.d/Manero_input0'.
     II) Each entry consists, in order, of the following lines:
     II.a) one date line (any format you like.)
     II.b) one line containing the ID of the one making the entry.
-    II.c) one or more lines of text explaining the entry.
-    II.d) Two or more lines following the following format:
-            account(s), 'Dr' or 'Cr', and an amount.
-        'account(s)' can either be a single account code or multiple
-        accounts can be specified in one of the following ways:
-             i) a coma separated (no white space) list of account
-             codes.
-            ii) two account codes separated by a dash ('-') specifies
-            as a range of accounts.)
-        The multiple account formats alow one to (as evenly as
-        possible) distribute one amount amongst several accounts.
+    II.c) one or more lines of explanatory text.
+    II.d) Two or more line entries in the following format:
+            account(s), ' Dr ' or ' Cr ', an_amount
+        'account(s)' can be specified as one of the following:
+             i) a single account code,
+            ii) a coma separated list of account codes,
+           iii) two account codes separated by the character
+             defined by src.config.ACCOUNT_RANGE_SPECIFIER.
+        The latter multiple account formats (ii and iii) can be
+        used to distribute/divide (as evenly as possible) one
+        amount among several accounts.
+        For a line entry to be recognized as such, the 'Dr' or 'Cr'
+        must have a space on either side of it (to separate it from
+        the preceding account(s) and the subsequent amount.)
+        An unavoidable corollary of this is that no line of
+        explanatory text can contain a ' Dr ' or a ' Cr ' sequence!
 

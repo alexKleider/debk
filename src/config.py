@@ -73,6 +73,8 @@ def account_category(code):
             return category
 
 ACCOUNT_CODE_LENGTH = len(ACCOUNT_CATEGORIES['ASSET'])
+ACCOUNT_RANGE_INDICATOR = ':'  # Would probably make more sense
+    # to  make this a '-' but want to test before changing.
 
 DR_ACCOUNTS = {'ASSET', 'EXPENSE'}
 CR_ACCOUNTS = {'LIABILITY', 'EQUITY', 'INCOME'}
@@ -117,6 +119,7 @@ DEFAULTS = dict(        # DEFAULTS, often imported "as D".  ####
         # home directory; the other two are created.
     currency = DEFAULT_CURRENCY,
     verbosity = DEFAULT_VERBOSITY,
+    account_range_indicator = ACCOUNT_RANGE_INDICATOR
     # Plan to make verbosity a bit map:
 #   indentation = '',
 #   indentation_multiplier = 3,

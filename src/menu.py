@@ -190,5 +190,5 @@ if __name__ == "__main__":
     args = docopt.docopt(__doc__, version=config.VERSION)
 #   print(args)
     if args['<data_directory>']:
-        config.Defaults['home'] = args["<data_directory>"]
-    menu(config.Defaults)
+        config.DEFAULTS['home'] = args["<data_directory>"]
+    menu(config.DEFAULTS)
