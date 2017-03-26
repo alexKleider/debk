@@ -68,7 +68,12 @@ def create_entity(entity_name, defaults, set_default=True):
     Reports error if:
         1. <entity_name> already exists, or
         2. not able to write to new directory.
-    Also sets up an empty journal file and a metadata file.
+    Also sets up 
+    1. an empty journal file, and
+    2. a metadata file.
+    The names of the above two files are defined in 
+    src.config.defaults["metadata_name"] and
+    src.config.defaults["journal_name"].
     """
 #   print("Begin create_entity('{}')...".format(entity_name))
     home = defaults['home']
@@ -86,7 +91,9 @@ def create_entity(entity_name, defaults, set_default=True):
     # Following provides the metadata content eliminating the need to
     # have a separate file as was done initially.
     metadata = ("""{{\n"entity_name": "{}",
-"next_journal_entry_number": 1\n}}""".format(entity_name))
+"next_journal_entry_number": 1,
+"last_closing": "unset"\n}}
+""".format(entity_name))
 
     entity_file_path = os.path.join(home, defaults['last_entity'])
     try:

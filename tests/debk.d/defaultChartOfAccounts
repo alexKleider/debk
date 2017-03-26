@@ -29,6 +29,7 @@ code,indent,full_name,name,hidden,place_holder,split
     4200,1,Rental Income,Rental,F,F
     4910,1,Non-Operating Revenue:Interest,Interest,F,F
     4920,1,Non-Operating Revenue:Gain on Sale of Assets,Gain on Sale of Assets,F,F
+    4999,1,NET INCOME,NET INCOME,F,F
 
 5000,0,EXPENCE ACCOUNTS,Expenses,F,T
     5050,1,Expenses:Banking Charges,Banking charges,F,F

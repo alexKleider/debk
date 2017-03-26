@@ -13,10 +13,13 @@ and exit.
 
 import os
 from src import debk
+from src import config
 
 def setup_entity(defaults):
     """
     Assumes defaults['entity'] has already been assigned.
+    Returns a tuple: chart of accounts for the entity,
+    and the journal for the entity.
     """
     cofa = debk.ChartOfAccounts(defaults)
     journal = debk.Journal(defaults)
@@ -47,7 +50,7 @@ def deal_w_new_entries(new_entries, cofa, journal):
 
 
 def journal_entry(cofa, journal):
-    _ = input("Beginning journal entry.")
+    _ = input("Enter to begin journal entry: ")
     new_entries = []
     while True:
         entry = debk.JournalEntry.get_JournalEntry()
@@ -99,6 +102,21 @@ def show_accounts(cofa):
             print("cofa written to file '{}'."
                 .format(file_name))
 
+def close_fiscal_period(cofa):
+    print("Beginning and ending dates of fiscal period-")
+    first_date = input("First date of fiscal period ({}): "
+                        .format(src.config.FISCAL_YEAR_BEGIN))
+    last_date = input("Last date of fiscal period ({}): "
+                        .format(src.config.FISCAL_YEAR_END))
+    if not first_date:
+        first_date = src.config.FISCAL_YEAR_BEGIN
+    if not last_date:
+        last_date = src.config.FISCAL_YEAR_END
+    net_income = cofa.get_net_income()
+    print("Net Income at closing is: ${}"
+            .format(net_income))
+    pass
+
 def add_account(defaults, cofa):
     """
     This will be tricky: must add the account to the data base AND
@@ -121,7 +139,8 @@ Working with {}:
     2. Load Journal Entries from file.
     3. Show Journal.
     4. Show Accounts.
-    5. Add Another Account.
+    5. Close Fiscal Period
+    6. Add Another Account.
     9. Change Verbosity.
     0. Exit
 Choice: """.format(defaults["entity"]))
@@ -149,6 +168,8 @@ Choice: """.format(defaults["entity"]))
         elif option == 4:
             ret = show_accounts(cofa)
         elif option == 5:
+            ret = close_fiscal_period(cofa, journal)
+        elif option == 8:
             ret = add_account(defaults, cofa)
         elif option == 9:
             ret = change_verbosity(defaults)

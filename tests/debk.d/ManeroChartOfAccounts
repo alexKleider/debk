@@ -19,6 +19,7 @@ code,indent,full_name,name,hidden,place_holder,split
 
 4000,0,Income,Income,F,T
     4101,1,Income:Sales,Sales,F,F
+    4999,1,NET INCOME,NET INCOME,F,F
 
 5000,0,Expenses,Expenses,F,T
     5110,1,Expenses:Bank,Banking costs,F,F,9

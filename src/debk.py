@@ -373,7 +373,9 @@ class Account(object):
     @property
     def _dict(self):
         """
-        Returns a dict that can be used to format output for reports.
+        Returns a dictionary representation of an Account.
+        It is used to format output for reports and
+        to create json files.
         Could use global function convert2dict() but for now choosing
         not to because it would include a lot that is not needed.
         """
@@ -554,6 +556,19 @@ class ChartOfAccounts(object):
         # when needed.  This is done using the load_journal_entries()
         # method.
 
+    def _dict(self):
+        """
+        Returns a dictionary with one key ("ledger") value pair:
+        The value is an ordered (by account code) list of all the
+        Account instances in the ledger
+        """
+        list_of_accounts = [self.accounts[key]
+                    for key in self.ordered_codes]
+        return {"ledger": [self.accounts[key]
+                    for key in self.ordered_codes]
+            }
+              
+
     def _set_place_holder_signed_balances(self):
         """
         Iterates through the accounts setting the signed_balance
@@ -636,7 +651,7 @@ class ChartOfAccounts(object):
 #                   .format(account_codes))
         if isinstance(account_codes, str):
             split = account_codes.split(
-                            D['account_range_indicator'])
+                            config.ACCOUNT_RANGE_INDICATOR)
             codes = []
             if len(split) != 2:
                 logging.critical(
@@ -662,6 +677,10 @@ class ChartOfAccounts(object):
 #               print("Adding balance for acnt#{}: {:.2f}"
         return ret
 
+    def get_net_income(self):
+        return  (self.sum_accounts(config.INCOME_RANGE)
+                - self.sum_accounts(config.EXPENSE_RANGE))
+
     def show_accounts(self):
         """Returns a string representation of the Ledger.
         """
@@ -674,15 +693,85 @@ class ChartOfAccounts(object):
 #           logging.debug("Signed balance Acnt %s: %.2f",
 #               code, self.accounts[code].signed_balance)
         ret.append("\nNET INCOME: ${:.2f}"
-                .format(self.sum_accounts("4000:4999")
-                        - self.sum_accounts("5000:5999")))
+                .format(self.get_net_income()))
         return '\n'.join(ret)
+
+    def show_balance_sheet(self, date):
+        """Returns the balance sheet as a string.
+        """
+        ret = ["{:^60}".format(self.entity),
+               "{:^60}".format("Balance Sheet"),
+               "{:^60}".format(date),
+            ]
+        for code in self.ordered_codes:
+            if account_category(code) in config.BALANCE_SHEET_ACCOUNT:
+                text2show = (
+                        self.accounts[code].show_account(self.verbosity))
+                if text2show: ret.append(text2show)
+    #           logging.debug("Signed balance Acnt %s: %.2f",
+    #               code, self.accounts[code].signed_balance)
+        return '\n'.join(ret)
+
+    def show_income_statement(self,
+                              begin = config.FISCAL_YEAR_BEGIN,
+                                end = config.FISCAL_YEAR_END):
+        """Returns the income statement as a string.
+        """
+        fiscal_period = "For Fiscal Period {} to {}".format(
+                                                begin, end),
+        ret = ["{:^60}".format(self.entity),
+               "{:^60}".format("Income Statement"),
+               "{:^60}".format(fiscal_period),
+            ]
+        for code in self.ordered_codes:
+            if account_category(code) in config.INCOME_STATEMENT_ACCOUNT:
+                text2show = (
+                        self.accounts[code].show_account(self.verbosity))
+                if text2show: ret.append(text2show)
+    #           logging.debug("Signed balance Acnt %s: %.2f",
+    #               code, self.accounts[code].signed_balance)
+        return '\n'.join(ret)
+        return ret
+
+    def income2equity(self, date, user=config.DEFAULT_USER):
+        """
+        ### This should perhaps be done at the work_with menu level
+        ### since we should also get the JournalEntry we create into
+        ### the Journal!!!
+        Add a journal entry that debit's the config.NET_INCOME_ACCOUNT
+        and credits the config.EQUITY4INCOME_ACCOUNT.
+        """
+        amount = self.get_net_income()
+        closing_entry = JournalEntry( 0, date, user,
+            [config.INCOME_TRANSFER2EQUITY_DESCRIPTOR],
+            [LineEntry(config.NET_INCOME_ACCOUNT, "Dr", amount),
+             LineEntry(config.EQUITY4INCOME_ACCOUNT, "Cr", amount)])
+        self.load_journal_entries([closing_entry])
+        pass
+
+    def close_out(self, date):
+        """
+        What we need to do:
+        1. create an income statement
+        2. create a balance sheet with net income moved to
+        owner equity.
+        3. zero out all the temporary accounts (income and
+        expenses)
+        4. create a new journal with starting balances from
+        the newly created balance sheet.
+        5. archive the old journal, the balance sheet and the
+        income statement. Put these all into a subdirectory
+        named by the date with contents called: balance,
+        income, and journal.json (note the small J).
+        """
+        pass
+
 
 #The following classes pertain to the journal:
 
 class LineEntry(object):
     """
-    LineEntry: the individual line_entries of each JournalEntry.
+    ineEntry: the individual line_entries of each JournalEntry.
     Attributes are account_code, type_ (dr or cr), and amount.
     type_ is converted to 'D' or 'C'.
     Provides the following methods:
@@ -770,7 +859,7 @@ class LineEntry(object):
     @property       # LineEntry
     def _dict(self):
         """
-        Returns the dictionary version of a LineEntry.
+        Returns a dictionary representation of a LineEntry.
         """
         return dict(account_code = self.account_code,
                     amount = self.amount,
@@ -872,6 +961,9 @@ class JournalEntry(object):
 
     @property       # JournalEntry
     def _dict(self):
+        """
+        Returns a dictionary representation of a JournalEntry.
+        """
         return dict(entry_number= self.entry_number,
                     date_stamp= self.date_stamp,
                     user= self.user,

@@ -36,7 +36,11 @@ VERSION = "0.1.0-beta"
 import os
 import time
 
+DEFAULT_USER = "Book Keeper"
 DEFAULT_YEAR = time.localtime().tm_year
+FISCAL_YEAR_BEGIN = "Jan 1, {}".format(DEFAULT_YEAR)
+FISCAL_YEAR_END = "Dec 31, {}".format(DEFAULT_YEAR)
+
 Short_Months = {'Feb', 'Apr', 'Jun', 'Sep', 'Nov'}
 Months = (
 {'Jan', 'Mar', 'May', 'Jul', 'Aug', 'Oct', 'Dec'} | Short_Months)
@@ -50,17 +54,31 @@ LOGLEVEL = "WARNING"
 # LOGLEVEL = "ERROR"
 # LOGLEVEL = "CRITICAL"
 
+ACCOUNT_RANGE_INDICATOR = ':'  # Would probably make more sense
+    # to  make this a '-' but want to test before changing.
 CofA_HEADERS = ['code', 'indent', 'full_name', 'name',
                     'hidden', 'place_holder', 'split']
 N_COMPONENTS = len(CofA_HEADERS) -1
 
 ACCOUNT_CATEGORIES = dict(
-    ASSET= '1000',
-    LIABILITY= '2000',
-    EQUITY= '3000',
-    INCOME= '4000',
-    EXPENSE= '5000',
-    )
+    ASSET= '1000',     LAST_ASSET= '1999',
+    LIABILITY= '2000', LAST_LIABILITY= '2999',
+    EQUITY= '3000',    LAST_EQUITY= '3999',
+    INCOME= '4000',    LAST_INCOME= '4999',
+    EXPENSE= '5000',   LAST_EXPENSE= '5999')
+INCOME_TRANSFER2EQUITY_DESCRIPTOR = (
+    "End of Period: Move net income into owner equity")
+NET_INCOME_ACCOUNT =  "4999"
+EQUITY4INCOME_ACCOUNT = "3100"
+BALANCE_SHEET_ACCOUNTS = {"ASSET", "LIABILITY", "EQUITY"}
+INCOME_STATEMENT_ACCOUNTS = {"INCOME", "EXPENSE"}
+
+INCOME_RANGE = "{}{}{}".format(ACCOUNT_CATEGORIES["INCOME"],
+                            ACCOUNT_RANGE_INDICATOR ,
+                            ACCOUNT_CATEGORIES["LAST_INCOME"])
+EXPENSE_RANGE = "{}{}{}".format(ACCOUNT_CATEGORIES["EXPENSE"],
+                            ACCOUNT_RANGE_INDICATOR ,
+                            ACCOUNT_CATEGORIES["LAST_EXPENSE"])
 
 def account_category(code):
     """
@@ -73,13 +91,11 @@ def account_category(code):
             return category
 
 ACCOUNT_CODE_LENGTH = len(ACCOUNT_CATEGORIES['ASSET'])
-ACCOUNT_RANGE_INDICATOR = ':'  # Would probably make more sense
-    # to  make this a '-' but want to test before changing.
 
 DR_ACCOUNTS = {'ASSET', 'EXPENSE'}
 CR_ACCOUNTS = {'LIABILITY', 'EQUITY', 'INCOME'}
-DR_FIRSTS = {ACCOUNT_CATEGORIES[item][:1] for item in DR_ACCOUNTS}
-CR_FIRSTS = {ACCOUNT_CATEGORIES[item][:1] for item in CR_ACCOUNTS}
+DR_FIRSTS = {ACCOUNT_CATEGORIES[key][:1] for key in DR_ACCOUNTS}
+CR_FIRSTS = {ACCOUNT_CATEGORIES[key][:1] for key in CR_ACCOUNTS}
 
 def valid_account_code(account_code):
     if (account_code
@@ -119,7 +135,6 @@ DEFAULTS = dict(        # DEFAULTS, often imported "as D".  ####
         # home directory; the other two are created.
     currency = DEFAULT_CURRENCY,
     verbosity = DEFAULT_VERBOSITY,
-    account_range_indicator = ACCOUNT_RANGE_INDICATOR
     # Plan to make verbosity a bit map:
 #   indentation = '',
 #   indentation_multiplier = 3,

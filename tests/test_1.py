@@ -250,12 +250,13 @@ class CreateEntity(unittest.TestCase):
         Tests for a correclty set up json metadata file.
         """
         for entity in self.ENTITIES:
-            match = {"next_journal_entry_number": 1,
-                    "entity_name": entity}
+            expected = {"next_journal_entry_number": 1,
+                        "entity_name": entity,
+                        "last_closing": "unset"}
             with open(os.path.join(self.entity_dirs[entity],
-                        'Metadata.json'), 'r') as metadata_file_obj:
+                    'Metadata.json'), 'r') as metadata_file_obj:
                 metadata = json.load(metadata_file_obj)
-                self.assertTrue(metadata == match) 
+                self.assertTrue(metadata == expected) 
 
     def tearDown(self):
         """
@@ -523,6 +524,7 @@ class Ledger(unittest.TestCase):
             (self.cofa.sum_accounts("3000:3999"), 15000.00), # 
             (self.cofa.sum_accounts("4000:4999"), 600.00),  
             (self.cofa.sum_accounts("5000:5999"), 00.00),  #
+            (self.cofa.get_net_income(), 600.00),
                     ]
         for acnt_sum, amount in testdata:
             with self.subTest(acnt_sum=acnt_sum, amount=amount):
