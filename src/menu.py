@@ -6,7 +6,7 @@
 A simple menu model to be used as a front end for the
 double entry book keeping project.
 
-Usage: 
+Usage:
     ./src/menu.py
     ./src/menu.py -h | --help
     ./src/menu.py --version
@@ -21,7 +21,6 @@ directory which will replace that specified by DEFAULTS['home']
 in ./src/config.py
 """
 
-import sys
 import docopt
 import src.work_with as work_with
 import src.entities as entities
@@ -45,24 +44,26 @@ def choose_entity(entities, indent=0):
         entity_list = sorted(entities.lst)
     while True:
         option = input(
-"""{0:}Choose one of the following:
+            """{0:}Choose one of the following:
 {1:}
 {0:}0: to exit.
-{0:}Pick an entity: """.format(" "*indent,
-                entities.show_entities(numbered=True, indent=indent)))
+{0:}Pick an entity: """
+            .format(" "*indent,
+                    entities.show_entities(numbered=True,
+                                           indent=indent)))
         default = entities.default
-        if (option=='' or option=='_') and default:
+        if (option == '' or option == '_') and default:
             return default
         try:
             option = int(option)
         except ValueError:
             print("Invalid option: {}! (It must be an integer.)"
-                    .format(option))
+                  .format(option))
             continue
         if option in range(1, len(entity_list) + 1):
             chosen_entity = entity_list[option - 1]
             entities.reset_default(chosen_entity)
-            return chosen_entity 
+            return chosen_entity
         elif option == 0:
             return None
         else:
@@ -87,7 +88,7 @@ def create_new(entities):
     while True:
         entity = input("Pick name for new entity: ")
         if (entities.check_new_entity(entity)
-        and entities.add(entity) == entity):
+                and entities.add(entity) == entity):
             print(
             "Entity '{}' successfully created (and set as default.)"
                 .format(entity))
@@ -106,11 +107,11 @@ def delete_option(defaults, entities):
     print("Picked 'Delete an existing entity.'")
     while True:
         entity = choose_entity(entities, 4)
-        if not entity: 
+        if not entity:
             print("Entity deletion aborted.")
             return
         y_n = input("About to delete entity '{}', ARE YOU SURE? "
-                .format(entity))
+                    .format(entity))
         if y_n and y_n[0] in 'Yy':
             print("Deleting entity '{}'.".format(entity))
             entities.remove(entity)
@@ -137,8 +138,8 @@ def menu(defaults):
     begins the accounting process with that entity.
     """
     entities_ = entities.Entities(
-                            *entities.get_file_info(defaults),
-                            defaults=defaults)
+        *entities.get_file_info(defaults),
+        defaults=defaults)
 #   print("'entities_' is of type '{}'.".format(type(entities_)))
 #   print("Initializing 'entities_' with the following values:")
 #   print("\t", entities_.lst)
@@ -148,7 +149,7 @@ def menu(defaults):
         if listing:
             listing = (
 """\n    (Currently existing entities_ are:\n{}          )"""
-                    .format(listing))
+                .format(listing))
         else: listing = "\n    (No entities_ currently exist.)"
 #       print("listing is '{}'.".format(listing))
         option = input("""
@@ -168,7 +169,7 @@ Choice: """.format(defaults['home'], listing))
         except ValueError:
             print(
                 "Invalid main menu choice: {} (must be an integer.)"
-                        .format(option))
+                .format(option))
             continue
         if option == 1:
             entity = create_new(entities_)

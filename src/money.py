@@ -1,173 +1,229 @@
 #!./venv/bin/python3
 
-# file: src/money_re.py
+# File: tmoney.py
 
 import re
 import src.config as config
 
-DEFAULT_CURRENCY = config.DEFAULTS["currency"]
-
-CURRENCY_SIGNS = {     # The dollar sign must be escaped because
-    "dollar": "[$]",   # it's to be used in a RegEx expression,
-    "pound": "[£]",    # so all are being excaped (made into a
-    "yuan": "[¥]",     # character class) to make processing
-    "yen": "[¥]",      # simpler.  The square brackets are stripped
-    "euro": "[€]",     # when not wanted.
-    "rupee": "[₹]",   
-    }    # Multicharacter currency signs are not supported at present.
-
-RE_EXPRESSION_SANS_CURRENCY_SYMBOL = r"""
-{0:}?  # Optional currency sign.
-(   # Option to use minus to indicate negativity.
-    [-]?  # Could be a negative number.
-    {0:}?  # Currency sign could come after minus
-
-    (  # Beginning of first digit section.
-        (  # Forces at least one digit before decimal.
-            \d+
-            [.]  # Must contain a decimal place.
-            \d{{0,2}}  # 0 ... 2 digits after decimal.
-        )  #            ^
-        |  #  OR: digit ^before or v after mandatory decimal.
-        (  # Forces at least one digit after decimal.
-            \d*
-            [.]  # Must contain a decimal place.
-            \d{{1,2}}  # 1 or 2 digits after decimal.
-        )
-    )  # End of first digit section.
-)  # Ends minus sign option.
-|
-(  # Next choice is to use parens for negativity.
-    (?P<parens>  # Presence of this named group means negative.
-        [(]  # Presence of the parens indicates negativity.
-        {0:}?  # Currency sign could be inside parens.
-          # following OR is a duplicate of what's above.
-        (  # Begin digit section for second time.
-            (
-                \d+  # Forces at least one digit before decimal.
-                [.]  # Must contain a decimal place.
-                \d{{0,2}}  # 0 ... 2 digits after decimal.
-            )
-            |
-            (
-                \d*  # Forces at least one digit after decimal.
-                [.]  # Must contain a decimal place.
-                \d{{1,2}}  # 1 or 2 digits after decimal.
-            )
-        )  # End of the second appearance of this digit section.
-        [)]  # This closing parens DOES NOT get included!!!
-        # ... & I don't understand why not.
-    ) # Closes named group 'parens'.
-) # Closes outer OR (provides parens functionality.)
+wo_symbol_re = r"""
+[-]?
+(?P<d1>[0-9]*)
+[.]  # If no currency symbol, must have a decimal point.
+(?P<c1>[0-9]{0,2})?
+[.]?  # Want to know if there is a second_decimal!
 """
 
-_match = ''
-_parens = ''
+before_symbol_re = r"""
+[-]?
+{}
+[-]?
+(?P<d1>\d+)
+([.](?P<c1>\d{{0,2}}))?
+[.]?
+"""
 
-def pull_money(source, 
-            currency_name = DEFAULT_CURRENCY,
-            re_prototype=RE_EXPRESSION_SANS_CURRENCY_SYMBOL,
+with_symbol = before_symbol_re.format(
+    config.DEFAULT_CURRENCY_SYMBOL)
+
+pat_w_symbol = re.compile(with_symbol, re.VERBOSE)
+pat_wo_symbol = re.compile(wo_symbol_re, re.VERBOSE)
+
+def get_currency_value(string,
+                    pat_w_symbol=pat_w_symbol,
+                    debug=False):
+    """
+    Uses regex to find a currency value within the string.
+    Depends on the expressions precompiled in this module.
+    Those expressions in turn depend on the currency symbol
+    set in src.config.DEFAULT_CURRENCY_SYMBOL
+    Returns a float if successful, None if not.
+    """
+    value = cents = ''
+    negative = False
+    res = pat_w_symbol.search(string)
+    if not res:
+        if debug: print("failed w symbol")
+        res = pat_wo_symbol.search(string)
+    if res:
+        match = res.group()
+        if debug:
+            print("got a match: {}".format(match))
+        if match.count('.') > 1:
+            if debug:
+                print("failing: >1 decimal")
+            return
+        if match.count("-"):
+            if debug:
+                print("negative sign found")
+            negative = True
+        value = res.group("d1")
+        if debug: print("value is {}".format(value))
+        if not value:
+            if debug:
+                print("no dollar value. => '0'")
+            value = "0"
+        value = float(value)
+        cents = res.group("c1")
+        if debug: print("cents is {}".format(cents))
+        if not cents:
+            if debug: print("no cents. => '0'")
+            cents = "0"
+        if len(cents) == 1: cents += "0"
+        cents = float(cents)
+        if debug: print("final cents: {}".format(cents))
+        value += cents / 100
+        if negative: value = -value
+        if value != 0:
+            return value
+
+data2test = (
+    ("nothing here", "None"),
+    ("-45", "None"),
+    ("45", "None"),
+    ("cost is -45", "None"),
+    ("-45 is the price", "None"),
+
+    ("-45.", "-45.00"),
+    ("45.", "45.00"),
+    ("cost is -45.", "-45.00"),
+    ("-45. is the price", "-45.00"),
+
+    ("-45.2", "-45.20"),
+    ("45.2", "45.20"),
+    ("cost is -45.2", "-45.20"),
+    ("cost is 45.2", "45.20"),
+    ("-45.2 is the price", "-45.20"),
+    ("45.2 is the price", "45.20"),
+
+    ("-45.33", "-45.33"),
+    ("45.33", "45.33"),
+    ("cost is -45.33", "-45.33"),
+    ("-45.33 is the price", "-45.33"),
+    ("cost is 45.33", "45.33"),
+    ("45.33 is the price", "45.33"),
+
+    ("-45.33.", "None"),
+    ("45.33.2", "None"),
+    ("cost is -45.33.78", "None"),
+    ("-45.33. is the price", "None"),
+    ("cost is 45.33.2", "None"),
+    ("45.33.2 is the price", "None"),
+
+    ("nothing here", "None"),
+    ("-$45", "-45.00"),
+    ("$-45", "-45.00"),
+    ("cost is -45", "None"),
+    ("$-45 is the price", "-45.00"),
+
+    ("-$45.", "-45.00"),
+    ("$-45.", "-45.00"),
+    ("cost is -$45.", "-45.00"),
+    ("$-45. is the price", "-45.00"),
+
+    ("-$45.2", "-45.20"),
+    ("$-45.2", "-45.20"),
+    ("cost is -$45.2", "-45.20"),
+    ("$-45.2 is the price", "-45.20"),
+
+    ("-$45.33", "-45.33"),
+    ("$-45.33", "-45.33"),
+    ("cost is -$45.33", "-45.33"),
+    ("$-45.33 is the price", "-45.33"),
+
+    ("-$45.33.", "None"),
+    ("$-45.33.9", "None"),
+    ("cost is -$45.33.99", "None"),
+    ("$-45.33.99 is the price", "None"),
+
+      ("Dr 1111 5000.00", '5000.00'),
+      ("Dr 1111 5000.00", '5000.00'),
+      ("3100 5000.00 Cr", '5000.00'),
+       ("3100 5000.00Cr", '5000.00'),
+        ("3100 5000.0Cr", '5000.00'),
+         ("3100 5000.Cr", '5000.00'),
+          ("3100 5000Cr", "None"),
+      ("1111 Cr 5000.00", '5000.00'),
+      ("1511 Dr 5000.00", '5000.00'),
+    ("no dr or cr found", "None"),
+
+)
+
+def test_data(list_of_2_tuples,
+            symbol=config.DEFAULT_CURRENCY_SYMBOL,
             debug=False):
+#           debug=True):
     """
-    Uses RE to pull out a monetary value.
-    If a money quantity is not found, returns None.
-    If successfull, returns a 2 part tuple:
-        1. the money value as a float.
-        2. the span where re matched (a two part tuple.)
-    Uses globals _match and _parens for debugging purposes.
-    Negative values may be indicated by either a minus sign or by
-    enclosing parentheses.
-    The specified currency symbol may be used and it may appear on
-    either side of the minus sign or opening parens.
-    <escaped_currency_sign> must be a currency sign within square
-    brackets. e.g. "[£]"
+    Each of the (2) tuples in the first paramter consists of a
+    string which when passed to the get_currency function should
+    result it its returning the second component of the tuple.
+    Returned is a (3) tuple each component of which is a list:
+    The first of these lists represents successes, the second 
+    represents failures in that there was a match but the returned
+    value was not that specified, and the third lists the cases
+    where there was no match.
     """
-    escaped_currency_sign=CURRENCY_SIGNS[currency_name]
-    global _match, _parens
-    re_expression = (RE_EXPRESSION_SANS_CURRENCY_SYMBOL
-                        .format(escaped_currency_sign))
-    money_pattern = re.compile(re_expression, re.VERBOSE)
-    ret = None
-    match = money_pattern.search(source)
-    if match:
-        _match = match.group()
-        span = match.span()
-        try:
-            _parens = match.group("parens")
-#           if debug:
-#               print("'parens': {}".format(_parens))
-        except IndexError:
-            _parens = False
-        if _parens:
-            ret = _parens.replace("(","-")
-            ret = ret.replace(")","")
-        else:
-            ret = match.group()
-#       print("DEBUG: 'ret' is {}".format(ret))
-        ret = float(ret.replace(escaped_currency_sign[1:-1], ''))
-    else:
-        ret = _match = match
-    # We still have the float value in ret.
-    if ret:
-        return (ret, (span))
-
-
-def test():
-    """Testing suite: run if module is run as __main__.
-    """
-    failures = []
-    source = (
-        ("Expect failure.", "-4.00"),
-        ("Price 13.87 of something", "13.87"),
-        ("Price -23.87 of something", "-23.87"),
-        ("Price $-23.87 of something", "-23.87"),
-        ("Price -$23.87 of something", "-23.87"),
-        ("1010 .37 Cr", "0.37"),
-        ("1010 $.37 Cr", "0.37"),
-        ("1010 -$.37 Cr", "-0.37"),
-        ("1010 $-.37 Cr", "-0.37"),
-        ("4.", "4.00"), ("$4.", "4.00"),
-        ("-$4.", "-4.00"), ("$-4.", "-4.00"),
-        ("($4.)", "-4.00"), ("$(4.)", "-4.00"),
-        ("1010 (5.37) Cr", "-5.37"),
-        ("1010 Dr ($88.4)", "-88.40"),
-        ("Dr 1010 ($88.4)", "-88.40"),
-        ("Dr $(98.4) 1010", "-98.40"), 
-
-(".3 1010 Dr", "0.30"), ("$.3 1010 Dr", "0.30"),
-("-.3 1010 Dr", "-0.30"), ("(.3) 1010 Dr", "-0.30"),
-("-$.3 1010 Dr", "-0.30"), ("$-.3 1010 Dr", "-0.30"),
-("($.3) 1010 Dr", "-0.30"), ("$(.3) 1010 Dr", "-0.30"), 
-
-        ("EXPECT FAILURE", None),
-    )
-    from tests.money_test_data import more_tests
-    source = source + more_tests
-
-    print("{:<30} {:<10} {:<10} {:<10}"
-        .format("SOURCE", "MATCH", "RESULT", "EXPECTED"))
-
-    for source, expected in source:
-        returned = pull_money(source, debug=True)
-        if returned:
-            value, span = returned
-            if "{:.2f}".format(value) != expected:
-                add_info = ("!!  '{}' !>> '{}'  !!"
-                                .format(_match, expected))
+    successes = []
+    wrong_match = []
+    no_match = []
+    for subject, expected in list_of_2_tuples:
+        res = get_currency_value(subject,
+                                debug=False)
+#                               debug=True)
+        if res:
+            if "{:.2f}".format(res) == expected:
+                successes.append("{:>32}  {:.2f}  {}"
+                                   .format(subject, res, expected))
             else:
-                add_info = ''
-            print("{:<30} {:<10} {:<10.2f} {:<10} {}"
-                .format(source, _match, value, expected, add_info))
+                wrong_match.append("{:>32}  {:.2f}  {}"
+                                   .format(subject, res, expected))
         else:
-            failures.append("{:<30} {}".format(source, expected))
+            no_match.append("{:>32} => no match - expect {}"
+                                        .format(subject, expected))
+    return (successes, wrong_match, no_match)
 
-    if failures:
-        print("\nFAILURES:")
-        print("{:<30} {}".format('Source', 'Expected'))
-        print("{:<30} {}".format('------', '--------'))
-        print("\n".join(failures))
+def populate(successes, wrong_match, no_match, res):
+    """
+    Assumes that res is a (3) tuple as returned by test_data.
+    The three lists of res are appended to the first three params
+    as appropriate.
+    """
+    successes.extend(res[0])
+    wrong_match.extend(res[1])
+    no_match.extend(res[2])
 
+def test_foreign_currencies(dict_of_lists):
+    successes = []
+    wrong_match = []
+    no_match = []
+    for key in config.CURRENCY_SYMBOLS.keys():
+        data = dict_of_lists[key]
+        res = test_data(data)
+        populate(successes, wrong_match, no_match, res)
+    return (successes, wrong_match, no_match)
+
+def display(successes, wrong_match, no_match):
+    print("Successes:")
+    print("\n".join(successes))
+    print("Matched but wrong:")
+    print("\n".join(wrong_match))
+    print("No match:")
+    print("\n".join(no_match))
 
 if __name__ == "__main__":
-    test()
+#   test(after_symbol, test_data_with_sign)
+#   test(wo_symbol_re, test_data_without_sign)
+
+    double_symbol=config.CURRENCY_SYMBOLS["Iceland krona"]
+
+    successes = []
+    wrong_match = []
+    no_match = []
+
+    populate(successes, wrong_match, no_match,
+            test_data(data2test,
+#                   config.CURRENCY_SYMBOLS["Iceland krona"],
+#                   debug = True))
+                    debug = False))
+
+    display(successes, wrong_match, no_match)
 

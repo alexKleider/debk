@@ -102,19 +102,50 @@ def show_accounts(cofa):
             print("cofa written to file '{}'."
                 .format(file_name))
 
-def close_fiscal_period(cofa):
+def close_fiscal_period(cofa, journal):
+    """
+    Closes the fiscal period:
+    a. Zero out all the temporary accounts (income and
+    expenses) with adjustment entries putting net income
+    into the config.EQUITY4INCOME_ACCOUNT.
+    b. Create a new JournalEntry that would populate a virgin
+    chart of accounts with starting balances as in the newly
+    created balance sheet.  (Adjust the metadata file accordingly.)
+    c. Archive the Journal as a time stamped file.  (Log this in
+    the metadata file.)
+
+    Returns two strings as a tuple:
+        1. an income statement (before zeroing of the temporary
+        accounts,) and
+        2. a balance sheet (with net income already moved
+        to owner equity (config.EQUITY4INCOME_ACCOUNT.))
+    """
     print("Beginning and ending dates of fiscal period-")
-    first_date = input("First date of fiscal period ({}): "
+    begin_date = input("First date of fiscal period ({}): "
                         .format(src.config.FISCAL_YEAR_BEGIN))
-    last_date = input("Last date of fiscal period ({}): "
+    closing_date = input("Last date of fiscal period ({}): "
                         .format(src.config.FISCAL_YEAR_END))
-    if not first_date:
-        first_date = src.config.FISCAL_YEAR_BEGIN
-    if not last_date:
-        last_date = src.config.FISCAL_YEAR_END
+    if not begin_date:
+        begin_date = src.config.FISCAL_YEAR_BEGIN
+    if not closing_date:
+        closing_date = src.config.FISCAL_YEAR_END
     net_income = cofa.get_net_income()
     print("Net Income at closing is: ${}"
             .format(net_income))
+    income_statement = cofa.show_balance_sheet(closing_date)
+    closing_entry = JournalEntry( 0, date, user,
+        [config.INCOME_TRANSFER2EQUITY_DESCRIPTOR],
+        [LineEntry(config.NET_INCOME_ACCOUNT, "Dr", net_income),
+         LineEntry(config.EQUITY4INCOME_ACCOUNT, "Cr", net_income)])
+    journal.append(closing_entry)
+    cofa.load_journal_entries([closing_entry])
+    balance_sheet = cofa.show_income_statement(
+                                    begin_date, closing_date)
+    income_total = 0
+    expense_total = 0
+    line_entries = cofa.total_reversal("INCOME", income_total)
+    line_entries.append(
+                cofa.total_reversal("EXPENSE", expense_total))
     pass
 
 def add_account(defaults, cofa):

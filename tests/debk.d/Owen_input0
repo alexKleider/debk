@@ -1,0 +1,44 @@
+July 1, 1985
+book keeper
+Start real estate business.
+1111 5000.00 Dr 
+3100 5000.00 Cr 
+
+July 2, 1985
+book keeper
+Buy office furniture
+1511 350.00 Dr 
+2211 350.00 Cr 
+
+July 3, 1985
+book keeper
+Sale of office equipment to Dale Hall
+1111 100.00 Dr 
+1210 50.00 Dr 
+1511 150.00 Cr 
+
+July 4, 1985
+book keeper
+Paid by Dale Hall
+1111 50.00 Dr 
+1210 50.00 Cr 
+
+July 4, 1985
+book keeper
+Pay off 1/2 of furniture cost
+2211 175 Dr 
+1111 175 Cr 
+
+July 5, 1985
+book keeper
+Commission
+1111 850.00 Dr 
+4210 850.00 Cr 
+
+July 6, 1985
+book keeper
+Phone bill
+5504 20.00 Dr 
+1111 20.00 Cr 
+
+

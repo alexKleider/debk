@@ -41,17 +41,21 @@ Usage:
 Options:
   -h --help  Print usage statement.
   --version  Print version.
+
+The first usage is only to run minor tests.
   """
 
 # Clarification of some issues that might otherwise cause confusion:
 
-# Attribute  Class(es)  Values +/- notes
-# ---------  ---------  ----------------
-# acnt_type  Account    Dr, Cr, or place_holder qualifies the account.
+# Attribute  Class(es)  Values / notes
+# ---------  ---------  --------------
+# acnt_type  Account    Dr | Cr | place_holder 
+#                       / qualifies the account type as
+#                       / (asset, income) vs (liab, equity, expense)
 # category   Account    ASSETS, LIABILITIES, EQUITY, INCOME, EXPENSES.
-# type_      Account    | D, C  | qualifies the balance attribute.
-#            LineItem  |       | qualifies the amount attribute.
-#            LineEntry   |       | ditto for JournalEntry LineEntrys.
+# type_      Account    D | C / qualifies the balance attribute.
+#            LineItem   / qualifies the amount attribute.
+#            LineEntry  / ditto for JournalEntry LineEntrys.
 
 import os
 import sys
@@ -62,9 +66,13 @@ import shutil
 import logging
 import datetime
 from docopt import docopt
+import src.drcr as drcr
 import src.config as config
 from src.config import DEFAULTS as D
-from src.money import pull_money
+from src.money import get_currency_value
+
+DEBUG = False
+
 logging.basicConfig(level = config.LOGLEVEL)
 
 INDENTATION_CONSTANT = ' ' * config.INDENTATION_MULTIPLIER  
@@ -184,26 +192,28 @@ def divider(dollar_amount, split):
     assert (abs(dollars)-abs(sum(ret)))<config.EPSILON  # Sanity chk.
     return ret
 
-# The following two functions are being kept here (rather than in
-# config.py) because they use the logging module.
+# The following two functions would be better placed in in
+# src.config but are being kept here because they use the
+# logging module.
 def valid_account_type(type_):
     """     tested in tests/test1 class ValidAccountType
     Checks validity of an account type:
-    i.e. checks that it is a string beginning with either of the two
-    letters 'd' or 'c': interpretable as either Debit or Credit.
-    Note: attribute type_ refers to an associated amount or balance.
-    while the attribute acnt_type refers to the account itself and can
-    refer to Debit, Credit or place_holder (while category refers to
-    asset, liability, etc.)
+    i.e. checks that it is a string beginning with one of the
+    letters in [DdCc]: interpretable as either Debit or Credit.
     NOTE: does not treat place_holder as a valid account type.
+    See the docstring for src.config.
     """
 #   print("\nCalling valid_account_type({})".format(type_))
     if (type_
     and isinstance(type_, str)
     and (type_[:1].upper() in "DC")):
-#       print("valid_account_type() returning True")
+#       print("Call to valid_account_type({}) returning True"
+#           .format(type_))
         return True
-#   print("valid_account_type() returning False")
+#   print("Call to valid_account_type({}) returning False"
+#           .format(type_))
+    logging.critical(
+        "Invalid account type: '%s'", type_)
     return False
 
 def acnt_type_from_code(account_code):
@@ -214,8 +224,8 @@ def acnt_type_from_code(account_code):
     Later processing may change an Account's type to
     'place_holder'.
     Used to set the Account attribute acnt_type.
-    Depends on config.py to define account types.
-    MIGHT BE BETTER PLACED IN config.py.
+    Depends on src.config to define account types.
+    See the docstring for src.config.
     """
     first = account_code[:1]
     if first in config.DR_FIRSTS:    # Assets and Expenses
@@ -223,7 +233,7 @@ def acnt_type_from_code(account_code):
     elif first in config.CR_FIRSTS:  # Liability, Equity, Income
         return('Cr')
     logging.critical(
-    "Malformed account code: '%s'", account_code)
+        "Malformed account code: '%s'", account_code)
 
 #####  END OF HELPER FUNCTIONS  #####
 
@@ -568,6 +578,18 @@ class ChartOfAccounts(object):
                     for key in self.ordered_codes]
             }
               
+    def balance_sheet_account_codes(self):
+        """
+        Returns a tuple of two ordered lists of account codes.
+        The first contains the income account codes, and
+        the second contains the expense account codes.
+        """
+        return dict(
+        income= [code for code in self.ordered_codes if code[:1]
+                    == config.ACCOUNT_CATEGORIES["INCOME"][:1]],
+        expense= [code for code in self.ordered_codes if code[:1]
+                    == config.ACCOUNT_CATEGORIES["EXPENSE"][:1]],
+        )
 
     def _set_place_holder_signed_balances(self):
         """
@@ -733,38 +755,20 @@ class ChartOfAccounts(object):
         return '\n'.join(ret)
         return ret
 
-    def income2equity(self, date, user=config.DEFAULT_USER):
-        """
-        ### This should perhaps be done at the work_with menu level
-        ### since we should also get the JournalEntry we create into
-        ### the Journal!!!
-        Add a journal entry that debit's the config.NET_INCOME_ACCOUNT
-        and credits the config.EQUITY4INCOME_ACCOUNT.
-        """
-        amount = self.get_net_income()
-        closing_entry = JournalEntry( 0, date, user,
-            [config.INCOME_TRANSFER2EQUITY_DESCRIPTOR],
-            [LineEntry(config.NET_INCOME_ACCOUNT, "Dr", amount),
-             LineEntry(config.EQUITY4INCOME_ACCOUNT, "Cr", amount)])
-        self.load_journal_entries([closing_entry])
-        pass
-
-    def close_out(self, date):
-        """
-        What we need to do:
-        1. create an income statement
-        2. create a balance sheet with net income moved to
-        owner equity.
-        3. zero out all the temporary accounts (income and
-        expenses)
-        4. create a new journal with starting balances from
-        the newly created balance sheet.
-        5. archive the old journal, the balance sheet and the
-        income statement. Put these all into a subdirectory
-        named by the date with contents called: balance,
-        income, and journal.json (note the small J).
-        """
-        pass
+def total_reversal(self, account_category, total):
+    """
+    Returns a list of <LineEntry>s to zero out all 
+    account_category accounts and adds the balance of 
+    each to total.  << A SIDE EFFECT!!
+    """
+    line_entries = []
+    for code in self.balance_sheet_account_codes[account_category]:
+        acnt = self[code]
+        balance = acnt.balance
+        if (acnt.type_[:1] in 'DC') and (balance):
+            total += balance
+            line_entries.append(LineEntry(code, drcr, balance))
+    return line_entries
 
 
 #The following classes pertain to the journal:
@@ -803,7 +807,7 @@ class LineEntry(object):
             and self.amount == other.amount)
 
     @classmethod     # LineEntry
-    def list_from_text(src, line):
+    def old_list_from_text(cls, line):
         """     
         Accepts a string with the following three white space
         separated components: account_code, type_, & amount.
@@ -856,20 +860,59 @@ class LineEntry(object):
             ret.append(LineEntry(code_part, type_part, amnt_part))
         return ret
 
+    @classmethod     # LineEntry
+    def list_from_text(cls, line):
+        """     
+        Accepts a string with the following three white space
+        separated components: account_code, type_, & amount.
+        The <account_code> component may be a comma separated
+        (no whitespace) list of <account_code>s. (For example
+        "1010,1011,1012 Cr 4.50") in which case the the currency
+        amount is divided (as evenly as possible) between the
+        accounts listed.
+        All three compoenets are identified using RegEx.
+        The components can appear in any order.
+        Returns a list of LineEntry instances (or None if parsing
+        is unsuccessful.)
+        """
+        if not line: return
+        abort = False
+        ret = []
+        value = get_currency_value(line,
+                debug=DEBUG)
+        accounts = config.get_list_of_accounts(line)
+        type_ = drcr.drcr(line)
+        for item, report in (
+                (value, "no dollar amount"),
+                (accounts, "no account(s) entered"),
+                (type_, "no 'Dr' or 'Cr' given"),
+                ):
+            if item is None:
+                logging.warning(
+"""Malformed LineEntry entry line- ({}).
+...line has {}""".format(line, report))
+                abort = True
+        if abort == True:
+            return
+        
+        values = divider(value, len(accounts))
+        for (account, value) in zip(accounts, values):
+            ret.append(LineEntry(account, type_, value))
+        return ret
+
     @property       # LineEntry
     def _dict(self):
         """
         Returns a dictionary representation of a LineEntry.
         """
-        return dict(account_code = self.account_code,
-                    amount = self.amount,
-                    type_ = self.type_)
+        return dict(account_code=self.account_code,
+                    amount=self.amount,
+                    type_=self.type_)
 
     def show(self):
         """
+        Returns a string version of a LineEntry instance.
         Output format puts account type_ at end.
-        This may be different from input format which is specified in
-        the config.py file.
         """
         if self.type_ == 'D': spacer = 12
         if self.type_ == 'C': spacer = 26
@@ -893,10 +936,11 @@ class LineEntry(object):
                     .format(" " * indent)))
 
     @classmethod       # LineEntry
-    def balanced_LineEntry_list(src, list_of_LineEntrys):
+    def balanced_LineEntry_list(cls, list_of_LineEntrys):
         """
         Returns True if list_of_LineEntrys is balanced.
         i.e. if Debits equal Credits.  Else returns False.
+        Used for sanity checking.
         """
         totals = dict(D= 0,
                       C= 0)
@@ -913,7 +957,7 @@ class JournalEntry(object):
             entry_number: int but displayed as a formatted string.
             date_stamp: date_stamp,  # string- any format
             user: name,  # person making the journal entry
-            description: explanation, # string with imbedded CRs
+            description: explanation, # string with imbedded '\n's.
             line_entries: list of LineEntry objects
                 (need conversion to dict to fit json format)
     We use the _dict property to convert to json format.
@@ -964,11 +1008,11 @@ class JournalEntry(object):
         """
         Returns a dictionary representation of a JournalEntry.
         """
-        return dict(entry_number= self.entry_number,
-                    date_stamp= self.date_stamp,
-                    user= self.user,
-                    description= self.description,
-                    line_entries= [
+        return dict(entry_number=self.entry_number,
+                    date_stamp=self.date_stamp,
+                    user=self.user,
+                    description=self.description,
+                    line_entries=[
                         item._dict for item in self.line_entries],
                     )
 
@@ -1118,7 +1162,7 @@ class JournalEntry(object):
 #               print(   # debugging print
 #                  "setting user to '{}'".format(line))
                 new_dict['user'] = line
-            elif (not ' Dr ' in line) and (not ' Cr ' in line):
+            elif not drcr.drcr(line):
 #               print(  # debugging print
 #                  "Appending description: '{}'".format(line))
                 new_dict['description'].append(line)

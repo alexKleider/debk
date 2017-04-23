@@ -44,6 +44,7 @@ code,indent,full_name,name,hidden,place_holder,split
         5501,2,Expenses:Utilities:Propane,Propane,F,F
         5502,2,Expenses:Utilities:Electricity,Electricity,F,F
         5503,2,Expenses:Utilities:Water,Water,F,F
+        5504,2,Expenses:Telephone,Telephone,F,F
         5510,2,Expenses:Utilities,Utilities,F,F
     5590,1,Expenses:Miscelaneous,Miscelaneous,F,F
     5600,1,Expenses:Advertising,Advertising,F,F

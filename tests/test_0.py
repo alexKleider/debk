@@ -1,8 +1,9 @@
 #!./venv/bin/python3
 # -*- coding: utf-8 -*-
 # vim: set file encoding=utf-8 :
-#
+
 # file: '../test1.py'
+
 # Part of debk, Double Entry Book Keeping module.
 
 # Copyright 2015 Alex Kleider
@@ -25,7 +26,6 @@ test suite for debk.src.config.check_date.
 import unittest
 import src.money as money
 import src.config as config
-import tests.money_test_data as more_test_data
 
 VERSION = "v0.0.1"
 
@@ -86,69 +86,6 @@ class DateStamp(unittest.TestCase):
                                     result=result):
                 self.assertEqual(config.check_date(input_string),
                                     result)
-
-class MoneyRegex(unittest.TestCase):
-    """Test the assign_money_regex function of src/config.py."""
-    def test_assign_money_regex(self):
-        testdata = {
-            "dollar": [
-                ("1010 Cr .", None),
-                ("1010 Cr $.", None),
-                ("1010 Cr $75.45", 75.45),
-                ("1010 Cr $75.", 75.00),
-                ("1010 Cr 75.", 75.00),
-                ("1010 $75.3 Cr", 75.30),
-                ("1010 75.3 Cr", 75.30),
-                ("Cr 1010 $75.", 75.00),
-                ("Cr 1010 75.", 75.00),
-                ("Cr $75. 1010", 75.00),
-                ("Cr 75. 1010", 75.00),
-                ("$75. Cr 1010", 75.00),
-                ("75. Cr 1010", 75.00),
-                ("$75.3 1010 Cr ", 75.30),
-                ("75.3 1010 Cr ", 75.30),
-                ("1010 Cr $75.", 75.00),
-                ("1010 Cr 75.", 75.00),
-            ],
-            "pound": [
-                ("1010 Cr \u00a375.", 75.00),
-            ],
-            "yuan" : [
-                ("1010 Cr \u00a575.", 75.00),
-            ],
-            "yen" : [
-                ("1010 Cr \u00a575.", 75.00),
-            ],
-            "euro" : [
-                ("1010 Cr \u20ac75.", 75.00),
-            ],
-            "rupee" : [
-            ],
-        }
-        for currency_name in money.CURRENCY_SIGNS.keys():
-            for input_string, result in testdata[currency_name]:
-                with self.subTest(input_string=input_string,
-                                result=result):
-                    res = money.pull_money(input_string,
-                                    currency_name=currency_name)
-                    if result:
-                        match = res[0]
-                    else:
-                        match = res
-#                       print("Failed: {}".format(input_string))
-                    self.assertEqual(match, result)
-
-    def test_assign_money_regex_external_input(self):
-        for input_string, result in more_test_data.more_tests:
-            with self.subTest(input_string=input_string,
-                            result=result):
-                res = money.pull_money(input_string)
-                if result:
-                    match = "{:.2f}".format(res[0])
-                else:
-                    match = res
-                    print("Failed: {}".format(input_string))
-                self.assertEqual(match, result)
 
 if __name__ == '__main__':  # code block to run the application
     unittest.main()
