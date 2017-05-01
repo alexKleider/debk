@@ -21,16 +21,16 @@
 #   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #   Look for file named COPYING.
 """
-test suite for debk.src.config.check_date.
+test suite for debk.src.date.check_date.
 """
 import unittest
 import src.money as money
-import src.config as config
+import src.date as date
 
 VERSION = "v0.0.1"
 
 class DateStamp(unittest.TestCase):
-    """Test the check_date function of src/config.py."""
+    """Test the check_date function of src/date.py."""
     def test_check_date(self):
         testdata = [
             ("january 32", None),
@@ -84,7 +84,7 @@ class DateStamp(unittest.TestCase):
         for input_string, result in testdata:
             with self.subTest(input_string=input_string,
                                     result=result):
-                self.assertEqual(config.check_date(input_string),
+                self.assertEqual(date.check_date(input_string),
                                     result)
 
 if __name__ == '__main__':  # code block to run the application

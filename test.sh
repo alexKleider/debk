@@ -35,4 +35,12 @@ echo  >> testresults
 echo Running tests/test_3.py......................... >> testresults
 tests/test_3.py >> testresults 2>&1
 
+echo  >> testresults
+echo Running src/config.py......................... >> testresults
+src/config.py >> testresults 2>&1
+
+echo  >> testresults
+echo Running src/date.py >> testresults
+src/date.py >> testresults 2>&1
+
 vim testresults

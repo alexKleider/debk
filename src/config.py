@@ -32,7 +32,6 @@ Serves as a configuration file:
         get_list_of_accounts(a_string)
         account_category(code)
         valid_account_code(account_code)
-        check_date(entry)
 
 Verbosity Levels Explained:
  0: Show all the accounts without any accounting data.
@@ -60,13 +59,15 @@ VERSION = "0.1.0-beta"
 
 DEFAULT_VERBOSITY = 2
 DEFAULT_USER = "Book Keeper"
+
 DEFAULT_YEAR = time.localtime().tm_year
 FISCAL_YEAR_BEGIN = "Jan 1, {}".format(DEFAULT_YEAR)
 FISCAL_YEAR_END = "Dec 31, {}".format(DEFAULT_YEAR)
-
-SHORT_MONTHS = {'Feb', 'Apr', 'Jun', 'Sep', 'Nov'}
-MONTHS = (
-    {'Jan', 'Mar', 'May', 'Jul', 'Aug', 'Oct', 'Dec'} | SHORT_MONTHS)
+# Note: The date formats in the previous two lines must
+# match that provided by <standard_display_format> 3 lines down.
+month_name_entry_format = "%b %d, %Y"
+month_number_entry_format = "%m %d, %Y"
+standard_display_format = month_name_entry_format
 
 # If any changes are made to either of the next two constants,
 # the file tests/money_test.sh will have to be edited to suit.
@@ -100,7 +101,9 @@ INCOME_TRANSFER2EQUITY_DESCRIPTOR = (
 # to maintain consistency.  This also will involve changing
 # account numbers in the defaultChartOfAccounts.
 # Even more importantly: much of the test suite will have to
-# be modified- specifically the test data
+# be modified- for this reason, we are in the process of
+# putting all of the test data at the end of this file.
+
 ACCOUNT_NUMBER_LENGTH = 4
 ACCOUNT_CATEGORIES = dict(
     ASSET='1000',     LAST_ASSET='1999',
@@ -211,16 +214,6 @@ def get_type(a_string):
         ret = ret.group()
         return ret.capitalize()
 
-def account_category(code):
-    """
-    Depending on code provided, returns one of the following
-    ASSETS, LIABILITY, EQUITY, INCOME, EXPENSE
-    account categories.
-    """
-    for category in ACCOUNT_CATEGORIES:
-        if ACCOUNT_CATEGORIES[category][:1] == code[:1]:
-            return category
-
 def valid_account_code(account_code):
     """
     Checks the validity of an account code:
@@ -231,130 +224,164 @@ def valid_account_code(account_code):
     if (account_code
             and isinstance(account_code, str)
             and account_code.isdigit()
+            and 0 < int(account_code[:1]) < 6
             and len(account_code) == ACCOUNT_CODE_LENGTH):
         return True
 
-def test_firsts():
+def account_category(code):
     """
-    A testing function.
+    Depending on code provided, returns one of the following
+    "ASSET", "LIABILITY", "EQUITY", "INCOME", "EXPENSE"
+    account categories.
+    Returns None if not a valid code!
     """
-    print("DR_FIRSTS are {}".format(sorted(list(DR_FIRSTS))))
-    print("CR_FIRSTS are {}".format(sorted(list(CR_FIRSTS))))
-
-def check_date(entry):
-    """
-    Checks that something reasonable was provided as a date.
-    Expects Month, Day, Year format.
-    Month and Day can be without any separator between them.
-    Returns standard Month, Day, Year formated string
-    or None if uninterpretable.
-    """
-
-    def day_of_month_out_of_range(day):
-        """
-        Checks that day is >=1 and <=31
-        returning True if it's not.
-        """
-        return (day > 31) or (day < 1)
-
-    def split_month_day(date):
-        """
-        Takes a string and tries to return a tuple of 2 strings:
-        (<name of month>, <date>)
-        """
-        i = 0
-        letters = []
-        numbers = []
-        while i < len(date):
-            if date[i].isalpha():
-                letters.append(date[i])
-                i += 1
-            else:
-                break
-        while i < len(date):
-            if date[i].isdigit():
-                numbers.append(date[i])
-                i += 1
-            else:
-                break
-        return [''.join(letters), ''.join(numbers)]
-
-    parts = entry.translate(str.maketrans(',.-/-', '     ')).split()
-#   print(parts)
-    if parts and parts[0][:1].isalpha() and parts[0][-1:].isdigit():
-        parts = split_month_day(parts[0]) + (parts[1:])
-    if len(parts) == 2:
-        parts.append(DEFAULT_YEAR)
-#   print(parts)
-    if (len(parts) != 3) or (not parts[0].isalpha()):
+    if not valid_account_code(code):
         return
-    parts[0] = parts[0].capitalize()[:3]
-#   print(parts)
-    if not parts[0] in MONTHS:
-#       print("{} not in MONTHS".format(parts[0]))
-        return
-    try:
-        day = int(parts[1])
-        year = int(parts[2])
-    except ValueError:
-#       print("day&year: {} {}".format(day, year))
-        return
-    if (day_of_month_out_of_range(day) or
-            (day == 31 and parts[0] in SHORT_MONTHS) or
-            (parts[0] == 'Feb' and day > 29)):
-#       print("out of range")
-        return
-    if year < 100:
-        year += 2000
-#   print(parts)
-    return "{} {:0>2d}, {}".format(parts[0], day, year)
+    for category in ACCOUNT_CATEGORIES:
+        if ((not category.startswith("LAST")) and
+            (ACCOUNT_CATEGORIES[category][:1] == code[:1])):
+            return category
 
-def test_data(func, data):
-    for datum, desired in data:
-        res = func(datum)
-        if res is None:
-            res = "None"
-        if ((func == get_list_of_accounts)
-                and(res != "None")):
-            desired = desired.split(',')
-        if res == desired: ok = "OK"
-        else: ok = "WRONG"
-        print("{} {} => {}  SHOULD BE {}".format(
-            ok, datum, res, desired))
+    # The following are used by the tests in tests/config_test.py
+    # and will have to be modified if the account numbering system
+    # is changed.
 
-if __name__ == '__main__':
-    print("DEFAULT_YEAR is '{}'.".format(DEFAULT_YEAR))
-
-    date_test_data = (
-        ("no date here", "None"),
-        ("July 3 1945", "Jul 03, 1945"),
-        ("august 30", "Aug 30, 2017"),
+test_data4get_list_of_accounts = (
+    ("no account here", None),
+    ("1011 Cr 4.5", ["1011",]),
+    ("1011 4.5 Cr", ["1011",]),
+    ("Cr 1011 4.5", ["1011",]),
+    ("Cr 4.5 1011", ["1011",]),
+    ("4.5 1011 Cr", ["1011",]),
+    ("4.5 Cr 1011", ["1011",]),
+    ("Dr 2010 360.9", ["2010"]),
+    ("Dr 2010,2011,2012 360.34", ["2010", "2011", "2012"]),
+    ("1011,1050,1260 Cr 4.5", ["1011", "1050", "1260"]),
+    ("1011,1050,1260 4.5 Cr", ["1011", "1050", "1260"]),
+    ("Cr 1011,1050,1260 4.5", ["1011", "1050", "1260"]),
+    ("Cr 4.5 1011,1050,1260", ["1011", "1050", "1260"]),
+    ("4.5 1011,1050,1260 Cr", ["1011", "1050", "1260"]),
+    ("4.5 Cr 1011,1050,1260", ["1011", "1050", "1260"]),
+    ("1011Cr 4.5", None),
+    ("Cr1011 4.5", None),
+    ("Cr 10114.5", None),
+    ("Cr10114.5", None),
+    ("4.5 Cr1011", None),
     )
 
-    account_test_data = (
-        ("Dr 2010 360.9", "2010"),
-        ("Dr 2010,2011,2012 360.34", "2010,2011,2012"),
-        ("no account here", "None"),
-    )
+test_data4get_type = (# The account codes here don't matter.
+    ("Dr 2010 360.9", "Dr"),
+    ("2010 Dr 360.9", "Dr"),
+    ("2010 360.9 Dr", "Dr"),
+    ("cr 2010,2011,2012 360.34", "Cr"),
+    ("2010,2011,2012 cr 360.34", "Cr"),
+    ("2010,2011,2012 360.34 cr", "Cr"),
+    ("no account here", None),
+    ("no date here", None),
+)
 
-    type_test_data = (
-        ("Dr 2010 360.9", "Dr"),
-        ("2010 Dr 360.9", "Dr"),
-        ("2010 360.9 Dr", "Dr"),
-        ("cr 2010,2011,2012 360.34", "Cr"),
-        ("2010,2011,2012 cr 360.34", "Cr"),
-        ("2010,2011,2012 360.34 cr", "Cr"),
-        ("no account here", "None"),
-        ("no date here", "None"),
-    )
+test_data4account_category = (
+    ("1010", "ASSET"),
+    ("1000", "ASSET"),
+    ("1100", "ASSET"),
+    ("1110", "ASSET"),
+    ("1500", "ASSET"),
+    ("1511", "ASSET"),
+    ("1512", "ASSET"),
+    ("1513", "ASSET"),
+    ("1514", "ASSET"),
+    ("2000", "LIABILITY"),
+    ("2001", "LIABILITY"),
+    ("2002", "LIABILITY"),
+    ("2003", "LIABILITY"),
+    ("2004", "LIABILITY"),
+    ("2005", "LIABILITY"),
+    ("2006", "LIABILITY"),
+    ("2007", "LIABILITY"),
+    ("2008", "LIABILITY"),
+    ("2009", "LIABILITY"),
+    ("2010", "LIABILITY"),
+    ("3000", "EQUITY"),
+    ("3001", "EQUITY"),
+    ("3002", "EQUITY"),
+    ("3003", "EQUITY"),
+    ("3004", "EQUITY"),
+    ("3005", "EQUITY"),
+    ("3006", "EQUITY"),
+    ("3007", "EQUITY"),
+    ("3008", "EQUITY"),
+    ("3009", "EQUITY"),
+    ("3010", "EQUITY"),
+    ("4000", "INCOME"),
+    ("4001", "INCOME"),
+    ("5000", "EXPENSE"),
+    ("5001", "EXPENSE"),
+    ("5002", "EXPENSE"),
+    ("5020", "EXPENSE"),
+    ("5021", "EXPENSE"),
+    ("5030", "EXPENSE"),
+    ("5031", "EXPENSE"),
+    ("5041", "EXPENSE"),
+    ("5051", "EXPENSE"),
+    ("5310", "EXPENSE"),
+    ("5320", "EXPENSE"),
+    ("5400", "EXPENSE"),
+    ("5401", "EXPENSE"),
+    ("5500", "EXPENSE"),
+    ("5501", "EXPENSE"),
+    ("5502", "EXPENSE"),
+)
 
-    print("Testing date input:")
-    test_data(check_date, date_test_data)
-
-    print("Testing account input:")
-    test_data(get_list_of_accounts, account_test_data)
-
-    print("Testing type input:")
-    test_data(get_type, type_test_data)
-
-
+test_data4valid_account_code = (
+    ("1010", True),
+    ("1000", True),
+    ("1010", True),
+    ("1000", True),
+    ("1100", True),
+    ("1110", True),
+    ("1500", True),
+    ("1511", True),
+    ("1512", True),
+    ("1513", True),
+    ("1514", True),
+    ("2000", True),
+    ("2001", True),
+    ("2002", True),
+    ("2003", True),
+    ("2004", True),
+    ("2005", True),
+    ("2006", True),
+    ("2007", True),
+    ("2008", True),
+    ("2009", True),
+    ("2010", True),
+    ("3000", True),
+    ("3001", True),
+    ("3002", True),
+    ("3003", True),
+    ("3004", True),
+    ("3005", True),
+    ("3006", True),
+    ("3007", True),
+    ("3008", True),
+    ("3009", True),
+    ("3010", True),
+    ("4000", True),
+    ("4001", True),
+    ("5000", True),
+    ("5001", True),
+    ("5002", True),
+    ("5020", True),
+    ("5021", True),
+    ("5030", True),
+    ("5031", True),
+    ("5041", True),
+    ("5051", True),
+    ("5310", True),
+    ("5320", True),
+    ("5400", True),
+    ("5401", True),
+    ("5500", True),
+    ("5501", True),
+    ("5502", True),
+)

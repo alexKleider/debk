@@ -9,58 +9,55 @@ src.config.get_list_of_accounts.
 
 import unittest
 import re
+import time
 import src.config as config
-
-test_data = (
-    ("1011 Cr 4.5", ["1011",]),
-    ("1011 4.5 Cr", ["1011",]),
-    ("Cr 1011 4.5", ["1011",]),
-    ("Cr 4.5 1011", ["1011",]),
-    ("4.5 1011 Cr", ["1011",]),
-    ("4.5 Cr 1011", ["1011",]),
-    ("1011,1050,1260 Cr 4.5", ["1011", "1050", "1260"]),
-    ("1011,1050,1260 4.5 Cr", ["1011", "1050", "1260"]),
-    ("Cr 1011,1050,1260 4.5", ["1011", "1050", "1260"]),
-    ("Cr 4.5 1011,1050,1260", ["1011", "1050", "1260"]),
-    ("4.5 1011,1050,1260 Cr", ["1011", "1050", "1260"]),
-    ("4.5 Cr 1011,1050,1260", ["1011", "1050", "1260"]),
-    ("1011Cr 4.5", None),
-    ("Cr1011 4.5", None),
-    ("Cr 10114.5", None),
-    ("Cr10114.5", None),
-    ("4.5 Cr1011", None),
-    )
 
 class Config(unittest.TestCase):
     def setUp(self):
         pass
-    def test_get_acnt(self):
-        for source, expected in test_data:
+    def test_DEFAULT_YEAR(self):
+        self.assertEqual(
+            config.DEFAULT_YEAR,
+            time.localtime().tm_year)
+
+    def test_get_list_of_accounts(self):
+        for source, expected in test_data4get_list_of_accounts:
             with self.subTest(source=source, expected=expected):
                 self.assertEqual(
                     config.get_list_of_accounts(source),
                     expected)
+    def test_get_type(self):
+        for entry, expected in test_data4get_type:
+            with self.subTest(entry=entry, expected=expected):
+                self.assertEqual(
+                    config.get_type(entry),
+                    expected)
+    def test_valid_account_code(self):
+        for entry, expected in test_data4valid_account_code:
+            with self.subTest(entry=entry, expected=expected):
+                self.assertEqual(
+                    config.valid_account_code(entry),
+                    expected)
+    def test_account_category(self):
+        for entry, expected in test_data4account_category:
+            with self.subTest(entry=entry, expected=expected):
+                self.assertEqual(
+                    config.account_category(entry),
+                    expected)
+
+test_data4get_list_of_accounts = (
+    config.test_data4get_list_of_accounts)
+
+test_data4get_type = (
+    config.test_data4get_type)
+
+test_data4valid_account_code = (
+    config.test_data4valid_account_code)
+
+test_data4account_category = (
+    config.test_data4account_category)
 
 if __name__ == "__main__":
+    
     unittest.main()
 
-    old = """
-    no_match = []
-    wrong = []
-    success = []
-    for source, should_be in test_data:
-        result = config.get_list_of_accounts(source)
-        if not result:
-            no_match.append("{} => {}=={}"
-                        .format(source, result, should_be))
-        elif result == should_be:
-            success.append("{} => {}".format(source, should_be))
-        else:
-            wrong.append("{} !=> {}".format(source, should_be))
-    print("Successes:")
-    print("\n".join(success))
-    print("Failures:")
-    print("\n".join(wrong))
-    print("No Match:")
-    print("\n".join(no_match))
-"""

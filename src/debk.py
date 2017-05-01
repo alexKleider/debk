@@ -62,14 +62,14 @@ import sys
 import csv
 import json
 import copy
-import shutil
+#import shutil
 import logging
-import datetime
-from docopt import docopt
+#import datetime
 import src.drcr as drcr
+import src.date as date
+import src.money as money
 import src.config as config
 from src.config import DEFAULTS as D
-from src.money import get_currency_value
 
 DEBUG = False
 
@@ -878,7 +878,7 @@ class LineEntry(object):
         if not line: return
         abort = False
         ret = []
-        value = get_currency_value(line,
+        value = money.get_currency_value(line,
                 debug=DEBUG)
         accounts = config.get_list_of_accounts(line)
         type_ = drcr.drcr(line)
@@ -1059,7 +1059,7 @@ class JournalEntry(object):
             if not date_stamp:  # Empty 'date_stamp' line terminates
                 print()
                 return
-            date = config.check_date(date_stamp)
+            date = date.check_date(date_stamp)
             if date:
                 date_stamp = date
                 break
@@ -1157,7 +1157,7 @@ class JournalEntry(object):
             if not new_dict['date_stamp']:
 #               print(  # debugging print
 #                  "setting date_stamp to '{}'".format(line))
-                new_dict['date_stamp'] = config.check_date(line)
+                new_dict['date_stamp'] = date.check_date(line)
             elif not new_dict['user']:
 #               print(   # debugging print
 #                  "setting user to '{}'".format(line))
@@ -1565,6 +1565,7 @@ def check_equity_vs_bank(chart_of_accounts):
 #### The menu framework is in menu.py and work_with.py
 
 if __name__ == '__main__':  # code block to run the application
+    from docopt import docopt
     args = docopt(__doc__, version=config.VERSION)
     print(
     'Running src/debk.py which does nothing but print its args:')
